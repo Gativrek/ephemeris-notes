@@ -9,6 +9,7 @@ import { FileCatalog } from '../library/catalog';
 import { LibraryFs, type FsDeps } from '../library/fileio';
 import { readLibrary } from '../library/library';
 import { LibraryRoot } from '../library/paths';
+import type { WatchBackend, WatchRoots } from '../library/watch-backend';
 import { LibraryWatcher, type WatchEvent } from '../library/watcher';
 
 export interface LibrarySession {
@@ -36,6 +37,31 @@ export class SessionManager {
 
   get current(): LibrarySession | null {
     return this.session;
+  }
+
+  private pending: Promise<unknown> = Promise.resolve();
+  private watcherGate: Promise<void> = Promise.resolve();
+  private watchBackend: ((roots: WatchRoots) => WatchBackend) | undefined;
+  /** The app runs the watcher in a worker thread (watch-worker.ts). */
+  setWatchBackend(make: (roots: WatchRoots) => WatchBackend): void {
+    this.watchBackend = make;
+  }
+  /** Watchers start once this resolves (after the first window loads), so their scan does not slow startup. */
+  setWatcherGate(gate: Promise<void>): void {
+    this.watcherGate = gate;
+  }
+  /** Resolves once a library being restored at startup is open (or failed to open). */
+  settled(): Promise<void> {
+    return this.pending.then(
+      () => undefined,
+      () => undefined,
+    );
+  }
+  /** The startup restore: the window can load while the library opens. */
+  restore(folder: string): Promise<LibraryInfo> {
+    const p = this.open(folder, { waitForWatcher: false });
+    this.pending = p;
+    return p;
   }
 
   require(): LibrarySession {
@@ -66,7 +92,11 @@ export class SessionManager {
     return () => this.openListeners.delete(fn);
   }
 
-  async open(folder: string): Promise<LibraryInfo> {
+  /**
+   * Opens a library. A library the user opens waits for the watcher's initial scan (at
+   * most 5 s), so changes made right after are seen; the startup restore does not.
+   */
+  async open(folder: string, opts: { waitForWatcher?: boolean } = {}): Promise<LibraryInfo> {
     const info = await readLibrary(folder);
     if (!info) fail('NOT_A_LIBRARY', 'This folder is not a library.');
     await this.close(false);
@@ -105,13 +135,36 @@ export class SessionManager {
         }
       },
     });
-    watcher = new LibraryWatcher(root, (e) => {
-      void catalogChanged([e.path]);
-      for (const fn of this.watchListeners) fn(e);
-      this.broadcast({ type: `file.${e.type}`, payload: { path: e.path, kind: e.kind } });
-    });
-    await watcher.start();
+    watcher = new LibraryWatcher(
+      root,
+      (e) => {
+        void catalogChanged([e.path]);
+        for (const fn of this.watchListeners) fn(e);
+        this.broadcast({ type: `file.${e.type}`, payload: { path: e.path, kind: e.kind } });
+      },
+      this.watchBackend,
+    );
+    // The watcher's initial scan of a large library takes seconds: do not wait for it.
+    // Changes during the scan are covered by the catalog build and the index sync, and
+    // once it is ready a sync runs again (as after a restart).
+    const current = watcher;
+    const watching = this.watcherGate.then(() =>
+      this.session?.watcher === current ? current.start() : Promise.reject(new Error('closed')),
+    );
+    void watching.then(
+      () => {
+        // Only the startup restore opened before the scan finished: catch up on the gap.
+        if (this.session?.watcher !== watcher || opts.waitForWatcher !== false) return;
+        void catalog
+          .rescan()
+          .then((changed) => changed && this.broadcast({ type: 'catalog.changed', payload: null }));
+        for (const l of this.restartListeners) l();
+      },
+      () => undefined,
+    );
     this.session = { info, root, fs, watcher, catalog };
+    if (opts.waitForWatcher !== false)
+      await Promise.race([watching.catch(() => undefined), new Promise((r) => setTimeout(r, 5000))]);
     for (const fn of this.openListeners) await fn(this.session);
     this.broadcast({ type: 'library.changed', payload: info });
     return info;

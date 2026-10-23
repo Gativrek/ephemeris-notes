@@ -4,7 +4,7 @@
  */
 import { closeBrackets, closeBracketsKeymap, completionKeymap } from '@codemirror/autocomplete';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
-import { markdown } from '@codemirror/lang-markdown';
+import { markdown, markdownKeymap } from '@codemirror/lang-markdown';
 import { syntaxHighlighting } from '@codemirror/language';
 import { highlightSelectionMatches, search, searchKeymap } from '@codemirror/search';
 import { Compartment, EditorSelection, EditorState, Prec, type Extension } from '@codemirror/state';
@@ -108,6 +108,20 @@ export interface EditorOptions {
   onUpdate?: (view: EditorView, docChanged: boolean) => void;
   spellcheck?: boolean;
   extra?: Extension[];
+}
+
+/** Every key binding the note editor installs (Settings > Keyboard refuses these). */
+export function editorKeyBindings(): readonly KeyBinding[] {
+  return [
+    ...editingKeymap,
+    ...closeBracketsKeymap,
+    ...completionKeymap,
+    ...searchKeymap,
+    ...historyKeymap,
+    ...defaultKeymap,
+    indentWithTab,
+    ...markdownKeymap,
+  ];
 }
 
 export function previewExtensions(source: boolean): Extension {

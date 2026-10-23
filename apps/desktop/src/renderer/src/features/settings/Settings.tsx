@@ -3,9 +3,11 @@
  * General, Editor, Math, Appearance, Library, Plugins, Help and About.
  */
 import { useEffect, useState, type ReactNode } from 'react';
-import type { Domain } from '@shared/bridge';
+import type { Domain, GitStatusInfo } from '@shared/bridge';
 import { Icon } from '../../components/Icon';
 import { useCatalog } from '../../lib/catalog';
+import { useSettings } from '../../lib/settings';
+import { relativeTime } from '../../lib/time';
 import { errorMessage, unwrap, vx } from '../../lib/vx';
 import { useApp } from '../../store/app';
 import { settingsStrings as s } from '../../strings/settings';
@@ -13,13 +15,21 @@ import { openPath } from '../../workspace/actions';
 import { useIndexStatus } from '../../workspace/SearchBox';
 import { HelpSection } from './HelpSection';
 import { MathSection } from './MathSection';
-import { AboutSection, AppearanceSection, EditorSection, GeneralSection, PluginsSection } from './sections';
+import {
+  AboutSection,
+  AppearanceSection,
+  EditorSection,
+  GeneralSection,
+  KeyboardSection,
+  PluginsSection,
+} from './sections';
 
 export type SettingsSection = keyof typeof s.sections;
 
 export const SECTION_ORDER: SettingsSection[] = [
   'general',
   'editor',
+  'keyboard',
   'math',
   'appearance',
   'library',
@@ -50,6 +60,70 @@ function Group({
       </div>
       {children}
     </section>
+  );
+}
+
+function GitGroup() {
+  const enabled = useSettings((st) => st.get<boolean>('git.autoCommit'));
+  const interval = useSettings((st) => st.get<number>('git.intervalMinutes'));
+  const [status, setStatus] = useState<GitStatusInfo | null>(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    void unwrap(vx().library.gitStatus()).then(setStatus, () => undefined);
+  }, [enabled, interval]);
+  const commit = async () => {
+    setBusy(true);
+    try {
+      setStatus(await unwrap(vx().library.gitCommitNow()));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Group
+      title={s.library.git}
+      hint={status && !status.repo ? s.library.gitNotRepo : s.library.gitHint}
+      action={
+        <input
+          type="checkbox"
+          className="vx-switch"
+          aria-label={s.library.git}
+          checked={enabled === true}
+          disabled={!status?.repo}
+          onChange={(e) => void useSettings.getState().set('git.autoCommit', e.target.checked)}
+        />
+      }
+    >
+      {status?.repo && (
+        <div className="vx-settings__item">
+          <div className="vx-settings__hint" role="status" data-testid="git-status">
+            {status.last ? s.library.gitLast(status.last.message, relativeTime(status.last.at)) : ''}
+          </div>
+          <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <select
+              className="vx-select"
+              aria-label={s.library.gitInterval}
+              value={interval}
+              onChange={(e) => void useSettings.getState().set('git.intervalMinutes', Number(e.target.value))}
+            >
+              {[5, 10, 15, 30, 60, 120].map((m) => (
+                <option key={m} value={m}>
+                  {s.library.gitInterval} {s.library.minutes(m)}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="vx-btn vx-btn--small"
+              disabled={busy}
+              onClick={() => void commit()}
+            >
+              {s.library.commitNow}
+            </button>
+          </span>
+        </div>
+      )}
+    </Group>
   );
 }
 
@@ -167,6 +241,7 @@ function LibrarySection() {
           ))}
         </div>
       </Group>
+      <GitGroup />
       <Group title={s.library.outside} hint={s.library.outsideHint}>
         <div className="vx-settings__list">
           {outside.length === 0 && <div className="vx-row">{s.library.none}</div>}
@@ -240,6 +315,7 @@ export function Settings({
         </button>
         {section === 'general' && <GeneralSection />}
         {section === 'editor' && <EditorSection />}
+        {section === 'keyboard' && <KeyboardSection />}
         {section === 'math' && <MathSection />}
         {section === 'appearance' && <AppearanceSection />}
         {section === 'library' && <LibrarySection />}

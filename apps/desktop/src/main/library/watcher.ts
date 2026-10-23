@@ -5,11 +5,11 @@
  */
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { watch, type FSWatcher } from 'chokidar';
 import type { FileEvent } from '@shared/bridge';
 import { isTempFile } from './atomic';
 import { sha256 } from './encoding';
 import type { LibraryRoot } from './paths';
+import { inProcessBackend, type WatchBackend, type WatchRoots } from './watch-backend';
 
 export type WatchEventType = 'created' | 'changed' | 'deleted';
 export interface WatchEvent extends FileEvent {
@@ -79,37 +79,21 @@ export class OwnWrites {
 }
 
 export class LibraryWatcher {
-  private watcher: FSWatcher | null = null;
+  private backend: WatchBackend | null = null;
   readonly ownWrites = new OwnWrites();
 
   constructor(
     private readonly root: LibraryRoot,
     private readonly emit: (e: WatchEvent) => void,
+    /** The app runs chokidar in a worker (watch-worker.ts); tests run it in process. */
+    private readonly makeBackend: (roots: WatchRoots) => WatchBackend = (roots) =>
+      inProcessBackend(roots, shouldIgnore),
   ) {}
 
   start(): Promise<void> {
-    const rootAbs = this.root.root;
-    const watcher = watch(rootAbs, {
-      ignoreInitial: true,
-      followSymlinks: false,
-      atomic: true,
-      awaitWriteFinish: { stabilityThreshold: 120, pollInterval: 40 },
-      ignored: (p: string) => {
-        // chokidar passes forward slashes to `ignored` on Windows.
-        const rel = this.root.toRelative(path.normalize(p));
-        return rel === null || shouldIgnore(rel);
-      },
-    });
-    this.watcher = watcher;
-    const handle = (type: WatchEventType, kind: FileEvent['kind']) => (abs: string) => {
-      void this.dispatch(type, kind, abs);
-    };
-    watcher.on('add', handle('created', 'file'));
-    watcher.on('change', handle('changed', 'file'));
-    watcher.on('unlink', handle('deleted', 'file'));
-    watcher.on('addDir', handle('created', 'folder'));
-    watcher.on('unlinkDir', handle('deleted', 'folder'));
-    return new Promise((resolve) => watcher.once('ready', () => resolve()));
+    const backend = this.makeBackend({ root: this.root.root, realRoot: this.root.realRoot });
+    this.backend = backend;
+    return backend.start((e) => void this.dispatch(e.type, e.kind, e.abs));
   }
 
   private async dispatch(type: WatchEventType, kind: FileEvent['kind'], abs: string): Promise<void> {
@@ -128,8 +112,9 @@ export class LibraryWatcher {
   }
 
   async stop(): Promise<void> {
-    await this.watcher?.close();
-    this.watcher = null;
+    const b = this.backend;
+    this.backend = null;
+    await b?.stop();
   }
 }
 

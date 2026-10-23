@@ -98,6 +98,7 @@ export function Rail({
   settingsEnabled: boolean;
 }) {
   const sidebar = useWorkspace((st) => st.sidebar);
+  const inbox = useWorkspace((st) => st.inbox);
   const inboxCount = useCatalog(
     (st) => st.paths.filter((p) => p.startsWith('Inbox/') && !p.slice(6).includes('/')).length,
   );
@@ -113,14 +114,19 @@ export function Rail({
         icon="folder"
         label={s.rail.files}
         title={s.rail.filesTitle}
-        pressed={sidebar}
-        onClick={() => useWorkspace.getState().setPanels({ sidebar: !sidebar })}
+        pressed={sidebar && !inbox}
+        onClick={() =>
+          inbox && sidebar
+            ? useWorkspace.setState({ inbox: false })
+            : useWorkspace.getState().setPanels({ sidebar: !sidebar })
+        }
       />
       <RailButton icon="search" label={s.rail.search} title={s.rail.searchTitle} onClick={onSearch} />
       <RailButton
         icon="inbox"
         label={s.rail.inbox}
         title={s.rail.inboxTitle}
+        pressed={sidebar && inbox}
         onClick={onInbox}
         badge={inboxCount}
         disabled={!inboxEnabled}
@@ -150,26 +156,46 @@ export function Rail({
   );
 }
 
-function useEditorStats(): { line: number; col: number; words: number } {
-  const [st, setSt] = useState({ line: 1, col: 1, words: 0 });
+const WORD = /[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*/gu;
+
+/** Waits for a typing pause, longer in long notes, so counting never competes with keystrokes. */
+export function settleDelay(length: number): number {
+  return length > 100_000 ? 1200 : length > 20_000 ? 500 : 200;
+}
+
+export function useEditorStats(): { line: number; col: number; words: number } {
+  const [pos, setPos] = useState({ line: 1, col: 1 });
+  const [words, setWords] = useState(0);
   useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | null = null;
+    let posTimer: ReturnType<typeof setTimeout> | null = null;
+    let wordTimer: ReturnType<typeof setTimeout> | null = null;
+    const count = () => {
+      wordTimer = null;
+      const state = editorStats.path ? getRecord(editorStats.path)?.state : undefined;
+      let n = 0;
+      // Line by line: no copy of the whole note.
+      if (state)
+        for (const it = state.doc.iter(); !it.next().done;)
+          if (!it.lineBreak) n += it.value.match(WORD)?.length ?? 0;
+      setWords(n);
+    };
     const fn = () => {
-      if (timer) return;
-      timer = setTimeout(() => {
-        timer = null;
-        const text = editorStats.path ? (getRecord(editorStats.path)?.state.doc.toString() ?? '') : '';
-        const words = (text.match(/[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*/gu) ?? []).length;
-        setSt({ line: editorStats.line, col: editorStats.col, words });
-      }, 200);
+      posTimer ??= setTimeout(() => {
+        posTimer = null;
+        setPos({ line: editorStats.line, col: editorStats.col });
+      }, 50);
+      const length = editorStats.path ? (getRecord(editorStats.path)?.state.doc.length ?? 0) : 0;
+      if (wordTimer) clearTimeout(wordTimer);
+      wordTimer = setTimeout(count, settleDelay(length));
     };
     editorStats.listeners.add(fn);
     return () => {
       editorStats.listeners.delete(fn);
-      if (timer) clearTimeout(timer);
+      if (posTimer) clearTimeout(posTimer);
+      if (wordTimer) clearTimeout(wordTimer);
     };
   }, []);
-  return st;
+  return { ...pos, words };
 }
 
 export function StatusBar({ vault, extra }: { vault: VaultInfo; extra?: ReactNode }) {

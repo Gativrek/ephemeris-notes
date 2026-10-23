@@ -17,6 +17,7 @@ import { useApp } from '../../store/app';
 import { workspaceStrings as s } from '../../strings/workspace';
 import { newNote, openDailyNote, setNotifier } from '../../workspace/actions';
 import { setDateLocale } from '../../workspace/tree';
+import { HOTKEYS_KEY, eventKey, isMacPlatform, recording } from '../../lib/hotkeys';
 import { Rail, StatusBar, TitleBar, type SearchScopeKind } from '../../workspace/Chrome';
 import { closeItem, Desk } from '../../workspace/Desk';
 import { externalChange, externalDelete, getRecord, saveAll, useDocs } from '../../workspace/docs';
@@ -24,6 +25,7 @@ import { EditorPane } from '../../workspace/EditorPane';
 import { Outline, useOutline } from '../../workspace/Outline';
 import { Overlays } from '../../workspace/Overlays';
 import { Sidebar } from '../../workspace/Sidebar';
+import { InboxPanel } from '../../workspace/Inbox';
 import { useWorkspace } from '../../workspace/store';
 
 const NO_BACKLINKS: Backlink[] = [];
@@ -74,6 +76,7 @@ function useNotice(): [string | null, (m: string) => void] {
 export function Workspace({ vaultPath }: { vaultPath: string }) {
   const vault = useApp((st) => st.vaults.find((v) => v.path === vaultPath)) as VaultInfo | undefined;
   const sidebar = useWorkspace((st) => st.sidebar);
+  const inbox = useWorkspace((st) => st.inbox);
   const outlineOpen = useWorkspace((st) => st.outline);
   const active = useWorkspace((st) => st.desk.active);
   const activeTitle = useDocs((st) => (active ? st.meta[active]?.path : null));
@@ -184,7 +187,27 @@ export function Workspace({ vaultPath }: { vaultPath: string }) {
 
   // Core shortcuts (SPECS 11.4). They never shadow CodeMirror's own keys.
   useEffect(() => {
+    const mac = isMacPlatform();
     const onKey = (e: KeyboardEvent) => {
+      if (recording.active) return;
+      // User hotkeys (Settings > Keyboard) first; they never collide with the keys below.
+      const bindings = useSettings.getState().get<Record<string, string>>(HOTKEYS_KEY) ?? {};
+      const pressed = eventKey(e, mac);
+      const hit = pressed ? Object.keys(bindings).find((id) => bindings[id] === pressed) : undefined;
+      const cmd = hit ? usePlugins.getState().commands.find((c) => c.id === hit) : undefined;
+      if (cmd) {
+        e.preventDefault();
+        e.stopPropagation();
+        void (async () => {
+          try {
+            await cmd.run();
+          } catch (err) {
+            console.error(`[${cmd.owner}] command ${cmd.id} failed`, err);
+            setNotice(s.commands.failed(cmd.title, err instanceof Error ? err.message : String(err)));
+          }
+        })();
+        return;
+      }
       const mod = e.ctrlKey || e.metaKey;
       if (!mod) return;
       const key = e.key.toLowerCase();
@@ -220,7 +243,7 @@ export function Workspace({ vaultPath }: { vaultPath: string }) {
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, []);
+  }, [setNotice]);
 
   // A Vault switch or a window reload: save everything first.
   useEffect(() => () => void saveAll(), []);
@@ -231,21 +254,21 @@ export function Workspace({ vaultPath }: { vaultPath: string }) {
       <TitleBar vault={vault} searchRef={searchRef} scope={scope} onScope={setScope} />
       <Rail
         onSearch={() => searchRef.current?.focus()}
-        onInbox={() => undefined}
+        onInbox={() => useWorkspace.setState((st) => ({ inbox: !(st.inbox && st.sidebar), sidebar: true }))}
         onHelp={() => toggleSettings('help')}
         onSettings={() => toggleSettings('general')}
-        inboxEnabled={false}
+        inboxEnabled
         helpEnabled
         settingsEnabled
       />
-      {sidebar && <Sidebar vault={vault} />}
+      {sidebar && (inbox ? <InboxPanel /> : <Sidebar vault={vault} />)}
       <main className="vx-main">
         <Desk />
         <EditorPane />
       </main>
       {outlineOpen && (
         <div className="vx-outline-wrap">
-          <Outline model={outline.model} currentLine={outline.currentLine} />
+          <Outline model={outline.model} currentLine={outline.currentLine} path={notePath} />
         </div>
       )}
       <StatusBar vault={vault} extra={notice ? <span role="status">{notice}</span> : null} />

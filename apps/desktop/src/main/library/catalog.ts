@@ -7,7 +7,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { CatalogEntry } from '@shared/bridge';
 import { isTempFile } from './atomic';
-import { walkFiles } from './walk';
+import { isNote, walkFiles } from './walk';
 
 export class FileCatalog {
   private readonly files = new Map<string, CatalogEntry>();
@@ -24,6 +24,39 @@ export class FileCatalog {
       this.version++;
     })();
     return this.ready;
+  }
+
+  /** Note count and newest note mtime under `rel` (Vault cards), without touching the disk. */
+  async statsUnder(rel: string): Promise<{ noteCount: number; lastEdited: number | null }> {
+    await this.build();
+    const prefix = `${rel}/`;
+    let noteCount = 0;
+    let lastEdited: number | null = null;
+    for (const f of this.files.values()) {
+      if (!f.path.startsWith(prefix) || !isNote(f.path)) continue;
+      noteCount++;
+      if (lastEdited === null || f.mtime > lastEdited) lastEdited = f.mtime;
+    }
+    return { noteCount, lastEdited };
+  }
+
+  /** Walks again and replaces the list; true when anything differed. */
+  async rescan(): Promise<boolean> {
+    await this.build();
+    const next = new Map<string, CatalogEntry>();
+    for await (const f of walkFiles(this.rootAbs))
+      next.set(f.rel, { path: f.rel, size: f.size, mtime: f.mtimeMs });
+    let differs = next.size !== this.files.size;
+    for (const [k, v] of next) {
+      if (differs) break;
+      const old = this.files.get(k);
+      differs = !old || old.size !== v.size || old.mtime !== v.mtime;
+    }
+    if (!differs) return false;
+    this.files.clear();
+    for (const [k, v] of next) this.files.set(k, v);
+    this.version++;
+    return true;
   }
 
   async list(): Promise<{ version: number; files: CatalogEntry[] }> {

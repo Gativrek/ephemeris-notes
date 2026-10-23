@@ -9,7 +9,7 @@ import { EVENT_CHANNEL, type Domain, type LibraryStats, type PushEvent } from '@
 import { DOMAIN_FOLDERS, DOMAINS } from './library/library';
 import { isNote } from './library/walk';
 import { registerCoreHandlers, type MachineState } from './app/handlers';
-import { setDevOrigin } from './app/ipc';
+import { handle, setDevOrigin } from './app/ipc';
 import { JsonStore } from './app/json-store';
 import {
   handleAppProtocol,
@@ -28,10 +28,13 @@ import {
 import { SessionManager } from './app/session';
 import { installTestMode, isTestMode } from './app/test-mode';
 import { Settings } from './app/settings';
+import { execGit, GIT_ENABLED_KEY, GIT_INTERVAL_KEY, GitAutoCommit } from './library/git';
 import { registerVaultHandlers } from './app/vault-handlers';
 import { registerIndexHandlers, renameWithLinks } from './app/index-handlers';
 import { IndexClient } from './index/client';
 import createIndexWorker from './index/worker?nodeWorker';
+import createWatchWorker from './library/watch-worker?nodeWorker';
+import { workerBackend } from './library/watch-backend';
 import { closeConfirmed, registerWorkspaceHandlers } from './app/workspace-handlers';
 import { registerAppHandlers } from './app/app-handlers';
 import { enabledPlugins, registerPluginHandlers } from './app/plugin-handlers';
@@ -163,6 +166,8 @@ async function main(): Promise<void> {
   );
   const testMode = isTestMode() ? installTestMode(userData) : null;
   const sessions = new SessionManager(broadcast, testMode?.trash ?? ((abs) => shell.trashItem(abs)));
+  // chokidar's scan of a large library would stall the window's frames on this thread.
+  sessions.setWatchBackend((roots) => workerBackend(() => createWatchWorker({ workerData: roots })));
   const settings = new Settings(machineSettings, broadcast);
   sessions.onOpenChanged((s) => settings.attach(s));
   sessions.onWatch((e) => {
@@ -212,6 +217,19 @@ async function main(): Promise<void> {
   registerIndexHandlers({ sessions, index });
   registerAppHandlers(path.join(here, '../renderer'));
 
+  // Optional git auto-commit (SPECS 4.11): off by default, per machine.
+  const git = new GitAutoCommit(execGit(), () => ({
+    enabled: machineSettings.get(GIT_ENABLED_KEY) === true,
+    intervalMinutes: Math.min(1440, Math.max(1, Number(machineSettings.get(GIT_INTERVAL_KEY)) || 10)),
+  }));
+  sessions.onOpenChanged((s) => git.setRoot(s?.root.root ?? null));
+  git.start();
+  handle('library', 'gitStatus', () => git.status());
+  handle('library', 'gitCommitNow', async () => {
+    await git.commitNow();
+    return git.status();
+  });
+
   // Plugins (SPECS 12): per machine, in user data; served from vx-plugin://<id>/.
   const plugins = new PluginManager(path.join(userData, 'plugins'), () => enabledPlugins(machineSettings));
   handlePluginProtocol((id, rel) => plugins.resolveFile(id, rel));
@@ -223,14 +241,21 @@ async function main(): Promise<void> {
   });
   registerWorkspaceHandlers({ sessions, testMode: testMode !== null });
 
+  // The window loads while the last library reopens; `library.current` waits for it.
   const last = state.get('lastLibrary');
   if (typeof last === 'string' && process.env.VX_NO_REOPEN !== '1') {
-    await sessions.open(last).catch(() => state.set('lastLibrary', null));
+    void sessions.restore(last).catch(() => state.set('lastLibrary', null));
   }
 
   const savedBounds = (state.get('windowBounds') as Bounds | undefined) ?? null;
   const open = () => createWindow(savedBounds, (b) => state.set('windowBounds', b));
-  open();
+  const first = open();
+  sessions.setWatcherGate(
+    new Promise((resolve) => {
+      first.webContents.once('did-finish-load', () => setTimeout(resolve, 500));
+      setTimeout(resolve, 4000);
+    }),
+  );
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) open();
   });

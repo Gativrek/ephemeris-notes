@@ -14,6 +14,10 @@ export type OutlineItem =
 export interface OutlineModel {
   headings: Array<{ level: number; text: string; line: number; items: OutlineItem[] }>;
   backlinks: Array<{ path: string; title: string; line: number; snippet: string }>;
+  /** Line count of the note (margin track and document map positions). */
+  lines: number;
+  /** Frontmatter properties, or null (tabbed inspector, Info). */
+  properties: Record<string, unknown> | null;
 }
 
 export function buildOutline(
@@ -63,7 +67,8 @@ export function buildOutline(
       items: items.filter((i) => i.pos >= h.from && i.pos < end).map(strip),
     });
   });
-  return { headings, backlinks };
+  const lines = text.length ? text.split('\n').length : 1;
+  return { headings, backlinks, lines, properties: s.frontmatter?.data ?? null };
 }
 
 function strip(i: OutlineItem & { pos: number }): OutlineItem {

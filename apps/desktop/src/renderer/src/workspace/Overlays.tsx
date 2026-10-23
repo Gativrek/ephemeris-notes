@@ -16,6 +16,7 @@ import {
   trashPath,
 } from './actions';
 import { currentEditor } from './EditorPane';
+import { MoveToPicker } from './Inbox';
 import { useWorkspace } from './store';
 import { displayName } from './tree';
 
@@ -171,6 +172,8 @@ export function Overlays() {
       return <QuickOpen insert />;
     case 'commands':
       return <CommandPalette />;
+    case 'moveTo':
+      return <MoveToPicker path={overlay.path} />;
     case 'confirmTrash':
       return (
         <Confirm

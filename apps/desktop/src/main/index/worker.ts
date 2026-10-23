@@ -8,6 +8,9 @@ import type { NumberingMode } from '@vaults/markdown';
 import { openDb, type Db } from './db';
 import { LibraryIndex } from './indexer';
 import { planRename, type RenamePlanItem } from './rename';
+import os from 'node:os';
+import { ParsePool } from './parse-pool';
+import createParseWorker from './parse-worker?nodeWorker';
 
 export type { RenamePlanItem };
 
@@ -34,12 +37,18 @@ const post = (m: WorkerMessage) => port.postMessage(m);
 
 let db: Db;
 let index: LibraryIndex;
+// Parsing dominates a full build: spread it over a few threads (leaving cores for the UI).
+const pool = new ParsePool(
+  () => createParseWorker({}),
+  Math.max(1, Math.min(3, os.availableParallelism() - 2)),
+);
 
 function open(): void {
   db = openDb(init.dbPath);
   LibraryIndex.prepare(db, init.libraryId);
   index = new LibraryIndex(db, init.rootAbs, {
     numbering: init.numbering,
+    analyze: (text, numbering) => pool.analyze(text, numbering),
     onProgress: (status) => post({ type: 'status', status }),
   });
 }

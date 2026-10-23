@@ -134,6 +134,8 @@ export class VaultStore {
     /** Moves a folder; the app passes the rename with link updates (SPECS 5). */
     private readonly renamer: (from: string, to: string) => Promise<{ path: string }> = (f, t) =>
       lfs.rename(f, t),
+    /** Note counts and last edit; the app answers from the file catalog instead of walking. */
+    private readonly stats: (rel: string) => Promise<VaultStats> = (rel) => vaultStats(lfs.root.root, rel),
   ) {}
 
   private get rootAbs(): string {
@@ -169,7 +171,7 @@ export class VaultStore {
     if (!domainFolder || !folder || rest.length > 0 || !domainOf(domainFolder)) return null;
     const { raw, broken } = await this.readRaw(rel);
     if (!raw && !broken) return null;
-    const stats = await vaultStats(this.rootAbs, rel);
+    const stats = await this.stats(rel);
     if (broken) return { ...vaultFromJson(rel, {}, stats), broken: true };
     const info = vaultFromJson(rel, raw ?? {}, stats);
     if (info.cover) {

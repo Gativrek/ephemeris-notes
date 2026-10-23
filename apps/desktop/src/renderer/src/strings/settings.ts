@@ -4,6 +4,7 @@ export const settingsStrings = {
   sections: {
     general: 'General',
     editor: 'Editor',
+    keyboard: 'Keyboard',
     math: 'Math',
     appearance: 'Appearance',
     library: 'Library',
@@ -30,6 +31,14 @@ export const settingsStrings = {
     none: 'None.',
     outside: 'Folders outside Domains',
     outsideHint: 'Indexed, searchable in All and linkable, but not shown in the sidebar.',
+    git: 'Commit to git automatically',
+    gitHint:
+      'When the library folder is a git repository, commit every change on an interval. Nothing is pushed. Uses git from this computer.',
+    gitNotRepo: 'The library folder is not a git repository. Run git init there to use this.',
+    gitInterval: 'Every',
+    minutes: (n: number) => (n >= 60 ? `${n / 60} h` : `${n} min`),
+    commitNow: 'Commit Now',
+    gitLast: (message: string, when: string) => `${message} (${when})`,
   },
   general: {
     reopen: 'Reopen last Vault',
@@ -47,6 +56,19 @@ export const settingsStrings = {
       'Milliseconds after the last edit before the note is saved. Notes also save on blur and close.',
     spellcheck: 'Spell check',
     spellcheckHint: 'The language follows the system dictionary.',
+  },
+  keyboard: {
+    hint: 'Give any command a shortcut. Shortcuts the app or the editor already use are refused. Plugin commands have no shortcuts until you set one.',
+    set: 'Set Shortcut',
+    change: 'Change',
+    remove: 'Remove',
+    press: 'Press the keys…',
+    builtIn: 'Built in',
+    palette: 'Command palette',
+    editor: 'the editor',
+    needsModifier: 'Shortcuts need Ctrl, Cmd or Alt, or a function key.',
+    taken: (keys: string, by: string) => `${keys} is already used by ${by}.`,
+    saved: (keys: string, title: string) => `${keys} runs ${title}.`,
   },
   appearance: {
     theme: 'Theme',

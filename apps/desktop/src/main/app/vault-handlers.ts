@@ -57,7 +57,10 @@ export function registerVaultHandlers(deps: {
   rename?: (from: string, to: string) => Promise<{ path: string }>;
 }): void {
   const { sessions, state, broadcast } = deps;
-  const store = () => new VaultStore(sessions.require().fs, deps.rename);
+  const store = () => {
+    const s = sessions.require();
+    return new VaultStore(s.fs, deps.rename, (rel) => s.catalog.statsUnder(rel));
+  };
   const changed = <T>(value: T): T => {
     broadcast({ type: 'vaults.changed', payload: null });
     return value;

@@ -84,7 +84,10 @@ export function registerCoreHandlers(deps: HandlerDeps): void {
     return { kind: 'created', library: opened };
   });
 
-  handle('library', 'current', () => sessions.current?.info ?? null);
+  handle('library', 'current', async () => {
+    await sessions.settled();
+    return sessions.current?.info ?? null;
+  });
 
   handle('library', 'close', async () => {
     await sessions.close();

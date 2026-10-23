@@ -20,6 +20,7 @@ export type Overlay =
   | { kind: 'quickOpen' }
   | { kind: 'insertLink' }
   | { kind: 'commands' }
+  | { kind: 'moveTo'; path: string }
   | { kind: 'confirmTrash'; path: string }
   | { kind: 'createMissing'; target: string; folder: string }
   | { kind: 'renameLinks'; from: string; to: string; notes: Array<{ path: string; links: number }> }
@@ -33,6 +34,8 @@ interface WorkspaceState {
   expanded: Record<string, boolean>;
   desk: Desk;
   sidebar: boolean;
+  /** The sidebar area shows the Inbox instead of the Vault (SPECS 4.6). */
+  inbox: boolean;
   outline: boolean;
   source: boolean;
   renaming: string | null;
@@ -80,6 +83,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
   expanded: {},
   desk: emptyDesk(),
   sidebar: true,
+  inbox: false,
   outline: typeof window !== 'undefined' ? window.innerWidth >= 1440 : true,
   source: false,
   renaming: null,
@@ -97,6 +101,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
       overlay: null,
       jump: null,
       moreTiles: false,
+      inbox: false,
     });
     const [desk, ws] = await Promise.all([
       unwrap(vx().ui.get(`desk.${vaultId}`)).catch(() => null),

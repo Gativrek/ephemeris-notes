@@ -73,17 +73,24 @@ export function toFtsMatch(q: ParsedQuery): string | null {
 
 /** Folds case and diacritics, keeping a map back to the original offsets. */
 export function fold(text: string): { folded: string; map: number[] } {
-  let folded = '';
+  const out: string[] = [];
   const map: number[] = [];
   for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    // ASCII needs no normalization: the common case, and the fast one.
+    if (c < 128) {
+      out.push(c >= 65 && c <= 90 ? String.fromCharCode(c + 32) : text[i]!);
+      map.push(i);
+      continue;
+    }
     const base = text[i]!.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
     for (let k = 0; k < base.length; k++) {
-      folded += base[k];
+      out.push(base[k]!);
       map.push(i);
     }
   }
   map.push(text.length);
-  return { folded, map };
+  return { folded: out.join(''), map };
 }
 
 export interface SnippetPart {
@@ -95,13 +102,13 @@ export interface SnippetPart {
 export function snippets(body: string, q: ParsedQuery, max = 2, radius = 60): SnippetPart[][] {
   const needles = [...q.terms, ...q.phrases].map((n) => fold(n).folded).filter(Boolean);
   if (!needles.length) return [];
+  const words = new Set(q.terms.map((w) => fold(w).folded));
   const { folded, map } = fold(body);
   const hits: Array<[number, number]> = [];
   for (const n of needles) {
     for (let i = folded.indexOf(n); i >= 0 && hits.length < 200; i = folded.indexOf(n, i + n.length)) {
       // Plain words match at word starts (prefix search), phrases anywhere.
-      if (i > 0 && /[\p{L}\p{N}]/u.test(folded[i - 1]!) && q.terms.some((t) => fold(t).folded === n))
-        continue;
+      if (i > 0 && /[\p{L}\p{N}]/u.test(folded[i - 1]!) && words.has(n)) continue;
       hits.push([map[i]!, map[i + n.length]!]);
     }
   }

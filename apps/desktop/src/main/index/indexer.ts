@@ -14,15 +14,17 @@ import {
   stringList,
   vaultRootOf,
   type LinkRef,
+  type NoteSummary,
   type NumberingMode,
 } from '@vaults/markdown';
 import type { Backlink, IndexStatus, SearchHit, SearchScope } from '@shared/bridge';
 import { decodeText } from '../library/encoding';
 import { isTempFile } from '../library/atomic';
+import { walkFiles } from '../library/walk';
 import type { Db, Row, SqlValue } from './db';
 import { fold, parseQuery, snippets, toFtsMatch } from './query';
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 const MAX_INDEX_BYTES = 8 * 1024 * 1024;
 
 const SCHEMA = `
@@ -64,29 +66,13 @@ function visible(rel: string): boolean {
 }
 
 async function* walk(root: string, rel = ''): AsyncGenerator<{ rel: string; mtime: number; size: number }> {
-  let entries;
-  try {
-    entries = await fs.readdir(rel ? path.join(root, ...rel.split('/')) : root, { withFileTypes: true });
-  } catch {
-    return;
-  }
-  for (const e of entries) {
-    if (e.name.startsWith('.') || isTempFile(e.name)) continue;
-    const r = rel ? `${rel}/${e.name}` : e.name;
-    if (e.isDirectory()) yield* walk(root, r);
-    else if (e.isFile()) {
-      try {
-        const st = await fs.stat(path.join(root, ...r.split('/')));
-        yield { rel: r, mtime: st.mtimeMs, size: st.size };
-      } catch {
-        // Vanished while walking.
-      }
-    }
-  }
+  for await (const f of walkFiles(root, rel)) yield { rel: f.rel, mtime: f.mtimeMs, size: f.size };
 }
 
 export interface IndexOptions {
   numbering?: NumberingMode;
+  /** Parses notes elsewhere (a worker pool) during a full sync; in place when absent. */
+  analyze?: (text: string, numbering: NumberingMode) => Promise<NoteSummary>;
   onProgress?(status: IndexStatus): void;
 }
 
@@ -162,8 +148,35 @@ export class LibraryIndex {
     return this.catalog;
   }
 
-  /** Brings the index in line with the disk: new, changed and deleted files. */
-  async sync(): Promise<{ indexed: number; removed: number }> {
+  private syncing: Promise<{ indexed: number; removed: number }> | null = null;
+  private syncAgain = false;
+
+  /**
+   * Brings the index in line with the disk: new, changed and deleted files. Never runs
+   * twice at once: a request during a sync runs once more after it.
+   */
+  sync(): Promise<{ indexed: number; removed: number }> {
+    if (this.syncing) {
+      this.syncAgain = true;
+      return this.syncing;
+    }
+    this.syncing = (async () => {
+      try {
+        let r = await this.syncOnce();
+        while (this.syncAgain) {
+          this.syncAgain = false;
+          const more = await this.syncOnce();
+          r = { indexed: r.indexed + more.indexed, removed: r.removed + more.removed };
+        }
+        return r;
+      } finally {
+        this.syncing = null;
+      }
+    })();
+    return this.syncing;
+  }
+
+  private async syncOnce(): Promise<{ indexed: number; removed: number }> {
     const known = new Map<string, { mtime: number; size: number }>();
     for (const r of this.db.prepare('SELECT path, mtime, size FROM files').all()) {
       known.set(String(r.path), { mtime: Number(r.mtime), size: Number(r.size) });
@@ -185,13 +198,28 @@ export class LibraryIndex {
     await this.syncVaults();
     let done = removed.length;
     const BATCH = 100;
-    for (let i = 0; i < changed.length; i += BATCH) {
-      const batch = changed.slice(i, i + BATCH);
+    // Read and parse one batch while the previous one is written (a pipeline).
+    const prepare = async (batch: typeof changed) => {
       const parsed = await Promise.all(batch.map((f) => this.readNote(f.rel, f.mtime, f.size)));
+      const analyze = this.opts.analyze;
+      if (analyze)
+        await Promise.all(
+          parsed.map(async (p) => {
+            if (p?.note && typeof p.note === 'object')
+              p.note.summary = await analyze(p.note.text, this.opts.numbering ?? 'all');
+          }),
+        );
+      return parsed;
+    };
+    let next = changed.length ? prepare(changed.slice(0, BATCH)) : null;
+    for (let i = 0; next; i += BATCH) {
+      const parsed = await next;
+      const count = Math.min(BATCH, changed.length - i);
+      next = i + BATCH < changed.length ? prepare(changed.slice(i + BATCH, i + 2 * BATCH)) : null;
       this.db.transaction(() => {
         for (const p of parsed) if (p) this.writeRows(p);
       });
-      done += batch.length;
+      done += count;
       this.setStatus({ state: 'indexing', done, total });
       // Let other messages in between batches.
       await new Promise((r) => setImmediate(r));
@@ -242,10 +270,17 @@ export class LibraryIndex {
     const old = this.db.prepare('SELECT hash FROM notes WHERE path = ?').get(rel);
     if (old && old.hash === hash) return { rel, mtime, size, note: 'unchanged' as const };
     const text = decodeText(bytes).text;
-    return { rel, mtime, size, note: { text, hash } };
+    return {
+      rel,
+      mtime,
+      size,
+      note: { text, hash } as { text: string; hash: string; summary?: NoteSummary },
+    };
   }
 
   private deleteRows(rel: string, alsoFile: boolean): void {
+    // The FTS row shares the note's rowid: deleting by path would scan the whole table.
+    this.db.prepare('DELETE FROM notes_fts WHERE rowid = (SELECT rowid FROM notes WHERE path = ?)').run(rel);
     for (const t of [
       'links WHERE src',
       'headings WHERE path',
@@ -253,7 +288,6 @@ export class LibraryIndex {
       'tags WHERE path',
       'equations WHERE path',
       'notes WHERE path',
-      'notes_fts WHERE path',
     ]) {
       this.db.prepare(`DELETE FROM ${t} = ?`).run(rel);
     }
@@ -271,7 +305,7 @@ export class LibraryIndex {
     }
     this.deleteRows(rel, false);
     if (!note) return;
-    const s = analyzeNote(note.text, { numbering: this.opts.numbering ?? 'all' });
+    const s = note.summary ?? analyzeNote(note.text, { numbering: this.opts.numbering ?? 'all' });
     const fm = s.frontmatter?.data ?? null;
     const title = noteTitle(s, rel);
     const aliases = fm ? stringList(fm.aliases) : [];
@@ -290,7 +324,11 @@ export class LibraryIndex {
         aliases.length ? JSON.stringify(aliases) : null,
       );
     const body = s.frontmatter ? note.text.slice(s.frontmatter.to) : note.text;
-    this.db.prepare('INSERT INTO notes_fts (path, title, body) VALUES (?, ?, ?)').run(rel, title, body);
+    this.db
+      .prepare(
+        'INSERT INTO notes_fts (rowid, path, title, body) VALUES ((SELECT rowid FROM notes WHERE path = ?), ?, ?, ?)',
+      )
+      .run(rel, rel, title, body);
     const lines = note.text.split('\n');
     for (const l of s.links) this.insertLink(rel, l, lines[l.line - 1] ?? '');
     for (const h of s.headings)
@@ -482,8 +520,8 @@ export class LibraryIndex {
     const onlyFiles = q.exts.length > 0 && !q.exts.includes('md');
     if (!onlyFiles && (match || where.length)) {
       const sql = match
-        ? `SELECT n.path, n.title, n.vault, n.domain, f.body, bm25(notes_fts, 0, 8, 1) AS score FROM notes_fts f JOIN notes n ON n.path = f.path WHERE notes_fts MATCH ? ${where.length ? `AND ${where.join(' AND ')}` : ''} ORDER BY score LIMIT ?`
-        : `SELECT n.path, n.title, n.vault, n.domain, f.body, 0 AS score FROM notes n JOIN notes_fts f ON f.path = n.path WHERE ${where.join(' AND ')} ORDER BY n.title LIMIT ?`;
+        ? `SELECT n.path, n.title, n.vault, n.domain, f.body, bm25(notes_fts, 0, 8, 1) AS score FROM notes_fts f JOIN notes n ON n.rowid = f.rowid WHERE notes_fts MATCH ? ${where.length ? `AND ${where.join(' AND ')}` : ''} ORDER BY score LIMIT ?`
+        : `SELECT n.path, n.title, n.vault, n.domain, f.body, 0 AS score FROM notes n JOIN notes_fts f ON f.rowid = n.rowid WHERE ${where.join(' AND ')} ORDER BY n.title LIMIT ?`;
       const rows = this.db.prepare(sql).all(...(match ? [match] : []), ...params, limit);
       for (const r of rows) {
         hits.push({

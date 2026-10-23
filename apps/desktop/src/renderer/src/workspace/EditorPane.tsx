@@ -48,7 +48,26 @@ export const editorStats = {
   words: 0,
   text: '',
   path: '',
+  /** First and last visible lines (margin track, document map). */
+  viewTop: 1,
+  viewBottom: 1,
 };
+
+function emitViewport(view: EditorView): void {
+  const doc = view.state.doc;
+  // documentTop is the screen position of the document's top, so it already includes scrolling.
+  const rect = view.scrollDOM.getBoundingClientRect();
+  const height = view.contentHeight;
+  const top = view.lineBlockAtHeight(Math.min(height, Math.max(0, rect.top - view.documentTop)));
+  const bottom = view.lineBlockAtHeight(Math.min(height, Math.max(0, rect.bottom - view.documentTop)));
+  const a = doc.lineAt(Math.min(top.from, doc.length)).number;
+  const b = doc.lineAt(Math.min(bottom.from, doc.length)).number;
+  if (a === editorStats.viewTop && b === editorStats.viewBottom) return;
+  editorStats.viewTop = a;
+  editorStats.viewBottom = b;
+  for (const fn of editorStats.listeners) fn();
+}
+
 function emitStats(view: EditorView, path: string) {
   const head = view.state.selection.main.head;
   const line = view.state.doc.lineAt(head);
@@ -316,6 +335,12 @@ export function EditorPane() {
     const view = new EditorView({ parent: hostRef.current, state: EditorState.create({ doc: '' }) });
     viewRef.current = view;
     paneView = { view, shown: () => shownRef.current };
+    let frame = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => emitViewport(view));
+    };
+    view.scrollDOM.addEventListener('scroll', onScroll, { passive: true });
     // Blocks seen before their renderer registers re-render when it does (SPECS 12.3).
     const offRegistry = blockRegistry.onChange(() =>
       queueMicrotask(() => viewRef.current === view && view.dispatch({ effects: refreshLinks.of(null) })),
@@ -333,6 +358,8 @@ export function EditorPane() {
     });
     return () => {
       offRegistry();
+      cancelAnimationFrame(frame);
+      view.scrollDOM.removeEventListener('scroll', onScroll);
       attachView(null);
       paneView = null;
       view.destroy();
@@ -376,6 +403,9 @@ export function EditorPane() {
           ],
         });
         emitStats(view, active);
+        // Performance mark for the SPECS 16 measurement (e2e/perf.spec.ts).
+        performance.mark('vx-note-shown');
+        requestAnimationFrame(() => emitViewport(view));
         setShown((n) => n + 1);
         // Take focus unless the user is typing somewhere else (a rename field, the search box).
         requestAnimationFrame(() => {

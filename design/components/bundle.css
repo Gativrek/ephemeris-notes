@@ -528,3 +528,66 @@ body { margin: 0; font-family: var(--font-ui); color: var(--text); background: v
 .vx-editor.vx-help__article .cm-editor { height: auto; background: transparent; }
 .vx-editor.vx-help__article .cm-scroller { padding: 0 0 var(--space-8); }
 .vx-editor.vx-help__article .cm-content { margin: 0; }
+
+/* Outline styles 2-4 (SPECS 9.6, M6): views of the same outline model. */
+.vx-outline__text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vx-margin, .vx-map, .vx-inspector { box-sizing: border-box; display: flex; flex-direction: column; gap: 4px; min-height: 0; overflow-y: auto; border-left: 1px solid var(--line); font-size: 14px; color: var(--text); }
+/* Margin track: 220px, ticks on a thin line in the editor's own ground. */
+.vx-margin { width: 220px; padding: 18px 14px; background: var(--surface); }
+.vx-margin__track { position: relative; flex: 1 1 auto; min-height: 240px; margin: 4px 0 8px; cursor: pointer; }
+.vx-margin__rail { position: absolute; left: 7px; top: 0; bottom: 0; width: 2px; background: var(--line); }
+.vx-margin__view { position: absolute; left: 4px; width: 8px; border-radius: var(--radius-xs); background: var(--cyan-glow); }
+.vx-margin__mark { position: absolute; left: 0; width: 6px; height: 2px; margin-top: -1px; background: var(--muted); }
+.vx-margin__mark--link { background: var(--link); }
+.vx-margin__mark--missing { background: transparent; border-top: 2px dashed var(--faint); height: 0; }
+.vx-margin__heading { position: absolute; left: 4px; right: 0; height: 18px; margin-top: -9px; display: flex; align-items: center; gap: 8px; color: var(--text); text-decoration: none; font-size: 13px; }
+.vx-margin__heading .vx-diamond { margin-left: 1px; flex: 0 0 auto; }
+.vx-margin__tick { flex: 0 0 auto; width: 8px; height: 2px; background: var(--faint); }
+.vx-margin__heading--l1 .vx-margin__tick { width: 12px; background: var(--ink); }
+.vx-margin__heading--l1 { font-weight: 500; color: var(--ink); }
+.vx-margin__heading[aria-current="location"] { color: var(--ink); font-weight: 500; }
+.vx-margin__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 4px; border-radius: var(--radius-xs); background: var(--surface); }
+.vx-margin__heading:hover .vx-margin__label { background: var(--surface-hover); }
+/* Document map: 300px, a semantic miniature with a viewport frame. */
+.vx-map { width: 300px; padding: 18px; background: var(--surface-side); }
+.vx-map__page { position: relative; flex: 1 1 auto; min-height: 320px; display: flex; flex-direction: column; margin: 4px 0 8px; padding: 0 8px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); overflow: hidden; cursor: pointer; }
+.vx-map__section { flex-basis: 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 2px; padding: 3px 0; border-bottom: 1px solid var(--line-note); }
+.vx-map__section:last-of-type { border-bottom: 0; }
+.vx-map__heading { flex: 0 0 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); text-decoration: none; font: 400 12px/16px var(--font-ui); }
+.vx-map__heading--l1 { font: 400 15px/20px var(--font-note); color: var(--ink); }
+.vx-map__heading--l2 { font-weight: 600; color: var(--ink); }
+.vx-map__heading[aria-current="location"] { color: var(--cyan-fill); }
+.vx-map__chips { display: flex; flex-wrap: wrap; gap: 2px 4px; min-height: 0; overflow: hidden; }
+.vx-map__chip { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 4px; border-radius: var(--radius-xs); background: var(--chip); font: 400 10px/15px var(--font-ui); color: var(--muted); }
+.vx-map__chip--link { color: var(--link); }
+.vx-map__chip--missing { color: var(--link-missing); text-decoration: underline dashed; }
+.vx-map__frame { position: absolute; left: 0; right: 0; border: 1px solid var(--cyan); border-radius: var(--radius-xs); background: var(--cyan-glow); pointer-events: none; }
+/* Tabbed inspector: 320px, Outline / Links / Info. */
+.vx-inspector { width: var(--size-outline); padding: 18px; background: var(--surface-side); }
+.vx-inspector > .vx-segmented { flex: 0 0 auto; margin-bottom: 8px; }
+.vx-inspector__body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.vx-inspector__props { margin: 0 0 8px; display: grid; grid-template-columns: max-content minmax(0, 1fr); column-gap: 14px; row-gap: 4px; font-size: 13px; }
+.vx-inspector__prop { display: contents; }
+.vx-inspector__prop dt { color: var(--muted); }
+.vx-inspector__prop dd { margin: 0; min-width: 0; overflow-wrap: anywhere; color: var(--text); }
+
+/* Inbox list (SPECS 4.6, M6): the sidebar area while the rail's Inbox is pressed. */
+.vx-inbox__head { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; height: 52px; padding: 0 var(--space-3) 0 6px; border-bottom: 1px solid var(--line); }
+.vx-inbox__title { flex: 1 1 auto; font: 600 15px/20px var(--font-ui); color: var(--ink); }
+.vx-inbox__empty { margin: var(--space-4) 6px; font-size: 13px; line-height: 18px; color: var(--muted); }
+.vx-side__scroll[role="list"] { padding-top: var(--space-2); }
+.vx-inbox__row { height: auto; min-height: 48px; padding: 6px 8px 6px 6px; cursor: pointer; }
+.vx-inbox__row:hover { background: var(--surface-hover); }
+.vx-inbox__row[aria-current="page"] { background: var(--selection); color: var(--on-selection); }
+.vx-inbox__text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.vx-inbox__text .vx-row__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vx-inbox__move { flex: 0 0 auto; opacity: 0; }
+.vx-inbox__row:hover .vx-inbox__move, .vx-inbox__row:focus-within .vx-inbox__move, .vx-inbox__move:focus-visible { opacity: 1; }
+
+/* Settings > Keyboard (M6). */
+.vx-settings__list--tall { max-height: none; }
+.vx-keyboard__row { gap: 10px; }
+.vx-keyboard__row .vx-row__name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vx-keyboard__keys { flex: 0 0 auto; }
+.vx-keyboard__keys .vx-chip { font: 400 12px/1.4 var(--font-mono); }
+.vx-keyboard__recording { outline: 1px solid var(--cyan); }

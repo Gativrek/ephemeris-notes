@@ -16,6 +16,9 @@ export function setDevOrigin(origin: string | null): void {
   devOrigin = origin;
 }
 
+/** VX_IPC_TIMING=1 logs each call's duration (performance work). */
+const timing = process.env.VX_IPC_TIMING === '1';
+
 export function handle(ns: string, method: string, fn: Handler): void {
   const name = channel(ns, method);
   if (registered.has(name)) throw new Error(`Duplicate IPC handler ${name}`);
@@ -24,7 +27,12 @@ export function handle(ns: string, method: string, fn: Handler): void {
     try {
       const url = event.senderFrame?.url ?? '';
       if (!isAppUrl(url, devOrigin)) fail('FORBIDDEN', 'Calls are only accepted from the app.');
+      const started = timing ? performance.now() : 0;
       const value = await fn(event, ...args);
+      if (timing)
+        console.log(
+          `[ipc] ${name} ${Math.round(performance.now() - started)} ms @${Math.round(process.uptime() * 1000)}`,
+        );
       return ok(value === undefined ? null : value);
     } catch (err) {
       const error = toVxError(err);

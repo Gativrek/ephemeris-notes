@@ -109,7 +109,7 @@ export class IndexClient {
       this.touched.clear();
       this.timer = null;
       void this.call('refresh', batch).catch((err: unknown) => console.error('[index] refresh failed', err));
-    }, 60);
+    }, 30);
   }
 
   /** Waits for queued refreshes to finish (before a rename plan, in tests). */

@@ -6,6 +6,7 @@ import { Workspace } from './features/workspace/Workspace';
 import { applyTheme } from './lib/theme';
 import { unwrap, vx } from './lib/vx';
 import { useApp } from './store/app';
+import { recording } from './lib/hotkeys';
 import { stopPlugins } from './plugins/host';
 import { saveAll } from './workspace/docs';
 
@@ -42,6 +43,7 @@ export function App() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const mod = e.ctrlKey || e.metaKey;
+      if (recording.active) return;
       if (mod && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'o' && useApp.getState().library) {
         e.preventDefault();
         useApp.getState().showChooser();

@@ -34,9 +34,9 @@ Links, search and backlinks work across the whole library. Domains and Vaults ar
 
 ## Stack
 
-Electron, TypeScript, React, CodeMirror 6 (`@lezer/markdown`), KaTeX, pdf.js, SQLite (better-sqlite3 with FTS5), chokidar. pnpm workspaces. Vitest and Playwright (Electron).
+Electron, TypeScript, React, CodeMirror 6 (`@lezer/markdown`), KaTeX, pdf.js, SQLite with FTS5 (Electron's built-in `node:sqlite` for now, GOALS decision 34), chokidar. pnpm workspaces. Vitest and Playwright (Electron).
 
-## Repository layout (planned)
+## Repository layout
 
 ```
 apps/desktop/            Electron app
@@ -61,6 +61,10 @@ pnpm test         # unit tests (Vitest)
 pnpm test:e2e     # end-to-end tests (Playwright, Electron)
 pnpm tokens       # regenerate CSS variables from design/tokens.json
 ```
+
+The performance budgets (SPECS 16) are measured on a generated 5,000-note library by an opt-in test: set `VX_PERF=1` and run `pnpm test:e2e`. It takes a few minutes and writes `apps/desktop/test-results/perf.json`.
+
+The sample plugin (`packages/sample-plugin`) builds with `node packages/sample-plugin/build.mjs` into `dist/`, a folder you can install from Settings > Plugins > Install from Folder….
 
 ## Plugins
 

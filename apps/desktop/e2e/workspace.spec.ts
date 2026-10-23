@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { cp, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
@@ -298,4 +299,107 @@ test('Settings > Editor applies font size and spell check; Help lists the core p
   await page.keyboard.press('Escape');
   await expect(page.locator('.vx-editor .cm-scroller')).toHaveCSS('font-size', '22px');
   await expect(editor(page)).toHaveAttribute('spellcheck', 'false');
+});
+
+test('Inbox: the rail badge counts captures; Move to… files a note into a section', async () => {
+  const { page } = ctx;
+  const inboxButton = page.getByRole('button', { name: 'Inbox', exact: true });
+  await expect(inboxButton).toContainText('2');
+  await inboxButton.click();
+  const inbox = page.getByTestId('inbox');
+  await expect(inbox.getByRole('listitem')).toHaveText([/reading/, /idea/]);
+  await inbox.getByRole('listitem').filter({ hasText: 'reading' }).click();
+  await expect(editor(page)).toContainText('Reading list');
+  await inbox
+    .getByRole('listitem')
+    .filter({ hasText: 'idea' })
+    .getByRole('button', { name: 'Move to…' })
+    .click();
+  await expect(page.getByTestId('move-to')).toBeVisible();
+  await page.keyboard.type('GNSS Notes');
+  await expect(page.getByTestId('move-to').locator('.vx-row').first()).toContainText(
+    'GNSS Constellation Study / Notes',
+  );
+  await page.keyboard.press('Enter');
+  await expect(inbox.getByRole('listitem')).toHaveCount(1);
+  await expect(inboxButton).toContainText('1');
+  expect(await readFile(file('Academic/GNSS Study/Notes/2026-10-20 081500 idea.md'), 'utf8')).toContain(
+    'adaptive R',
+  );
+  await page.getByRole('button', { name: 'Back to the Vault' }).click();
+  await expect(page.getByTestId('sidebar')).toBeVisible();
+});
+
+test('outline styles: margin track, document map and tabbed inspector render the same note', async () => {
+  const { page } = ctx;
+  await openNote(page, 'Notes', 'Lecture 10');
+  const outline = page.getByTestId('outline');
+  if (!(await outline.isVisible())) await page.keyboard.press('ControlOrMeta+Shift+O');
+  await expect(outline).toHaveAttribute('data-style', 'annotated');
+  const setStyle = async (label: string) => {
+    await page.keyboard.press('ControlOrMeta+,');
+    await page.getByTestId('settings').getByRole('link', { name: 'Appearance', exact: true }).click();
+    await page.getByRole('combobox', { name: 'Outline style' }).selectOption({ label });
+    await page.keyboard.press('Escape');
+  };
+  await setStyle('Margin track');
+  await expect(outline).toHaveAttribute('data-style', 'margin');
+  const firstHeading = outline.locator('.vx-margin__heading').first();
+  await expect(firstHeading).toBeVisible();
+  await setStyle('Document map');
+  await expect(outline).toHaveAttribute('data-style', 'map');
+  await expect(outline.locator('.vx-map__section').first()).toBeVisible();
+  await expect(page.getByTestId('map-frame')).toBeVisible();
+  await setStyle('Tabbed inspector');
+  await expect(outline).toHaveAttribute('data-style', 'inspector');
+  await outline.getByRole('tab', { name: 'Info' }).click();
+  await expect(outline).toContainText('Lines');
+  await expect(outline).toContainText('Academic/GNSS Study/Notes/Lectures/Lecture 10.md');
+  await outline.getByRole('tab', { name: 'Links' }).click();
+  await expect(outline.getByRole('tabpanel')).toBeVisible();
+});
+
+test('Settings > Keyboard: a hotkey runs its command; taken keys are refused', async () => {
+  const { page } = ctx;
+  await page.keyboard.press('ControlOrMeta+,');
+  await page.getByTestId('settings').getByRole('link', { name: 'Keyboard', exact: true }).click();
+  const row = page.getByTestId('hotkey-core:open-note');
+  await row.getByRole('button', { name: 'Set Shortcut' }).click();
+  await page.keyboard.press('ControlOrMeta+k');
+  await expect(page.getByRole('alert')).toContainText('is already used by Search');
+  await page.keyboard.press('ControlOrMeta+f');
+  await expect(page.getByRole('alert')).toContainText('is already used by the editor');
+  await page.keyboard.press('l');
+  await expect(page.getByRole('alert')).toContainText('Shortcuts need Ctrl, Cmd or Alt');
+  await page.keyboard.press('ControlOrMeta+Shift+J');
+  await expect(row).toContainText('+Shift+J');
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('settings')).toHaveCount(0);
+  await page.keyboard.press('ControlOrMeta+Shift+J');
+  await expect(page.getByTestId('quick-open')).toBeVisible();
+});
+
+test('Settings > Library: git auto-commit commits the library when it is a repository', async () => {
+  const { page } = ctx;
+  await page.keyboard.press('ControlOrMeta+,');
+  await page.getByTestId('settings').getByRole('link', { name: 'Library', exact: true }).click();
+  await expect(page.getByTestId('settings-library')).toContainText('not a git repository');
+  await expect(page.getByRole('checkbox', { name: 'Commit to git automatically' })).toBeDisabled();
+  await page.keyboard.press('Escape');
+
+  // A repository with a local identity only; nothing global is touched.
+  const git = (...args: string[]) =>
+    execFileSync('git', args, { cwd: lib, encoding: 'utf8', windowsHide: true });
+  git('init', '--quiet');
+  git('config', 'user.email', 'test@example.invalid');
+  git('config', 'user.name', 'Test');
+  git('config', 'commit.gpgsign', 'false');
+  await page.keyboard.press('ControlOrMeta+,');
+  await page.getByTestId('settings').getByRole('link', { name: 'Library', exact: true }).click();
+  await page.getByRole('checkbox', { name: 'Commit to git automatically' }).check();
+  await page.getByRole('button', { name: 'Commit Now' }).click();
+  await expect(page.getByTestId('git-status')).toContainText(/Committed \d+ changes/);
+  expect(git('log', '--format=%s').trim()).toMatch(/^\{AppName\}: auto-commit \d{4}-/);
+  await page.getByRole('button', { name: 'Commit Now' }).click();
+  await expect(page.getByTestId('git-status')).toContainText('Nothing to commit.');
 });

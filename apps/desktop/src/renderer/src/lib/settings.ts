@@ -17,6 +17,9 @@ export const SETTING_DEFAULTS: Record<string, unknown> = {
   'math.numbering': 'all',
   'math.referenceFormat': 'eq',
   'library.math.macros': {},
+  'keyboard.bindings': {},
+  'git.autoCommit': false,
+  'git.intervalMinutes': 10,
 };
 
 interface SettingsState {

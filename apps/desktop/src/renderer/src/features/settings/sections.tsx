@@ -4,7 +4,18 @@
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { SettingField } from '@vaults/plugin-api';
+import { editorKeyBindings } from '../../editor/setup';
 import { useCatalog } from '../../lib/catalog';
+import {
+  CORE_SHORTCUTS,
+  HOTKEYS_KEY,
+  checkBinding,
+  displayKey,
+  eventKey,
+  isMacPlatform,
+  normalizeKey,
+  recording,
+} from '../../lib/hotkeys';
 import { useSettings } from '../../lib/settings';
 import { errorMessage } from '../../lib/vx';
 import { installPlugin, setPluginEnabled, setPluginSetting } from '../../plugins/host';
@@ -200,6 +211,127 @@ export function AppearanceSection() {
   );
 }
 
+// ---- Keyboard -----------------------------------------------------------------------
+
+export function KeyboardSection() {
+  const commands = usePlugins((st) => st.commands);
+  const plugins = usePlugins((st) => st.plugins);
+  const bindings = useSettings((st) => st.get<Record<string, string>>(HOTKEYS_KEY)) ?? {};
+  const [recordFor, setRecordFor] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
+  const mac = isMacPlatform();
+  const titleOf = (id: string) =>
+    id === 'core:palette' ? s.keyboard.palette : (commands.find((c) => c.id === id)?.title ?? id);
+
+  useEffect(() => {
+    if (!recordFor) return;
+    recording.active = true;
+    const onKey = (e: KeyboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.key === 'Escape') {
+        setRecordFor(null);
+        return;
+      }
+      const key = eventKey(e, mac);
+      if (!key) return;
+      // Everything the key could collide with: core shortcuts, editor keys, other hotkeys.
+      const taken = new Map<string, string>();
+      for (const b of editorKeyBindings())
+        for (const k of [b.key, mac ? b.mac : b.win].filter((x): x is string => !!x))
+          taken.set(normalizeKey(k, mac), s.keyboard.editor);
+      for (const [id, k] of Object.entries(CORE_SHORTCUTS)) taken.set(k, titleOf(id));
+      for (const [id, k] of Object.entries(bindings)) if (id !== recordFor) taken.set(k, titleOf(id));
+      const check = checkBinding(key, taken);
+      if (!check.ok) {
+        setMessage({
+          text:
+            check.reason === 'modifier'
+              ? s.keyboard.needsModifier
+              : s.keyboard.taken(displayKey(key, mac), check.by ?? ''),
+          error: true,
+        });
+        return;
+      }
+      void useSettings.getState().set(HOTKEYS_KEY, { ...bindings, [recordFor]: key });
+      setMessage({ text: s.keyboard.saved(displayKey(key, mac), titleOf(recordFor)), error: false });
+      setRecordFor(null);
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => {
+      recording.active = false;
+      window.removeEventListener('keydown', onKey, true);
+    };
+    // Re-arm per command; bindings and titles are read fresh on each key.
+  }, [recordFor, bindings, commands]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const remove = (id: string) => {
+    const { [id]: _gone, ...rest } = bindings;
+    void useSettings.getState().set(HOTKEYS_KEY, rest);
+  };
+  const sorted = [...commands].sort(
+    (a, b) => Number(a.owner !== 'core') - Number(b.owner !== 'core') || a.title.localeCompare(b.title),
+  );
+  return (
+    <div className="vx-settings__page" data-testid="settings-keyboard">
+      <h2 className="vx-settings__h">{s.sections.keyboard}</h2>
+      <p className="vx-settings__hint">{s.keyboard.hint}</p>
+      {message && (
+        <p
+          className={message.error ? 'vx-dialog__error' : 'vx-settings__hint'}
+          role={message.error ? 'alert' : 'status'}
+        >
+          {message.text}
+        </p>
+      )}
+      <div className="vx-settings__list vx-settings__list--tall">
+        {sorted.map((c) => {
+          const builtIn = CORE_SHORTCUTS[c.id];
+          const custom = bindings[c.id];
+          const owner =
+            c.owner === 'core'
+              ? null
+              : (plugins.find((p) => p.info.manifest.id === c.owner)?.info.manifest.name ?? c.owner);
+          return (
+            <div key={c.id} className="vx-row vx-keyboard__row" data-testid={`hotkey-${c.id}`}>
+              <span className="vx-row__name">{c.title}</span>
+              {owner && <span className="vx-row__meta">{owner}</span>}
+              <span className="vx-keyboard__keys">
+                {recordFor === c.id ? (
+                  <span className="vx-chip vx-keyboard__recording">{s.keyboard.press}</span>
+                ) : builtIn ? (
+                  <span className="vx-chip" title={s.keyboard.builtIn}>
+                    {displayKey(builtIn, mac)}
+                  </span>
+                ) : custom ? (
+                  <span className="vx-chip">{displayKey(custom, mac)}</span>
+                ) : null}
+              </span>
+              {!builtIn && recordFor !== c.id && (
+                <button
+                  type="button"
+                  className="vx-btn vx-btn--small"
+                  onClick={() => {
+                    setMessage(null);
+                    setRecordFor(c.id);
+                  }}
+                >
+                  {custom ? s.keyboard.change : s.keyboard.set}
+                </button>
+              )}
+              {!builtIn && custom && recordFor !== c.id && (
+                <button type="button" className="vx-btn vx-btn--small" onClick={() => remove(c.id)}>
+                  {s.keyboard.remove}
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ---- Plugins ------------------------------------------------------------------------
 
 function FieldControl({ owner, field }: { owner: string; field: SettingField }) {
@@ -341,12 +473,16 @@ function PluginCard({ p }: { p: PluginRuntime }) {
   const allSettings = usePlugins((st) => st.settings);
   const registered = allSettings.filter((x) => x.owner === m.id);
   const [busy, setBusy] = useState(false);
+  // Shown at once; the plugin loads or unloads behind it.
+  const [pending, setPending] = useState<boolean | null>(null);
   const toggle = async (on: boolean) => {
     setBusy(true);
+    setPending(on);
     try {
       await setPluginEnabled(m.id, on);
     } finally {
       setBusy(false);
+      setPending(null);
     }
   };
   return (
@@ -371,7 +507,7 @@ function PluginCard({ p }: { p: PluginRuntime }) {
           type="checkbox"
           className="vx-switch"
           aria-label={s.plugins.enable(m.name)}
-          checked={p.info.enabled}
+          checked={pending ?? p.info.enabled}
           disabled={busy}
           onChange={(e) => void toggle(e.target.checked)}
         />

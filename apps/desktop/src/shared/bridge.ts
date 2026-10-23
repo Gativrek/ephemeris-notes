@@ -123,6 +123,10 @@ export interface VxBridge {
     files(): Promise<Result<{ version: number; files: CatalogEntry[] }>>;
     onFilesChanged(cb: () => void): Unsubscribe;
     onChanged(cb: (library: LibraryInfo | null) => void): Unsubscribe;
+    /** Git auto-commit (SPECS 4.11): whether the library is a repository and the last attempt. */
+    gitStatus(): Promise<Result<GitStatusInfo>>;
+    /** Commits every change now (Settings > Library > Commit Now). */
+    gitCommitNow(): Promise<Result<GitStatusInfo>>;
   };
   fs: {
     read(path: string): Promise<Result<TextFile>>;
@@ -337,6 +341,17 @@ export interface PluginInfo {
 
 export type StorageScope = 'library' | 'vault';
 
+export interface GitStatusInfo {
+  repo: boolean;
+  enabled: boolean;
+  intervalMinutes: number;
+  last: {
+    at: number;
+    result: 'committed' | 'clean' | 'skipped' | 'failed' | 'unavailable';
+    message: string;
+  } | null;
+}
+
 export interface LibraryStats {
   notes: Record<Domain, number>;
 }
@@ -362,7 +377,7 @@ export type PushEvent =
 
 /** Bridge surface as a method list, so preload and main agree on channels. */
 export const BRIDGE_METHODS = {
-  library: ['open', 'create', 'current', 'close', 'stats', 'files'],
+  library: ['open', 'create', 'current', 'close', 'stats', 'files', 'gitStatus', 'gitCommitNow'],
   notes: ['create', 'templates', 'daily', 'addAttachment'],
   app: ['pdfData'],
   plugins: [

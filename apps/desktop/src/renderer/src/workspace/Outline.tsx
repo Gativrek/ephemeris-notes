@@ -12,7 +12,9 @@ import { workspaceStrings as s } from '../strings/workspace';
 import { openPath } from './actions';
 import { getRecord } from './docs';
 import { editorStats } from './EditorPane';
+import { settleDelay } from './Chrome';
 import { useWorkspace } from './store';
+import { DocumentMap, Inspector, MarginTrack } from './OutlineStyles';
 
 const MAX_ITEMS = 5;
 
@@ -47,12 +49,15 @@ export function useOutline(
         }),
       );
     };
+    let lastEdit = 0;
     const schedule = () => {
+      lastEdit = Date.now();
       if (timer) clearTimeout(timer);
-      timer = setTimeout(rebuild, 150);
+      timer = setTimeout(rebuild, Math.max(150, settleDelay(getRecord(path)?.state.doc.length ?? 0)));
     };
     rebuild();
-    const poll = setInterval(rebuild, 1500);
+    // Catches changes that bypass the editor (reloads); never while the user is typing.
+    const poll = setInterval(() => Date.now() - lastEdit > 1500 && rebuild(), 1500);
     editorStats.listeners.add(schedule);
     return () => {
       editorStats.listeners.delete(schedule);
@@ -67,10 +72,27 @@ function scrollTo(line: number) {
   useWorkspace.setState((st) => ({ jump: st.desk.active ? { path: st.desk.active, line } : null }));
 }
 
-export function Outline({ model, currentLine }: { model: OutlineModel | null; currentLine: number }) {
+/** The outline panel in the style chosen in Settings > Appearance. */
+export function Outline({
+  model,
+  currentLine,
+  path = null,
+}: {
+  model: OutlineModel | null;
+  currentLine: number;
+  path?: string | null;
+}) {
+  const style = useSettings((st) => st.get<string>('appearance.outlineStyle'));
+  if (!model) return null;
+  if (style === 'margin') return <MarginTrack model={model} currentLine={currentLine} />;
+  if (style === 'map') return <DocumentMap model={model} currentLine={currentLine} />;
+  if (style === 'inspector') return <Inspector model={model} currentLine={currentLine} path={path} />;
+  return <AnnotatedOutline model={model} currentLine={currentLine} />;
+}
+
+function AnnotatedOutline({ model, currentLine }: { model: OutlineModel; currentLine: number }) {
   const [open, setOpen] = useState<Record<number, boolean>>({});
   const current = useMemo(() => {
-    if (!model) return -1;
     let idx = -1;
     model.headings.forEach((h, i) => {
       if (h.line <= currentLine) idx = i;
@@ -78,9 +100,8 @@ export function Outline({ model, currentLine }: { model: OutlineModel | null; cu
     return idx;
   }, [model, currentLine]);
 
-  if (!model) return null;
   return (
-    <aside className="vx-outline" aria-label={s.outline.label} data-testid="outline">
+    <aside className="vx-outline" data-style="annotated" aria-label={s.outline.label} data-testid="outline">
       <div className="vx-outline__label">
         <span className="vx-caps">{s.outline.label}</span>
       </div>

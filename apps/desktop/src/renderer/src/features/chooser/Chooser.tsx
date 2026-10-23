@@ -43,6 +43,8 @@ export function Chooser() {
   const app = useApp.getState;
   const inDomain = useMemo(() => vaultsIn(vaults, domain), [vaults, domain]);
   const selected = selection[domain];
+  // Performance mark for the SPECS 16 measurement (e2e/perf.spec.ts).
+  useEffect(() => void performance.mark('vx-chooser'), []);
   const itemCount = inDomain.length + 1;
   const pages = Math.max(1, Math.ceil(itemCount / PER_PAGE));
   const page = Math.floor(selected / PER_PAGE);
