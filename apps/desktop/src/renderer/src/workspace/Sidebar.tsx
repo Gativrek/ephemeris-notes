@@ -10,6 +10,8 @@ import {
   askDeleteSection,
   baseName,
   createNoteIn,
+  moveToUnfiled,
+  newUnfiledNote,
   newFolder,
   openPath,
   parentOf,
@@ -87,12 +89,14 @@ async function sectionMenu(t: Section): Promise<void> {
   const choice = await unwrap(
     vx().window.contextMenu([
       { id: 'new', label: s.section.menuNew },
+      { id: 'unfiled', label: s.section.menuNewUnfiled },
       { id: 'rename', label: s.section.menuRename, enabled: t.kind === 'section', separatorBefore: true },
       { id: 'reveal', label: s.menu.reveal },
       { id: 'delete', label: s.section.menuDelete, enabled: t.kind !== 'unfiled', separatorBefore: true },
     ]),
   ).catch(() => null);
   if (choice === 'new') useWorkspace.setState({ overlay: { kind: 'sectionName', from: null } });
+  else if (choice === 'unfiled') void newUnfiledNote();
   else if (choice === 'rename') useWorkspace.setState({ overlay: { kind: 'sectionName', from: t.path } });
   else if (choice === 'reveal') void vx().shell.revealInFolder(t.path);
   else if (choice === 'delete') askDeleteSection(t.path);
@@ -411,7 +415,13 @@ export function Sidebar({ vault }: { vault: VaultInfo }) {
             { id: 'template', label: s.menu.newNoteFromTemplate },
             { id: 'newFolder', label: s.menu.newFolder },
           ]
-        : [{ id: pinned ? 'unpin' : 'pin', label: pinned ? s.menu.unpin : s.menu.pin }]),
+        : [
+            { id: pinned ? 'unpin' : 'pin', label: pinned ? s.menu.unpin : s.menu.pin },
+            // Only from inside a section: notes at the root are already Unfiled.
+            ...(parentOf(node.path) !== useWorkspace.getState().vaultPath
+              ? [{ id: 'unfiled', label: s.menu.moveToUnfiled }]
+              : []),
+          ]),
       { id: 'rename', label: s.menu.rename, separatorBefore: true },
       { id: 'reveal', label: s.menu.reveal },
       { id: 'trash', label: s.menu.delete, separatorBefore: true },
@@ -437,6 +447,9 @@ export function Sidebar({ vault }: { vault: VaultInfo }) {
         break;
       case 'rename':
         useWorkspace.setState({ renaming: node.path });
+        break;
+      case 'unfiled':
+        void moveToUnfiled(node.path);
         break;
       case 'reveal':
         void vx().shell.revealInFolder(node.path);

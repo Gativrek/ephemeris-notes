@@ -454,3 +454,51 @@ test('sections: New Section, Rename Section and Delete Section', async () => {
   await expect(page.getByRole('alertdialog')).toHaveCount(0);
   expect(await exists('Academic/GNSS Study')).toBe(true);
 });
+
+test('Unfiled: New Unfiled Note from a tile or the palette, and Move to Unfiled', async () => {
+  const { page } = ctx;
+  const vault = 'Academic/GNSS Study';
+  const isFile = async (rel: string) => (await stat(file(rel)).catch(() => null))?.isFile() ?? false;
+
+  // From a section tile's menu: the note lands at the Vault root, Unfiled is selected.
+  await contextChoice('unfiled');
+  await tile(page, 'Notes').click({ button: 'right' });
+  const input = page.getByLabel('New name');
+  await expect(input).toBeFocused();
+  await input.fill('Loose idea');
+  await input.press('Enter');
+  await expect.poll(() => isFile(`${vault}/Loose idea.md`)).toBe(true);
+  await expect(tile(page, 'Unfiled')).toHaveAttribute('aria-pressed', 'true');
+
+  // From the command palette.
+  await page.keyboard.press('ControlOrMeta+p');
+  await page.keyboard.type('New Unfiled Note');
+  await page.keyboard.press('Enter');
+  await expect(page.getByLabel('New name')).toBeFocused();
+  await page.getByLabel('New name').fill('Second thought');
+  await page.getByLabel('New name').press('Enter');
+  await expect.poll(() => isFile(`${vault}/Second thought.md`)).toBe(true);
+
+  // Move to Unfiled from a section; a clash gets a free name.
+  await tile(page, 'Notes').click();
+  await page.keyboard.press('ControlOrMeta+N');
+  await page.getByLabel('New name').fill('Loose idea');
+  await page.getByLabel('New name').press('Enter');
+  await expect.poll(() => isFile(`${vault}/Notes/Loose idea.md`)).toBe(true);
+  await contextChoice('unfiled');
+  await row(page, 'Loose idea').first().click({ button: 'right' });
+  await expect.poll(() => isFile(`${vault}/Loose idea 2.md`)).toBe(true);
+  expect(await isFile(`${vault}/Notes/Loose idea.md`)).toBe(false);
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Moved "Loose idea 2" to Unfiled.' }),
+  ).toBeVisible();
+
+  // Notes already at the root have no Move to Unfiled.
+  await tile(page, 'Unfiled').click();
+  await contextChoice('unfiled');
+  await row(page, 'Second thought').first().click({ button: 'right' });
+  const menus = await ctx.app.evaluate(
+    () => (globalThis as { __vxContextMenus?: Array<Array<{ id: string }>> }).__vxContextMenus ?? [],
+  );
+  expect(menus[menus.length - 1]!.some((i) => i.id === 'unfiled')).toBe(false);
+});

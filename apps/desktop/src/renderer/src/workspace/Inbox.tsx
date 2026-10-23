@@ -13,7 +13,7 @@ import { unwrap, vx } from '../lib/vx';
 import { useApp } from '../store/app';
 import { domainStrings } from '../strings/domains';
 import { workspaceStrings as s } from '../strings/workspace';
-import { baseName, notice, openPath, renamePath, report } from './actions';
+import { baseName, freeName, notice, openPath, renamePath, report } from './actions';
 import { useWorkspace } from './store';
 import { buildSections, collator, displayName } from './tree';
 
@@ -21,19 +21,6 @@ const INBOX = 'Inbox/';
 
 export function inboxFiles(paths: string[]): string[] {
   return paths.filter((p) => p.startsWith(INBOX) && !p.slice(INBOX.length).includes('/'));
-}
-
-/** A free name in `folder`: "name.md", then "name 2.md", "name 3.md". */
-export function freeName(folder: string, name: string, taken: Set<string>): string {
-  const dot = name.lastIndexOf('.');
-  const stem = dot > 0 ? name.slice(0, dot) : name;
-  const ext = dot > 0 ? name.slice(dot) : '';
-  const key = (n: string) => `${folder}/${n}`.toLowerCase();
-  if (!taken.has(key(name))) return name;
-  for (let i = 2; ; i++) {
-    const n = `${stem} ${i}${ext}`;
-    if (!taken.has(key(n))) return n;
-  }
 }
 
 async function inboxMenu(path: string): Promise<void> {

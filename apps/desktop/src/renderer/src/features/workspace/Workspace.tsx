@@ -18,7 +18,7 @@ import { useSettings, wireSettings } from '../../lib/settings';
 import { unwrap, vx } from '../../lib/vx';
 import { useApp } from '../../store/app';
 import { workspaceStrings as s } from '../../strings/workspace';
-import { newNote, openDailyNote, setNotifier } from '../../workspace/actions';
+import { newNote, newUnfiledNote, openDailyNote, setNotifier } from '../../workspace/actions';
 import { setDateLocale } from '../../workspace/tree';
 import { HOTKEYS_KEY, eventKey, isMacPlatform, recording } from '../../lib/hotkeys';
 import { Rail, StatusBar, TitleBar, type SearchScopeKind } from '../../workspace/Chrome';
@@ -117,6 +117,7 @@ export function Workspace({ vaultPath }: { vaultPath: string }) {
     const core: Array<[string, string, () => void]> = [
       ['search', c.search, () => searchRef.current?.focus()],
       ['new-note', c.newNote, () => void newNote()],
+      ['new-unfiled-note', c.newUnfiled, () => void newUnfiledNote()],
       ['open-note', c.openNote, () => useWorkspace.setState({ overlay: { kind: 'quickOpen' } })],
       ['insert-link', c.insertLink, () => useWorkspace.setState({ overlay: { kind: 'insertLink' } })],
       ['toggle-source', c.toggleSource, () => ws().setPanels({ source: !ws().source })],

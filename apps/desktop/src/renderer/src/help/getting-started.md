@@ -20,7 +20,7 @@ Links, search and backlinks work across the whole library, not just one Vault.
 
 ## Sections
 
-The top-level folders of a Vault are its **sections**, shown as tiles at the top of the sidebar. Notes at the Vault root appear under **Unfiled**. Folders whose names start with `_` (attachments, templates) are not sections.
+The top-level folders of a Vault are its **sections**, shown as tiles at the top of the sidebar. Notes at the Vault root, outside any section, appear under **Unfiled**: right-click a section tile and choose **New Unfiled Note**, or right-click a note and choose **Move to Unfiled**. **New Section** is the + beside "Sections"; right-click a tile to rename or delete it. Folders whose names start with `_` (attachments, templates) are not sections.
 
 ## The desk
 

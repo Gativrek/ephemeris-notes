@@ -250,3 +250,42 @@ export function askDeleteSection(path: string): void {
     .paths.filter((p) => p.startsWith(`${path}/`) && /\.md$/i.test(p)).length;
   useWorkspace.setState({ overlay: { kind: 'deleteSection', path, notes } });
 }
+
+/** A free name in `folder`: "name.md", then "name 2.md", "name 3.md". */
+export function freeName(folder: string, name: string, taken: Set<string>): string {
+  const dot = name.lastIndexOf('.');
+  const stem = dot > 0 ? name.slice(0, dot) : name;
+  const ext = dot > 0 ? name.slice(dot) : '';
+  const key = (n: string) => `${folder}/${n}`.toLowerCase();
+  if (!taken.has(key(name))) return name;
+  for (let i = 2; ; i++) {
+    const n = `${stem} ${i}${ext}`;
+    if (!taken.has(key(n))) return n;
+  }
+}
+
+// ---- Unfiled: notes at the Vault root (SPECS 4.4) ----------------------------------
+
+/** A new note outside any section; the Unfiled tile appears and is selected. */
+export async function newUnfiledNote(): Promise<void> {
+  const v = currentVault();
+  if (!v) return;
+  const path = await createNoteIn(v.path, s.untitled);
+  if (!path) return;
+  useWorkspace.setState((st) => ({ sectionsVersion: st.sectionsVersion + 1 }));
+  useWorkspace.getState().setSection(v.path);
+  useWorkspace.setState({ renaming: path });
+}
+
+/** Moves a note (or file) out of its section to the Vault root, keeping its name free. */
+export async function moveToUnfiled(path: string): Promise<void> {
+  const v = currentVault();
+  if (!v || parentOf(path) === v.path) return;
+  const taken = new Set(useCatalog.getState().paths.map((p) => p.toLowerCase()));
+  const name = freeName(v.path, baseName(path), taken);
+  // With links into the note, this asks to update them first (SPECS 5).
+  if (await renamePath(path, `${v.path}/${name}`)) {
+    useWorkspace.setState((st) => ({ sectionsVersion: st.sectionsVersion + 1 }));
+    notice(s.unfiled.moved(name.replace(/\.md$/i, '')));
+  }
+}

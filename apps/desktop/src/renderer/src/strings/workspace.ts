@@ -71,6 +71,7 @@ export const workspaceStrings = {
     unpin: 'Unpin',
     close: 'Close',
     closeOthers: 'Close Others',
+    moveToUnfiled: 'Move to Unfiled',
   },
   desk: {
     label: 'Desk',
@@ -167,6 +168,7 @@ export const workspaceStrings = {
     create: 'Create Section',
     rename: 'Rename Section',
     menuNew: 'New Section…',
+    menuNewUnfiled: 'New Unfiled Note',
     menuRename: 'Rename Section…',
     menuDelete: 'Delete Section…',
     empty: 'Give the section a name.',
@@ -196,6 +198,7 @@ export const workspaceStrings = {
     core: {
       search: 'Search',
       newNote: 'New Note',
+      newUnfiled: 'New Unfiled Note',
       newFromTemplate: 'New Note from Template',
       openNote: 'Open Note…',
       insertLink: 'Insert Link',
@@ -217,6 +220,9 @@ export const workspaceStrings = {
   overlay: {
     close: 'Close',
     unsaved: 'Unsaved changes',
+  },
+  unfiled: {
+    moved: (name: string) => `Moved "${name}" to Unfiled.`,
   },
   untitled: 'Untitled',
   pastedImage: (stamp: string) => `Pasted image ${stamp}.png`,
