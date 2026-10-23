@@ -13,6 +13,7 @@ import { noteCommandRun } from '../../plugins/activity';
 import type { SearchHandle } from '../../workspace/SearchBox';
 import { useCatalog, wireCatalog } from '../../lib/catalog';
 import { currentTheme, onThemeChange } from '../../lib/theme';
+import { setWindowChrome } from '../../lib/chrome';
 import { useSettings, wireSettings } from '../../lib/settings';
 import { unwrap, vx } from '../../lib/vx';
 import { useApp } from '../../store/app';
@@ -58,11 +59,8 @@ function useBacklinks(path: string | null): Backlink[] {
 
 /** Native window-control colours follow the theme (title-bar overlay). */
 function syncChrome(): void {
-  const css = getComputedStyle(document.documentElement);
-  const bg = css.getPropertyValue('--surface-chrome').trim();
-  const ink = css.getPropertyValue('--ink').trim();
-  if (/^#[0-9a-f]{6}$/i.test(bg) && /^#[0-9a-f]{6}$/i.test(ink))
-    void vx().window.setChrome({ background: bg, symbols: ink });
+  // The title bar is 44 px including its 1px bottom border: stop the controls above the border.
+  setWindowChrome(document.documentElement, '--surface-chrome', '--ink', 43);
 }
 
 function useNotice(): [string | null, (m: string) => void] {

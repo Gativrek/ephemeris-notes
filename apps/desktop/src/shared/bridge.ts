@@ -261,7 +261,8 @@ export interface VxBridge {
     /** Native context menu; resolves the chosen item id, or null. */
     contextMenu(items: ContextMenuItem[]): Promise<Result<string | null>>;
     /** Colours of the native window controls, from the theme tokens. */
-    setChrome(colors: { background: string; symbols: string }): Promise<Result<null>>;
+    /** The window controls' ground, ink and height in px (default 44; 24 to 88). */
+    setChrome(colors: { background: string; symbols: string; height?: number }): Promise<Result<null>>;
     /** Main asks before closing; the renderer saves, then calls this. */
     onBeforeClose(cb: () => void): Unsubscribe;
     readyToClose(): Promise<Result<null>>;

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import type { Domain, VaultInfo } from '@shared/bridge';
 import appIcon from '@design/assets/Logos/ephemeris-icon.svg';
 import { Icon } from '../../components/Icon';
+import { setWindowChrome } from '../../lib/chrome';
 import { Hint, Kbd } from '../../components/Keycap';
 import { OrnamentFrame } from '../../components/OrnamentFrame';
 import { assetUrl } from '../../lib/asset';
@@ -46,6 +47,11 @@ export function Chooser() {
   const selected = selection[domain];
   // Performance mark for the SPECS 16 measurement (e2e/perf.spec.ts).
   useEffect(() => void performance.mark('vx-chooser'), []);
+  const rootRef = useRef<HTMLDivElement>(null);
+  // The window controls take the top bar's ground and ink (the chooser is light-only).
+  useEffect(() => {
+    if (rootRef.current) setWindowChrome(rootRef.current, '--chooser-topbar', '--chooser-ink');
+  }, []);
   const itemCount = inDomain.length + 1;
   const pages = Math.max(1, Math.ceil(itemCount / PER_PAGE));
   const page = Math.floor(selected / PER_PAGE);
@@ -153,7 +159,7 @@ export function Chooser() {
   const header = s.header(d.name, inDomain.length);
 
   return (
-    <div className="vx-chooser vx-chooser-bg" data-theme="light" data-testid="chooser">
+    <div ref={rootRef} className="vx-chooser vx-chooser-bg" data-theme="light" data-testid="chooser">
       <header className="vx-chooser__topbar">
         <h1 className="vx-chooser__title">
           <img className="vx-chooser__icon" src={appIcon} width={48} height={48} alt="" />

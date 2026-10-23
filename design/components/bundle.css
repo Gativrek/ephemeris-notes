@@ -208,6 +208,10 @@ body { margin: 0; font-family: var(--font-ui); color: var(--text); background: v
 .vx-chooser__stat { display: flex; align-items: baseline; gap: 10px; font-size: 14px; letter-spacing: .02em; color: var(--chooser-muted); }
 .vx-chooser__stat-value { font: 400 26px/1 var(--font-display); color: var(--chooser-ink); }
 .vx-chooser__topbar .vx-domain-tabs { justify-self: end; padding-right: var(--space-6); }
+/* The window controls overlay the top-right corner (title-bar overlay): keep clear of them,
+   and let the bar move the window like a title bar. */
+.vx-chooser__topbar { padding-right: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw)); -webkit-app-region: drag; user-select: none; }
+.vx-chooser__topbar button, .vx-chooser__topbar [role="tab"], .vx-chooser__topbar [role="tablist"] { -webkit-app-region: no-drag; }
 .vx-chooser__topbar .vx-domain-tabs > .vx-kbd { width: 30px; height: 30px; margin: 0 14px; font-size: 15px; align-self: center; }
 .vx-chooser__stage { position: relative; flex: 1 1 auto; min-height: 0; display: flex; align-items: center; justify-content: center; }
 .vx-chooser__scale { transform-origin: center center; }

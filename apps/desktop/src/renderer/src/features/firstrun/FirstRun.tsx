@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import appIcon from '@design/assets/Logos/ephemeris-icon.svg';
 import { firstRunStrings as s } from '../../strings/firstrun';
+import { setWindowChrome } from '../../lib/chrome';
 import { errorMessage, unwrap, vx } from '../../lib/vx';
 
 /**
@@ -8,6 +9,10 @@ import { errorMessage, unwrap, vx } from '../../lib/vx';
  * PROGRESS.md): composed from the existing button styles only.
  */
 export function FirstRun() {
+  const rootRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (rootRef.current) setWindowChrome(rootRef.current, '--surface', '--ink');
+  }, []);
   const [pending, setPending] = useState<{ token: string; folder: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -37,7 +42,8 @@ export function FirstRun() {
     });
 
   return (
-    <main className="vx-firstrun" data-testid="first-run">
+    <main ref={rootRef} className="vx-firstrun" data-testid="first-run">
+      <div className="vx-firstrun__drag" aria-hidden="true" />
       <img className="vx-firstrun__icon" src={appIcon} width={96} height={96} alt="" />
       <h1 className="vx-firstrun__title">{s.title}</h1>
       {pending ? (

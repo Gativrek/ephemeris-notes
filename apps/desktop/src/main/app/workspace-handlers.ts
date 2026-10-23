@@ -94,9 +94,12 @@ export function registerWorkspaceHandlers(deps: { sessions: SessionManager; test
     const background = str(o.background, 'background', 7);
     const symbols = str(o.symbols, 'symbols', 7);
     if (!COLOR.test(background) || !COLOR.test(symbols)) fail('INVALID_ARGUMENT', 'Colours must be #rrggbb.');
+    const height = o.height === undefined ? 44 : Math.round(Number(o.height));
+    if (!Number.isFinite(height) || height < 24 || height > 88)
+      fail('INVALID_ARGUMENT', 'height must be 24 to 88.');
     const win = BrowserWindow.fromWebContents(event.sender);
     if (win && process.platform !== 'darwin') {
-      win.setTitleBarOverlay({ color: background, symbolColor: symbols, height: 44 });
+      win.setTitleBarOverlay({ color: background, symbolColor: symbols, height });
     }
     win?.setBackgroundColor(background);
     return null;
