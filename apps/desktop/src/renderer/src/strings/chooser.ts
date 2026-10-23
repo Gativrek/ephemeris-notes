@@ -1,0 +1,28 @@
+import { plural } from '../lib/time';
+
+export const chooserStrings = {
+  title: '{AppName}',
+  domainsLabel: 'Domains',
+  stat: (n: number) => ({
+    value: n.toLocaleString('en-US'),
+    label: n === 1 ? 'note in this Domain' : 'notes in this Domain',
+  }),
+  header: (domain: string, n: number) => ({ domain, count: n, noun: n === 1 ? 'Vault' : 'Vaults' }),
+  noVaults: 'No Vaults yet',
+  meta: (notes: number, edited: string | null) =>
+    notes === 0
+      ? 'No notes yet'
+      : edited
+        ? `${plural(notes, 'note')} · edited ${edited}`
+        : plural(notes, 'note'),
+  cardLabel: (name: string, meta: string) => `${name}, ${meta}`,
+  editVault: (name: string) => `Edit Vault ${name}`,
+  editTitle: 'Edit Vault',
+  newVault: 'New Vault',
+  newVaultHint: 'Pick a name, a Domain and a cover',
+  previousPage: 'Previous page',
+  nextPage: 'Next page',
+  page: (i: number, n: number) => `Page ${i} of ${n}`,
+  hints: { select: 'Select', open: 'Open', domain: 'Domain', edit: 'Edit Vault', back: 'Back' },
+  broken: 'vault.json needs fixing',
+};

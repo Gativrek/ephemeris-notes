@@ -19,6 +19,29 @@ export interface FsDeps {
   /** Told about every write the app makes, so the watcher can ignore its echo. */
   onOwnWrite?(rel: string, hash: string | null): void;
   atomicHooks?: AtomicHooks;
+  /**
+   * Wraps moves of whole paths. On Windows a watched folder cannot be renamed or
+   * trashed while the watcher holds handles inside it, so the session unwatches it.
+   */
+  aroundMove?<T>(fromAbs: string, toAbs: string | null, fn: () => Promise<T>): Promise<T>;
+}
+
+const isWindows = process.platform === 'win32';
+
+/** Retries a move briefly on Windows lock errors (indexer, antivirus, watcher). */
+async function retryLocked<T>(fn: () => Promise<T>): Promise<T> {
+  const delays = [20, 50, 100, 200, 400, 800];
+  for (let i = 0; ; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const code = (err as { code?: string }).code;
+      const delay = delays[i];
+      if (!isWindows || (code !== 'EPERM' && code !== 'EBUSY' && code !== 'EACCES') || delay === undefined)
+        throw err;
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
 }
 
 export class LibraryFs {
@@ -187,7 +210,8 @@ export class LibraryFs {
     }
     this.deps.onOwnWrite?.(from.rel, null);
     this.deps.onOwnWrite?.(to.rel, null);
-    await fs.rename(from.abs, to.abs);
+    const move = () => retryLocked(() => fs.rename(from.abs, to.abs));
+    await (this.deps.aroundMove ? this.deps.aroundMove(from.abs, to.abs, move) : move());
     return { path: to.rel };
   }
 
@@ -196,7 +220,8 @@ export class LibraryFs {
     const { rel, abs } = await this.resolve(input, opts);
     await fs.lstat(abs);
     this.deps.onOwnWrite?.(rel, null);
-    await this.deps.trash(abs);
+    const move = () => retryLocked(() => this.deps.trash(abs));
+    await (this.deps.aroundMove ? this.deps.aroundMove(abs, null, move) : move());
   }
 
   /** Creates a folder and any missing parents. Each new name is validated. */

@@ -40,3 +40,8 @@ body {
   font: 400 14px/20px var(--font-ui);
   color: var(--danger);
 }
+
+/* The hidden attribute wins over component display rules. */
+[hidden] {
+  display: none !important;
+}

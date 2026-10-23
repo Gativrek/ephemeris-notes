@@ -2,6 +2,7 @@
  * The open library: its root, file operations and watcher. One library is open at a
  * time (SPECS 2). Events go to every window through `broadcast`.
  */
+import { stat } from 'node:fs/promises';
 import type { LibraryInfo, PushEvent } from '@shared/bridge';
 import { fail } from '@shared/result';
 import { LibraryFs, type FsDeps } from '../library/fileio';
@@ -58,6 +59,22 @@ export class SessionManager {
     const fs = new LibraryFs(root, {
       trash: this.trash,
       onOwnWrite: (rel, hash) => watcher?.ownWrites.expect(rel, hash),
+      // Windows refuses to move a folder while the watcher holds handles inside it,
+      // and chokidar's unwatch does not release them: restart the watcher instead.
+      aroundMove: async (fromAbs, _toAbs, fn) => {
+        if (process.platform !== 'win32' || !watcher) return fn();
+        const isDir = await stat(fromAbs).then(
+          (s) => s.isDirectory(),
+          () => false,
+        );
+        if (!isDir) return fn();
+        await watcher.stop();
+        try {
+          return await fn();
+        } finally {
+          await watcher.start();
+        }
+      },
     });
     watcher = new LibraryWatcher(root, (e) => {
       for (const fn of this.watchListeners) fn(e);

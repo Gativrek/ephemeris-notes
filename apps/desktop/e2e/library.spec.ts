@@ -11,7 +11,7 @@ test('Create Library writes the skeleton and nothing else', async () => {
     await expect(ctx.page.getByTestId('first-run')).toBeVisible();
     await setPickFolder(ctx.app, folder);
     await ctx.page.getByRole('button', { name: 'Create Library…' }).click();
-    await expect(ctx.page.getByTestId('library-open')).toBeVisible();
+    await expect(ctx.page.getByTestId('chooser')).toBeVisible();
 
     const entries = (await readdir(folder)).sort();
     expect(entries).toEqual([
@@ -46,11 +46,11 @@ test('Open Library on a plain folder offers to create one; the library reopens o
     await ctx.page.getByRole('button', { name: 'Open Library…' }).click();
     await expect(ctx.page.getByText('is not a library yet.')).toBeVisible();
     await ctx.page.getByRole('button', { name: 'Create Library Here' }).click();
-    await expect(ctx.page.getByTestId('library-open')).toBeVisible();
+    await expect(ctx.page.getByTestId('chooser')).toBeVisible();
     await ctx.close();
 
     ctx = await launch({ userData });
-    await expect(ctx.page.getByTestId('library-open')).toBeVisible();
+    await expect(ctx.page.getByTestId('chooser')).toBeVisible();
   } finally {
     await ctx.close();
     await rm(folder, { recursive: true, force: true });

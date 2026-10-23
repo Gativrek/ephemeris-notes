@@ -62,6 +62,54 @@ export interface FileEvent {
 
 export type Unsubscribe = () => void;
 
+export interface VaultCover {
+  file: string;
+  /** The point kept in view, each axis in [0, 1]. */
+  focus: { x: number; y: number };
+  /** 1.0 to 2.5. */
+  zoom: number;
+}
+
+export interface VaultInfo {
+  /** Library-relative folder, e.g. "Academic/GNSS Study". */
+  path: string;
+  folder: string;
+  domain: Domain;
+  id: string;
+  name: string;
+  created: string;
+  order: number;
+  cover: VaultCover | null;
+  /** Changes whenever the cover file changes; append to the asset URL to bust caches. */
+  coverVersion: number;
+  settings: { attachments: string; templates: string; daily: string };
+  sectionOrder: string[] | null;
+  noteCount: number;
+  lastEdited: number | null;
+  /** vault.json exists but is not valid JSON: shown, never rewritten. */
+  broken: boolean;
+}
+
+export interface CoverInput {
+  /** New image bytes, or omitted to keep the current image and change focus or zoom. */
+  bytes?: ArrayBuffer;
+  focus: { x: number; y: number };
+  zoom: number;
+}
+
+export interface VaultInput {
+  name: string;
+  domain: Domain;
+  /** undefined keeps the cover; null removes it. */
+  cover?: CoverInput | null;
+}
+
+export interface VaultMoveImpact {
+  notes: number;
+  /** Notes outside the Vault that link into it by path. */
+  linkingNotes: string[];
+}
+
 export interface VxBridge {
   library: {
     /** Shows a folder picker. Opens the folder if it is a library. */
@@ -86,6 +134,24 @@ export interface VxBridge {
     mkdir(path: string): Promise<Result<{ path: string }>>;
     list(dir: string): Promise<Result<FileEntry[]>>;
     stat(path: string): Promise<Result<FileEntry>>;
+  };
+  vaults: {
+    list(): Promise<Result<VaultInfo[]>>;
+    get(path: string): Promise<Result<VaultInfo | null>>;
+    create(input: VaultInput): Promise<Result<VaultInfo>>;
+    update(path: string, input: Omit<VaultInput, 'domain'>): Promise<Result<VaultInfo>>;
+    moveImpact(path: string): Promise<Result<VaultMoveImpact>>;
+    move(path: string, to: Domain): Promise<Result<VaultInfo>>;
+    /** Trashes the Vault folder; typedName must equal the Vault name. */
+    remove(path: string, typedName: string): Promise<Result<null>>;
+    nonVaultFolders(): Promise<Result<Array<{ path: string; domain: Domain }>>>;
+    makeVault(path: string): Promise<Result<VaultInfo>>;
+    onChanged(cb: () => void): Unsubscribe;
+  };
+  /** Per-machine UI state for the open library (SPECS 4.10): desk, pins, last Vault. */
+  ui: {
+    get(key: string): Promise<Result<unknown>>;
+    set(key: string, value: unknown): Promise<Result<null>>;
   };
   index: {
     search(query: string, scope: SearchScope): Promise<Result<unknown>>;
@@ -135,11 +201,14 @@ export type PushEvent =
   | { type: 'file.changed' | 'file.created' | 'file.deleted'; payload: FileEvent }
   | { type: 'library.changed'; payload: LibraryInfo | null }
   | { type: 'settings.changed'; payload: { key: string; value: unknown } }
-  | { type: 'index.changed'; payload: null };
+  | { type: 'index.changed'; payload: null }
+  | { type: 'vaults.changed'; payload: null };
 
 /** Bridge surface as a method list, so preload and main agree on channels. */
 export const BRIDGE_METHODS = {
   library: ['open', 'create', 'current', 'close', 'stats'],
+  vaults: ['list', 'get', 'create', 'update', 'moveImpact', 'move', 'remove', 'nonVaultFolders', 'makeVault'],
+  ui: ['get', 'set'],
   fs: ['read', 'readBinary', 'write', 'create', 'rename', 'trash', 'mkdir', 'list', 'stat'],
   index: ['search', 'backlinks', 'resolve', 'outline', 'notesIn'],
   settings: ['get', 'set'],

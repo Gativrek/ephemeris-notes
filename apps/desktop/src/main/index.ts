@@ -23,6 +23,7 @@ import {
 import { SessionManager } from './app/session';
 import { installTestMode, isTestMode } from './app/test-mode';
 import { Settings } from './app/settings';
+import { registerVaultHandlers } from './app/vault-handlers';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -133,6 +134,7 @@ async function main(): Promise<void> {
     stats,
     reveal: testMode?.reveal ?? ((abs) => shell.showItemInFolder(abs)),
   });
+  registerVaultHandlers({ sessions, state, broadcast });
   for (const m of ['search', 'backlinks', 'resolve', 'outline', 'notesIn']) notImplemented('index', m);
 
   const last = state.get('lastLibrary');

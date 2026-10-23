@@ -2,6 +2,8 @@
  * `pnpm tokens`: generates the app's CSS variables from design/tokens.json (SPECS 14).
  * Names match design/components/bundle.css: `--<token>` and `--font-<family>`.
  * Light values go on :root, theme-dependent dark values on :root[data-theme="dark"].
+ * A last block restores the light values inside any [data-theme="light"] element, so
+ * light-only surfaces (the chooser, SPECS 7) ignore the app theme.
  *
  * Usage: node scripts/build-tokens.ts [--check]
  */
@@ -38,12 +40,14 @@ function cssValue(v: string): string {
 export function buildTokensCss(json: TokenFile): string {
   const light: string[] = [];
   const dark: string[] = [];
+  const lightThemed: string[] = [];
   const add = (tokens: Token[]) => {
     for (const t of tokens) {
       if (typeof t.value === 'string') {
         light.push(`  --${t.name}: ${cssValue(t.value)};`);
       } else {
         light.push(`  --${t.name}: ${cssValue(t.value.light)};`);
+        lightThemed.push(`  --${t.name}: ${cssValue(t.value.light)};`);
         dark.push(`  --${t.name}: ${cssValue(t.value.dark)};`);
       }
     }
@@ -55,7 +59,10 @@ export function buildTokensCss(json: TokenFile): string {
   add(json.radius.tokens);
   add(json.size.tokens);
   add(json.shadow.tokens);
-  return `:root {\n${light.join('\n')}\n}\n:root[data-theme="dark"] {\n${dark.join('\n')}\n}\n`;
+  return (
+    `:root {\n${light.join('\n')}\n}\n:root[data-theme="dark"] {\n${dark.join('\n')}\n}\n` +
+    `[data-theme="light"] {\n${lightThemed.join('\n')}\n}\n`
+  );
 }
 
 export function generate(): string {

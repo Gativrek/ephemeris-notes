@@ -15,7 +15,8 @@ describe('pnpm tokens', () => {
   it('matches the design system’s own preview copy', () => {
     const design = readFileSync(resolve(repo, 'design/tokens.css'), 'utf8');
     const body = (s: string) => s.slice(s.indexOf(':root {'));
-    expect(body(css)).toBe(body(design));
+    // The app copy adds one block (light-only scopes) after the design system's two.
+    expect(body(css).startsWith(body(design))).toBe(true);
   });
 
   it('defines every variable bundle.css uses', () => {
@@ -28,7 +29,7 @@ describe('pnpm tokens', () => {
   });
 
   it('gives the dark theme only theme-dependent tokens', () => {
-    const dark = css.slice(css.indexOf(':root[data-theme="dark"]'));
+    const dark = css.slice(css.indexOf(':root[data-theme="dark"]'), css.indexOf('[data-theme="light"]'));
     expect(dark).toContain('--surface: #1b1f24;');
     expect(dark).not.toContain('--chooser-ground');
     expect(dark).not.toContain('--space-1');

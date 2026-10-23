@@ -48,6 +48,7 @@ const shellNs = namespace('shell');
 const settingsNs = namespace('settings');
 const indexNs = namespace('index');
 const libraryNs = namespace('library');
+const vaultsNs = namespace('vaults');
 
 const vx = {
   library: {
@@ -55,6 +56,11 @@ const vx = {
     onChanged: (cb: Listener) => subscribe('library.changed', cb),
   },
   fs: namespace('fs'),
+  vaults: {
+    ...vaultsNs,
+    onChanged: (cb: Listener) => subscribe('vaults.changed', cb),
+  },
+  ui: namespace('ui'),
   index: {
     ...indexNs,
     onChanged: (cb: Listener) => subscribe('index.changed', cb),

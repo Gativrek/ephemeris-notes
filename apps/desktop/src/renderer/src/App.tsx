@@ -1,22 +1,59 @@
-import { useEffect, useState } from 'react';
-import type { LibraryInfo } from '@shared/bridge';
+import { useEffect } from 'react';
+import { Chooser } from './features/chooser/Chooser';
 import { FirstRun } from './features/firstrun/FirstRun';
+import { VaultDialog } from './features/vault-dialog/VaultDialog';
+import { Workspace } from './features/workspace/Workspace';
+import { applyTheme } from './lib/theme';
 import { unwrap, vx } from './lib/vx';
+import { useApp } from './store/app';
 
 export function App() {
-  const [library, setLibrary] = useState<LibraryInfo | null | undefined>(undefined);
+  const library = useApp((s) => s.library);
+  const screen = useApp((s) => s.screen);
+  const dialog = useApp((s) => s.dialog);
+  const openVault = useApp((s) => s.openVault);
 
   useEffect(() => {
-    const off = vx().library.onChanged(setLibrary);
-    void unwrap(vx().library.current()).then(setLibrary, () => setLibrary(null));
-    return off;
+    const app = useApp.getState;
+    const offLib = vx().library.onChanged((lib) => void app().setLibrary(lib));
+    const offVaults = vx().vaults.onChanged(() => void app().refreshVaults());
+    void unwrap(vx().library.current()).then(
+      (lib) => app().setLibrary(lib),
+      () => app().setLibrary(null),
+    );
+    const offTheme = applyTheme();
+    return () => {
+      offLib();
+      offVaults();
+      offTheme();
+    };
+  }, []);
+
+  // Switch Vault (SPECS 11.4) works from anywhere once a library is open.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'o' && useApp.getState().library) {
+        e.preventDefault();
+        useApp.getState().showChooser();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, []);
 
   if (library === undefined) return null;
   if (library === null) return <FirstRun />;
   return (
-    <main className="vx-firstrun" data-testid="library-open">
-      <h1 className="vx-firstrun__title">{library.name}</h1>
-    </main>
+    <>
+      {screen === 'workspace' && openVault ? (
+        <Workspace key={openVault} vaultPath={openVault} />
+      ) : (
+        <Chooser />
+      )}
+      {dialog && (
+        <VaultDialog key={dialog.mode === 'edit' ? `edit:${dialog.path}` : `new:${dialog.domain}`} />
+      )}
+    </>
   );
 }

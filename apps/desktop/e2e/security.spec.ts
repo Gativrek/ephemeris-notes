@@ -88,7 +88,17 @@ test('the bridge is one frozen object', async () => {
     };
   });
   expect(info.frozen).toBe(true);
-  expect(info.namespaces).toEqual(['events', 'fs', 'index', 'library', 'settings', 'shell', 'window']);
+  expect(info.namespaces).toEqual([
+    'events',
+    'fs',
+    'index',
+    'library',
+    'settings',
+    'shell',
+    'ui',
+    'vaults',
+    'window',
+  ]);
 });
 
 test('navigation and new windows are refused', async () => {
