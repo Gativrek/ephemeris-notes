@@ -8,7 +8,7 @@ import { useCatalog } from '../lib/catalog';
 import { errorMessage, unwrap, vx } from '../lib/vx';
 import { useApp } from '../store/app';
 import { workspaceStrings as s } from '../strings/workspace';
-import { closeDoc, renamed, saveDoc } from './docs';
+import { closeDoc, externalChange, getRecord, renamed, saveAll } from './docs';
 import { useWorkspace } from './store';
 
 export const OPENABLE = /\.(md|pdf)$/i;
@@ -120,15 +120,35 @@ export async function newFolder(parent: string): Promise<void> {
   }
 }
 
-/** Rename or move. Link updates arrive with the index in M3 (SPECS 5). */
+/**
+ * Rename or move (SPECS 5). When other notes link into `from`, ask first: "Update N
+ * links in M notes" (the confirmation calls `performRename`).
+ */
 export async function renamePath(from: string, to: string): Promise<boolean> {
   if (from === to) return true;
   try {
-    await saveDoc(from);
-    // TODO(M3): offer "Update N links in M notes" before renaming (SPECS 5).
-    const r = await unwrap(vx().fs.rename(from, to, { updateLinks: false }));
+    await saveAll();
+    const impact = await unwrap(vx().index.linkImpact([from])).catch(() => ({ notes: [] }));
+    if (impact.notes.length > 0) {
+      useWorkspace.setState({ overlay: { kind: 'renameLinks', from, to, notes: impact.notes } });
+      return false;
+    }
+    return await performRename(from, to, false);
+  } catch (err) {
+    report(err);
+    return false;
+  }
+}
+
+export async function performRename(from: string, to: string, updateLinks: boolean): Promise<boolean> {
+  try {
+    await saveAll();
+    const r = await unwrap(vx().fs.rename(from, to, { updateLinks }));
     renamed(from, r.path);
     useWorkspace.getState().renamePath(from, r.path);
+    // Notes rewritten in main: open ones reload in place.
+    for (const p of r.updated) if (getRecord(p)) void externalChange(p);
+    if (r.failed.length) report(new Error(s.rename.failed(r.failed.length)));
     void useCatalog.getState().load();
     return true;
   } catch (err) {

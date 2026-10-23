@@ -131,7 +131,7 @@ export interface VxBridge {
     write(path: string, text: string, expectedHash: string): Promise<Result<WriteResult>>;
     /** Creates a new file. Refused with EXISTS if anything is at `path`. */
     create(path: string, text: string): Promise<Result<WriteResult>>;
-    rename(from: string, to: string, opts?: { updateLinks?: boolean }): Promise<Result<{ path: string }>>;
+    rename(from: string, to: string, opts?: { updateLinks?: boolean }): Promise<Result<RenameResult>>;
     /** Moves to the OS trash. Never deletes permanently. */
     trash(path: string): Promise<Result<null>>;
     mkdir(path: string): Promise<Result<{ path: string }>>;
@@ -169,12 +169,26 @@ export interface VxBridge {
     set(key: string, value: unknown): Promise<Result<null>>;
   };
   index: {
-    search(query: string, scope: SearchScope): Promise<Result<unknown>>;
-    backlinks(path: string): Promise<Result<unknown>>;
-    resolve(link: string, fromPath: string): Promise<Result<string | null>>;
-    outline(path: string): Promise<Result<unknown>>;
-    notesIn(scope: SearchScope): Promise<Result<unknown>>;
+    search(query: string, scope: SearchScope): Promise<Result<SearchHit[]>>;
+    backlinks(path: string): Promise<Result<Backlink[]>>;
+    resolve(link: string, fromPath: string): Promise<Result<{ path: string | null; candidates: string[] }>>;
+    outline(path: string): Promise<
+      Result<{
+        headings: Array<{ level: number; text: string; line: number }>;
+        equations: Array<{ number: string | null; label: string | null; line: number }>;
+        backlinks: Backlink[];
+      }>
+    >;
+    notesIn(scope: SearchScope): Promise<Result<Array<{ path: string; title: string }>>>;
+    status(): Promise<Result<IndexStatus>>;
+    /** Deletes and rebuilds the index (Settings > Library). */
+    rebuild(): Promise<Result<null>>;
+    ambiguous(): Promise<Result<Array<{ src: string; target: string; line: number; candidates: string[] }>>>;
+    /** What renaming or moving `paths` would rewrite ("Update N links in M notes"). */
+    linkImpact(paths: string[]): Promise<Result<LinkImpact>>;
+    aliases(): Promise<Result<Array<[string, string[]]>>>;
     onChanged(cb: () => void): Unsubscribe;
+    onStatus(cb: (s: IndexStatus) => void): Unsubscribe;
   };
   settings: {
     get(key: string): Promise<Result<unknown>>;
@@ -220,6 +234,43 @@ export interface ContextMenuItem {
   separatorBefore?: boolean;
 }
 
+export interface SearchHit {
+  kind: 'note' | 'file';
+  path: string;
+  title: string;
+  /** `Domain/Vault`, or null outside Vaults. */
+  vault: string | null;
+  domain: Domain | null;
+  /** Up to two snippets; `hit` parts are the matched words. */
+  snippets: Array<Array<{ text: string; hit: boolean }>>;
+}
+
+export interface Backlink {
+  path: string;
+  title: string;
+  line: number;
+  snippet: string;
+}
+
+export interface IndexStatus {
+  state: 'idle' | 'indexing' | 'starting' | 'error';
+  done: number;
+  total: number;
+  message?: string;
+}
+
+export interface LinkImpact {
+  /** Notes outside the moved paths whose links point into them. */
+  notes: Array<{ path: string; links: number }>;
+}
+
+export interface RenameResult {
+  path: string;
+  /** Notes rewritten to follow the rename (explicit action, SPECS 4.8 rule 3). */
+  updated: string[];
+  failed: Array<{ path: string; message: string }>;
+}
+
 export interface LibraryStats {
   notes: Record<Domain, number>;
 }
@@ -238,6 +289,7 @@ export type PushEvent =
   | { type: 'library.changed'; payload: LibraryInfo | null }
   | { type: 'settings.changed'; payload: { key: string; value: unknown } }
   | { type: 'index.changed'; payload: null }
+  | { type: 'index.status'; payload: IndexStatus }
   | { type: 'vaults.changed'; payload: null }
   | { type: 'catalog.changed'; payload: null }
   | { type: 'app.beforeClose'; payload: null };
@@ -249,7 +301,18 @@ export const BRIDGE_METHODS = {
   vaults: ['list', 'get', 'create', 'update', 'moveImpact', 'move', 'remove', 'nonVaultFolders', 'makeVault'],
   ui: ['get', 'set'],
   fs: ['read', 'readBinary', 'write', 'create', 'rename', 'trash', 'mkdir', 'list', 'stat'],
-  index: ['search', 'backlinks', 'resolve', 'outline', 'notesIn'],
+  index: [
+    'search',
+    'backlinks',
+    'resolve',
+    'outline',
+    'notesIn',
+    'status',
+    'rebuild',
+    'ambiguous',
+    'linkImpact',
+    'aliases',
+  ],
   settings: ['get', 'set'],
   window: ['minimize', 'maximize', 'close', 'setTitle', 'contextMenu', 'setChrome', 'readyToClose'],
   shell: ['openExternal', 'revealInFolder'],

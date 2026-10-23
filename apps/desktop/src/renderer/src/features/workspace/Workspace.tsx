@@ -3,11 +3,13 @@
  * status bar, with the core shortcuts of SPECS 11.4.
  */
 import { useEffect, useRef, useState } from 'react';
-import type { VaultInfo } from '@shared/bridge';
+import type { Backlink, VaultInfo } from '@shared/bridge';
+import { Settings } from '../settings/Settings';
+import type { SearchHandle } from '../../workspace/SearchBox';
 import { useCatalog, wireCatalog } from '../../lib/catalog';
 import { currentTheme, onThemeChange } from '../../lib/theme';
 import { useSettings, wireSettings } from '../../lib/settings';
-import { vx } from '../../lib/vx';
+import { unwrap, vx } from '../../lib/vx';
 import { useApp } from '../../store/app';
 import { workspaceStrings as s } from '../../strings/workspace';
 import { newNote, openDailyNote, setNotifier } from '../../workspace/actions';
@@ -20,7 +22,31 @@ import { Overlays } from '../../workspace/Overlays';
 import { Sidebar } from '../../workspace/Sidebar';
 import { useWorkspace } from '../../workspace/store';
 
-const EMPTY_BACKLINKS: never[] = [];
+const NO_BACKLINKS: Backlink[] = [];
+
+/** Backlinks of the active note from the index (SPECS 9.6), refreshed as the index changes. */
+function useBacklinks(path: string | null): Backlink[] {
+  const [links, setLinks] = useState<Backlink[]>(NO_BACKLINKS);
+  useEffect(() => {
+    if (!path) {
+      setLinks(NO_BACKLINKS);
+      return;
+    }
+    let live = true;
+    const load = () =>
+      void unwrap(vx().index.backlinks(path)).then(
+        (b) => live && setLinks(b),
+        () => undefined,
+      );
+    load();
+    const off = vx().index.onChanged(load);
+    return () => {
+      live = false;
+      off();
+    };
+  }, [path]);
+  return links;
+}
 
 /** Native window-control colours follow the theme (title-bar overlay). */
 function syncChrome(): void {
@@ -47,10 +73,13 @@ export function Workspace({ vaultPath }: { vaultPath: string }) {
   const outlineOpen = useWorkspace((st) => st.outline);
   const active = useWorkspace((st) => st.desk.active);
   const activeTitle = useDocs((st) => (active ? st.meta[active]?.path : null));
-  const searchRef = useRef<HTMLInputElement>(null);
+  const searchRef = useRef<SearchHandle>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [scope, setScope] = useState<SearchScopeKind>('vault');
   const [notice, setNotice] = useNotice();
-  const outline = useOutline(active && /\.md$/i.test(active) ? active : null, EMPTY_BACKLINKS);
+  const notePath = active && /\.md$/i.test(active) ? active : null;
+  const backlinks = useBacklinks(notePath);
+  const outline = useOutline(notePath, backlinks);
   useSettings((st) => st.loaded);
 
   useEffect(() => setNotifier(setNotice), [setNotice]);
@@ -102,7 +131,6 @@ export function Workspace({ vaultPath }: { vaultPath: string }) {
       if (key === 'k' && !e.shiftKey && !e.altKey) {
         e.preventDefault();
         searchRef.current?.focus();
-        searchRef.current?.select();
       } else if (key === 'n' && !e.shiftKey && !e.altKey) {
         e.preventDefault();
         void newNote();
@@ -121,6 +149,9 @@ export function Workspace({ vaultPath }: { vaultPath: string }) {
       } else if (key === 'd' && e.shiftKey && !e.altKey) {
         e.preventDefault();
         void openDailyNote();
+      } else if (e.key === ',' && !e.shiftKey && !e.altKey) {
+        e.preventDefault();
+        setSettingsOpen((o) => !o);
       }
     };
     window.addEventListener('keydown', onKey, true);
@@ -138,10 +169,10 @@ export function Workspace({ vaultPath }: { vaultPath: string }) {
         onSearch={() => searchRef.current?.focus()}
         onInbox={() => undefined}
         onHelp={() => undefined}
-        onSettings={() => undefined}
+        onSettings={() => setSettingsOpen((o) => !o)}
         inboxEnabled={false}
         helpEnabled={false}
-        settingsEnabled={false}
+        settingsEnabled
       />
       {sidebar && <Sidebar vault={vault} />}
       <main className="vx-main">
@@ -155,6 +186,7 @@ export function Workspace({ vaultPath }: { vaultPath: string }) {
       )}
       <StatusBar vault={vault} extra={notice ? <span role="status">{notice}</span> : null} />
       <Overlays />
+      {settingsOpen && <Settings onClose={() => setSettingsOpen(false)} />}
     </div>
   );
 }

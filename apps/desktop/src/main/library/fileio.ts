@@ -25,7 +25,7 @@ export interface FsDeps {
    */
   aroundMove?<T>(fromAbs: string, toAbs: string | null, fn: () => Promise<T>): Promise<T>;
   /** Told which library paths an operation changed (the file catalog listens). */
-  afterChange?(rels: string[]): void;
+  afterChange?(rels: string[]): void | Promise<void>;
 }
 
 const isWindows = process.platform === 'win32';
@@ -122,7 +122,7 @@ export class LibraryFs {
     this.deps.onOwnWrite?.(rel, hash);
     await atomicWrite(target, next, this.deps.atomicHooks);
     const st = await fs.stat(target);
-    this.deps.afterChange?.([rel]);
+    await this.deps.afterChange?.([rel]);
     return { path: rel, hash, mtime: st.mtimeMs };
   }
 
@@ -140,7 +140,7 @@ export class LibraryFs {
     this.deps.onOwnWrite?.(rel, hash);
     await atomicWrite(target, data, this.deps.atomicHooks);
     const st = await fs.stat(target);
-    this.deps.afterChange?.([rel]);
+    await this.deps.afterChange?.([rel]);
     return { path: rel, hash, mtime: st.mtimeMs };
   }
 
@@ -161,7 +161,7 @@ export class LibraryFs {
       throw err;
     }
     const st = await fs.stat(abs);
-    this.deps.afterChange?.([rel]);
+    await this.deps.afterChange?.([rel]);
     return { path: rel, hash, mtime: st.mtimeMs };
   }
 
@@ -180,7 +180,7 @@ export class LibraryFs {
       throw err;
     }
     const st = await fs.stat(abs);
-    this.deps.afterChange?.([rel]);
+    await this.deps.afterChange?.([rel]);
     return { path: rel, hash, mtime: st.mtimeMs };
   }
 
@@ -218,7 +218,7 @@ export class LibraryFs {
     this.deps.onOwnWrite?.(to.rel, null);
     const move = () => retryLocked(() => fs.rename(from.abs, to.abs));
     await (this.deps.aroundMove ? this.deps.aroundMove(from.abs, to.abs, move) : move());
-    this.deps.afterChange?.([from.rel, to.rel]);
+    await this.deps.afterChange?.([from.rel, to.rel]);
     return { path: to.rel };
   }
 
@@ -229,7 +229,7 @@ export class LibraryFs {
     this.deps.onOwnWrite?.(rel, null);
     const move = () => retryLocked(() => this.deps.trash(abs));
     await (this.deps.aroundMove ? this.deps.aroundMove(abs, null, move) : move());
-    this.deps.afterChange?.([rel]);
+    await this.deps.afterChange?.([rel]);
   }
 
   /** Creates a folder and any missing parents. Each new name is validated. */
@@ -248,7 +248,7 @@ export class LibraryFs {
       }
     }
     await fs.mkdir(abs, { recursive: true });
-    this.deps.afterChange?.([rel]);
+    await this.deps.afterChange?.([rel]);
     return { path: rel };
   }
 

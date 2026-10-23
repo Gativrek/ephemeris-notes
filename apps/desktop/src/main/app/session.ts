@@ -26,6 +26,8 @@ export class SessionManager {
   private session: LibrarySession | null = null;
   private readonly watchListeners = new Set<WatchListener>();
   private readonly openListeners = new Set<(s: LibrarySession | null) => void | Promise<void>>();
+  private readonly changeListeners = new Set<(rels: string[]) => void>();
+  private readonly restartListeners = new Set<() => void>();
 
   constructor(
     private readonly broadcast: Broadcast,
@@ -47,6 +49,18 @@ export class SessionManager {
     return () => this.watchListeners.delete(fn);
   }
 
+  /** Paths changed on disk, by the watcher or by the app's own operations (the index listens). */
+  onPathsChanged(fn: (rels: string[]) => void): () => void {
+    this.changeListeners.add(fn);
+    return () => this.changeListeners.delete(fn);
+  }
+
+  /** The watcher restarted (Windows folder moves): external changes may have been missed. */
+  onWatcherRestart(fn: () => void): () => void {
+    this.restartListeners.add(fn);
+    return () => this.restartListeners.delete(fn);
+  }
+
   onOpenChanged(fn: (s: LibrarySession | null) => void | Promise<void>): () => void {
     this.openListeners.add(fn);
     return () => this.openListeners.delete(fn);
@@ -62,7 +76,9 @@ export class SessionManager {
     void catalog.build();
     let catalogTimer: NodeJS.Timeout | null = null;
     const catalogChanged = (rels: string[]) => {
-      void Promise.all(rels.map((r) => catalog.refresh(r))).then(() => {
+      for (const fn of this.changeListeners) fn(rels);
+      // Awaited by file operations, so a caller that reloads the catalog sees the change.
+      return Promise.all(rels.map((r) => catalog.refresh(r))).then(() => {
         if (catalogTimer) clearTimeout(catalogTimer);
         catalogTimer = setTimeout(() => this.broadcast({ type: 'catalog.changed', payload: null }), 120);
       });
@@ -85,11 +101,12 @@ export class SessionManager {
           return await fn();
         } finally {
           await watcher.start();
+          for (const l of this.restartListeners) l();
         }
       },
     });
     watcher = new LibraryWatcher(root, (e) => {
-      catalogChanged([e.path]);
+      void catalogChanged([e.path]);
       for (const fn of this.watchListeners) fn(e);
       this.broadcast({ type: `file.${e.type}`, payload: { path: e.path, kind: e.kind } });
     });

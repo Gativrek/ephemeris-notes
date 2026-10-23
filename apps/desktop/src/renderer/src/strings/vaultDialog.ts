@@ -27,7 +27,7 @@ export const vaultDialogStrings = {
       `Its folder moves, with ${notes} ${notes === 1 ? 'note' : 'notes'}. ` +
       (linking === 0
         ? 'No notes elsewhere link to it by path.'
-        : `${linking} ${linking === 1 ? 'note elsewhere links' : 'notes elsewhere link'} to it by path; links by name keep working.`),
+        : `${linking} ${linking === 1 ? 'note elsewhere links' : 'notes elsewhere link'} to it by path; those links are updated to the new place.`),
     confirm: 'Move Vault',
   },
   remove: {

@@ -63,7 +63,10 @@ export class FileCatalog {
       for await (const f of walkFiles(this.rootAbs, rel))
         this.files.set(f.rel, { path: f.rel, size: f.size, mtime: f.mtimeMs });
     } else {
+      const existed = this.files.has(rel);
       this.files.set(rel, { path: rel, size: st.size, mtime: st.mtimeMs });
+      // A content change keeps the file list as it was: the version stays.
+      if (existed) return;
     }
     this.version++;
   }

@@ -20,6 +20,7 @@ export type Overlay =
   | { kind: 'quickOpen' }
   | { kind: 'confirmTrash'; path: string }
   | { kind: 'createMissing'; target: string; folder: string }
+  | { kind: 'renameLinks'; from: string; to: string; notes: Array<{ path: string; links: number }> }
   | null;
 
 interface WorkspaceState {

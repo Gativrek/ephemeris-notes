@@ -66,6 +66,7 @@ const vx = {
   index: {
     ...indexNs,
     onChanged: (cb: Listener) => subscribe('index.changed', cb),
+    onStatus: (cb: Listener) => subscribe('index.status', cb),
   },
   settings: {
     ...settingsNs,

@@ -24,6 +24,13 @@ export const workspaceStrings = {
     key: 'Ctrl K',
     scopes: { vault: 'Vault', domain: 'Domain', all: 'All' },
     scopeLabel: 'Search scope',
+    indexing: (done: number, total: number) => `Indexing… ${done} of ${total}`,
+    none: 'No results.',
+    outside: 'Outside Vaults',
+    move: 'move',
+    open: 'open',
+    openKeep: 'open and keep results',
+    close: 'close',
   },
   sidebar: {
     sections: 'Sections',
@@ -77,6 +84,7 @@ export const workspaceStrings = {
     retry: 'Retry',
   },
   status: {
+    indexing: (done: number, total: number) => `Indexing… ${done} of ${total}`,
     saved: 'Saved',
     saving: 'Saving…',
     unsaved: 'Edited',
@@ -101,6 +109,16 @@ export const workspaceStrings = {
     noteName: 'Note name',
     create: 'Create Note',
     cancel: 'Cancel',
+  },
+  rename: {
+    title: (n: number, m: number) =>
+      `Update ${n} ${n === 1 ? 'link' : 'links'} in ${m} ${m === 1 ? 'note' : 'notes'}?`,
+    body: (name: string) =>
+      `Renaming or moving "${name}" changes where these links point. Updating rewrites the links in these notes:`,
+    update: 'Update Links',
+    skip: 'Move Without Updating',
+    cancel: 'Cancel',
+    failed: (n: number) => `${n} ${n === 1 ? 'note' : 'notes'} could not be updated.`,
   },
   confirm: {
     trashTitle: 'Move to the trash?',

@@ -121,7 +121,7 @@ test('moves a Vault to another Domain after confirming, and deletes one with the
   await page.getByRole('dialog').getByRole('button', { name: 'Personal' }).click();
   await page.getByRole('button', { name: 'Save Changes' }).click();
   await expect(page.getByText('Move this Vault to Personal?')).toBeVisible();
-  await expect(page.getByText('1 note elsewhere links to it by path')).toBeVisible();
+  await expect(page.getByText('1 note elsewhere links to it by path; those links are updated')).toBeVisible();
   await page.getByRole('button', { name: 'Move Vault' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(band()).toHaveText('Personal');

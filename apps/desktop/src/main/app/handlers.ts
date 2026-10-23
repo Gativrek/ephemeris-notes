@@ -5,7 +5,7 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { BrowserWindow, dialog } from 'electron';
-import type { LibraryCreateResult, LibraryOpenResult, LibraryStats } from '@shared/bridge';
+import type { LibraryCreateResult, LibraryOpenResult, LibraryStats, RenameResult } from '@shared/bridge';
 import { fail } from '@shared/result';
 import { createLibrary, readLibrary } from '../library/library';
 import { handle, optObj, optStr, str } from './ipc';
@@ -31,6 +31,8 @@ export interface HandlerDeps {
   /** Shows a file in the OS file manager (a recorder in test mode). */
   reveal(absPath: string): void;
   stats(): Promise<LibraryStats>;
+  /** Rename or move, with optional link updates (SPECS 5). */
+  rename(from: unknown, to: unknown, updateLinks: boolean): Promise<RenameResult>;
 }
 
 async function pickFolder(
@@ -102,8 +104,8 @@ export function registerCoreHandlers(deps: HandlerDeps): void {
   handle('fs', 'write', (_e, p, text, hash) => lfs().write(p, text, hash));
   handle('fs', 'create', (_e, p, text) => lfs().create(p, text));
   handle('fs', 'rename', (_e, from, to, opts) => {
-    optObj(opts, 'opts');
-    return lfs().rename(from, to);
+    const o = optObj(opts, 'opts');
+    return deps.rename(from, to, o?.updateLinks === true);
   });
   handle('fs', 'trash', async (_e, p) => {
     await lfs().trash(p);

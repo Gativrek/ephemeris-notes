@@ -208,10 +208,11 @@ test('dropping a file copies it into _attachments and embeds it', async () => {
         0,
     )
     .toBeGreaterThan(0);
-  await expect(page.getByTestId('save-state')).toHaveText('Saved', { timeout: 5000 });
-  expect(await readFile(file('Academic/GNSS Study/Notes/Lectures/Lecture 2.md'), 'utf8')).toContain(
-    '![[diagram 1.png]]',
-  );
+  await expect
+    .poll(async () => readFile(file('Academic/GNSS Study/Notes/Lectures/Lecture 2.md'), 'utf8'), {
+      timeout: 5000,
+    })
+    .toContain('![[diagram 1.png]]');
 });
 
 test('new note from template and source mode', async () => {
@@ -237,6 +238,8 @@ test('wikilink autocomplete inserts the shortest unambiguous link', async () => 
   await page.keyboard.press('ControlOrMeta+End');
   await page.keyboard.type(' [[Kalm');
   await expect(page.locator('.cm-tooltip-autocomplete')).toContainText('Kalman Filter');
+  // CodeMirror ignores Enter for 75 ms after the list opens (interactionDelay).
+  await page.waitForTimeout(150);
   await page.keyboard.press('Enter');
   await expect(editor(page)).toContainText('Kalman Filter');
   await expect(page.getByTestId('save-state')).toHaveText('Saved', { timeout: 5000 });

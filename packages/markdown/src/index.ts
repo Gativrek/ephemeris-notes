@@ -18,3 +18,4 @@ export {
 export { parseInfoString, splitArgs, type InfoString } from './infostring';
 export { LinkCatalog, domainOf, hasExtension, vaultRootOf, DOMAIN_FOLDERS, type Resolution } from './links';
 export { parseYaml, type YamlResult, type YamlValue } from './yaml';
+export { rewriteLinks, relativePath, resolvesUniquelyInObsidian } from './rewrite';

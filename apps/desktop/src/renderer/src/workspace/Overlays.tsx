@@ -4,7 +4,7 @@ import { Icon } from '../components/Icon';
 import { useCatalog } from '../lib/catalog';
 import { unwrap, vx } from '../lib/vx';
 import { workspaceStrings as s } from '../strings/workspace';
-import { baseName, createNoteIn, currentVault, openPath, report, trashPath } from './actions';
+import { baseName, createNoteIn, currentVault, openPath, performRename, report, trashPath } from './actions';
 import { useWorkspace } from './store';
 import { displayName } from './tree';
 
@@ -111,6 +111,58 @@ export function Overlays() {
           }}
         />
       );
+    case 'renameLinks': {
+      const total = overlay.notes.reduce((n, x) => n + x.links, 0);
+      return (
+        <div className="vx-overlay" onMouseDown={(e) => e.target === e.currentTarget && close()}>
+          <div
+            className="vx-palette"
+            role="alertdialog"
+            aria-label={s.rename.title(total, overlay.notes.length)}
+            style={{ width: 560 }}
+            data-testid="rename-links"
+          >
+            <div className="vx-palette__title vx-caps">{s.rename.title(total, overlay.notes.length)}</div>
+            <div className="vx-palette__body">{s.rename.body(displayName(baseName(overlay.from)))}</div>
+            <div className="vx-palette__list" style={{ maxHeight: 220 }}>
+              {overlay.notes.map((n) => (
+                <div key={n.path} className="vx-row">
+                  <Icon name="note" className="vx-row__doc" />
+                  <span className="vx-row__name">{displayName(baseName(n.path))}</span>
+                  <span className="vx-row__meta">{n.links}</span>
+                </div>
+              ))}
+            </div>
+            <div className="vx-palette__foot">
+              <button type="button" className="vx-btn vx-btn--small" onClick={close}>
+                {s.rename.cancel}
+              </button>
+              <button
+                type="button"
+                className="vx-btn vx-btn--small"
+                onClick={() => {
+                  close();
+                  void performRename(overlay.from, overlay.to, false);
+                }}
+              >
+                {s.rename.skip}
+              </button>
+              <button
+                type="button"
+                className="vx-btn vx-btn--small vx-btn--primary"
+                autoFocus
+                onClick={() => {
+                  close();
+                  void performRename(overlay.from, overlay.to, true);
+                }}
+              >
+                {s.rename.update}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
     case 'createMissing': {
       const v = currentVault();
       const where = v ? overlay.folder.slice(v.path.length + 1) || v.name : overlay.folder;

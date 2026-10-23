@@ -9,7 +9,7 @@ import { EVENT_CHANNEL, type Domain, type LibraryStats, type PushEvent } from '@
 import { DOMAIN_FOLDERS, DOMAINS } from './library/library';
 import { isNote } from './library/walk';
 import { registerCoreHandlers, type MachineState } from './app/handlers';
-import { notImplemented, setDevOrigin } from './app/ipc';
+import { setDevOrigin } from './app/ipc';
 import { JsonStore } from './app/json-store';
 import { handleAppProtocol, handleAssetProtocol, registerPrivilegedSchemes } from './app/protocols';
 import {
@@ -24,6 +24,9 @@ import { SessionManager } from './app/session';
 import { installTestMode, isTestMode } from './app/test-mode';
 import { Settings } from './app/settings';
 import { registerVaultHandlers } from './app/vault-handlers';
+import { registerIndexHandlers, renameWithLinks } from './app/index-handlers';
+import { IndexClient } from './index/client';
+import createIndexWorker from './index/worker?nodeWorker';
 import { closeConfirmed, registerWorkspaceHandlers } from './app/workspace-handlers';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -176,17 +179,30 @@ async function main(): Promise<void> {
     return { notes };
   };
 
+  // The index (SPECS 6.1): one worker per open library, fed by every change.
+  const index = new IndexClient((init) => createIndexWorker({ workerData: init }), broadcast);
+  sessions.onOpenChanged(async (s) => {
+    if (!s) return index.stop();
+    const numbering = settings.get('math.numbering') === 'labeled' ? 'labeled' : 'all';
+    await index.start({ userData, libraryId: s.info.id, rootAbs: s.root.root, numbering });
+  });
+  sessions.onPathsChanged((rels) => index.touch(rels));
+  sessions.onWatcherRestart(() => void index.call('sync').catch(() => undefined));
+  const rename = (from: unknown, to: unknown, updateLinks: boolean) =>
+    renameWithLinks(sessions, index, from, to, updateLinks);
+
   registerCoreHandlers({
     sessions,
     state,
     settings,
     isPackaged: app.isPackaged,
     stats,
+    rename,
     reveal: testMode?.reveal ?? ((abs) => shell.showItemInFolder(abs)),
   });
-  registerVaultHandlers({ sessions, state, broadcast });
+  registerVaultHandlers({ sessions, state, broadcast, rename: (from, to) => rename(from, to, true) });
+  registerIndexHandlers({ sessions, index });
   registerWorkspaceHandlers({ sessions, testMode: testMode !== null });
-  for (const m of ['search', 'backlinks', 'resolve', 'outline', 'notesIn']) notImplemented('index', m);
 
   const last = state.get('lastLibrary');
   if (typeof last === 'string' && process.env.VX_NO_REOPEN !== '1') {

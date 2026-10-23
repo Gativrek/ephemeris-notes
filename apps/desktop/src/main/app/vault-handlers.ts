@@ -53,9 +53,11 @@ export function registerVaultHandlers(deps: {
   sessions: SessionManager;
   state: JsonStore<Record<string, unknown>>;
   broadcast: (e: PushEvent) => void;
+  /** Folder moves with link updates, for Domain moves. */
+  rename?: (from: string, to: string) => Promise<{ path: string }>;
 }): void {
   const { sessions, state, broadcast } = deps;
-  const store = () => new VaultStore(sessions.require().fs);
+  const store = () => new VaultStore(sessions.require().fs, deps.rename);
   const changed = <T>(value: T): T => {
     broadcast({ type: 'vaults.changed', payload: null });
     return value;

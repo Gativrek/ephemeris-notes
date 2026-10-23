@@ -9,24 +9,33 @@ import { unwrap, vx } from './vx';
 
 interface CatalogState {
   version: number;
+  aliasKey: string;
   files: CatalogEntry[];
   links: LinkCatalog;
   paths: string[];
   load(): Promise<void>;
 }
 
-export const useCatalog = create<CatalogState>((set) => ({
+export const useCatalog = create<CatalogState>((set, get) => ({
   version: -1,
+  aliasKey: '',
   files: [],
   links: new LinkCatalog([]),
   paths: [],
   async load() {
     try {
-      const { version, files } = await unwrap(vx().library.files());
+      const [{ version, files }, aliases] = await Promise.all([
+        unwrap(vx().library.files()),
+        unwrap(vx().index.aliases()).catch(() => [] as Array<[string, string[]]>),
+      ]);
+      const aliasKey = JSON.stringify(aliases);
+      // Nothing structural changed (a note was saved): keep the current objects.
+      if (version === get().version && aliasKey === get().aliasKey) return;
       const paths = files.map((f) => f.path).sort();
-      set({ version, files, paths, links: new LinkCatalog(paths) });
+      // Frontmatter aliases are alternative names for link resolution (SPECS 10.6).
+      set({ version, aliasKey, files, paths, links: new LinkCatalog(paths, new Map(aliases)) });
     } catch {
-      set({ version: -1, files: [], paths: [], links: new LinkCatalog([]) });
+      set({ version: -1, aliasKey: '', files: [], paths: [], links: new LinkCatalog([]) });
     }
   },
 }));
@@ -44,9 +53,11 @@ export function wireCatalog(): () => void {
   void useCatalog.getState().load();
   const offFiles = vx().library.onFilesChanged(reload);
   const offLib = vx().library.onChanged(reload);
+  const offIndex = vx().index.onChanged(reload);
   return () => {
     wired = false;
     offFiles();
     offLib();
+    offIndex();
   };
 }

@@ -129,7 +129,12 @@ export function coverExtension(bytes: Uint8Array): 'png' | 'jpg' | 'webp' {
 }
 
 export class VaultStore {
-  constructor(private readonly lfs: LibraryFs) {}
+  constructor(
+    private readonly lfs: LibraryFs,
+    /** Moves a folder; the app passes the rename with link updates (SPECS 5). */
+    private readonly renamer: (from: string, to: string) => Promise<{ path: string }> = (f, t) =>
+      lfs.rename(f, t),
+  ) {}
 
   private get rootAbs(): string {
     return this.lfs.root.root;
@@ -325,7 +330,7 @@ export class VaultStore {
     await this.assertUniqueName(to, current.name);
     const folder = await this.freeFolder(to, current.folder);
     const dest = `${DOMAIN_FOLDERS[to]}/${folder}`;
-    await this.lfs.rename(rel, dest);
+    await this.renamer(rel, dest);
     const info = await this.get(dest);
     if (!info) fail('IO', 'The moved Vault could not be read back.');
     return info;

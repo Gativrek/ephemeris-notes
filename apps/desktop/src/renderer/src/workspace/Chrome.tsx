@@ -9,6 +9,7 @@ import { workspaceStrings as s } from '../strings/workspace';
 import { openDailyNote } from './actions';
 import { getRecord, useDocs } from './docs';
 import { editorStats } from './EditorPane';
+import { SearchBox, useIndexStatus, type SearchHandle } from './SearchBox';
 import { useWorkspace } from './store';
 
 export type SearchScopeKind = 'vault' | 'domain' | 'all';
@@ -21,26 +22,14 @@ export function TitleBar({
   children,
 }: {
   vault: VaultInfo;
-  searchRef: React.RefObject<HTMLInputElement | null>;
+  searchRef: React.RefObject<SearchHandle | null>;
   scope: SearchScopeKind;
   onScope: (s: SearchScopeKind) => void;
   children?: ReactNode;
 }) {
   return (
     <header className="vx-titlebar" data-testid="titlebar">
-      <label className="vx-search">
-        <Icon name="search" size={15} strokeWidth={1.8} />
-        <input
-          ref={searchRef}
-          type="search"
-          placeholder={s.search.placeholder(vault.name)}
-          aria-label={s.search.label}
-          data-testid="search-input"
-        />
-        <span className="vx-search__key" aria-hidden="true">
-          {s.search.key}
-        </span>
-      </label>
+      <SearchBox ref={searchRef} vault={vault} scope={scope} />
       <div
         role="group"
         aria-label={s.search.scopeLabel}
@@ -187,6 +176,7 @@ export function StatusBar({ vault, extra }: { vault: VaultInfo; extra?: ReactNod
   const active = useWorkspace((st) => st.desk.active);
   const meta = useDocs((st) => (active ? st.meta[active] : undefined));
   const stats = useEditorStats();
+  const index = useIndexStatus();
   const d = domainStrings[vault.domain];
   const crumbs = active
     ? active
@@ -214,6 +204,9 @@ export function StatusBar({ vault, extra }: { vault: VaultInfo; extra?: ReactNod
       </span>
       <span className="vx-statusbar__spacer" />
       {extra}
+      {index.state === 'indexing' && (
+        <span data-testid="index-progress">{s.status.indexing(index.done, index.total)}</span>
+      )}
       {meta && <span>{s.status.words(stats.words)}</span>}
       {meta && <span>{s.status.position(stats.line, stats.col)}</span>}
       {meta && <span data-testid="save-state">{save}</span>}
