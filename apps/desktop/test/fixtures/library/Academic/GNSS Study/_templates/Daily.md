@@ -1,0 +1,3 @@
+# {{date}}
+
+Vault: {{vault}} ({{domain}})

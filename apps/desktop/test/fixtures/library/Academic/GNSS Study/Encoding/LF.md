@@ -1,0 +1,3 @@
+# LF
+
+Plain LF file.

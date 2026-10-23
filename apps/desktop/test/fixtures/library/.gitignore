@@ -1,0 +1,4 @@
+.vaults/*.tmp
+**/.*.vx-tmp-*
+.obsidian/workspace*.json
+.trash/

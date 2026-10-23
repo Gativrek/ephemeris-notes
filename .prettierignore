@@ -1,0 +1,7 @@
+design/
+apps/desktop/test/fixtures/
+pnpm-lock.yaml
+out/
+dist/
+*.md
+apps/desktop/src/renderer/styles/tokens.css

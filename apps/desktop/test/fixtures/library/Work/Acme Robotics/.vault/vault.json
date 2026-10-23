@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "id": "0a1b2c3d-0000-4000-8000-000000000003",
+  "name": "Acme Robotics",
+  "created": "2026-10-03T08:30:00.000Z",
+  "order": 1,
+  "x-custom": {
+    "keep": "unknown keys survive writes"
+  },
+  "settings": {
+    "attachments": "_attachments",
+    "templates": "_templates",
+    "daily": "Daily"
+  }
+}

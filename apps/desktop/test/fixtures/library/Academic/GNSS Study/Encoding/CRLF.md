@@ -1,0 +1,3 @@
+# CRLF
+
+Windows line endings.

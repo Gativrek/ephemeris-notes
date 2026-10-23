@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "paths": { "@shared/*": ["./src/shared/*"] }
+  },
+  "include": [
+    "electron.vite.config.ts",
+    "playwright.config.ts",
+    "src/main/**/*",
+    "src/shared/**/*",
+    "test/**/*.ts"
+  ]
+}

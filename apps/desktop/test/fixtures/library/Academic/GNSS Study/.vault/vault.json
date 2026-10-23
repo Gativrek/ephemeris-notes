@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "id": "0a1b2c3d-0000-4000-8000-000000000002",
+  "name": "GNSS Constellation Study",
+  "created": "2026-10-02T10:00:00.000Z",
+  "order": 2,
+  "cover": {
+    "file": "cover.png",
+    "focus": {
+      "x": 0.5,
+      "y": 0.35
+    },
+    "zoom": 1
+  },
+  "settings": {
+    "attachments": "_attachments",
+    "templates": "_templates",
+    "daily": "Daily"
+  }
+}

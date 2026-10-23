@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "id": "0a1b2c3d-0000-4000-8000-000000000001",
+  "name": "Knowledge",
+  "created": "2026-10-01T09:05:00.000Z",
+  "order": 1,
+  "settings": {
+    "attachments": "_attachments",
+    "templates": "_templates",
+    "daily": "Daily"
+  }
+}
