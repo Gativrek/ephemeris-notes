@@ -1,0 +1,18 @@
+# Only the faces declared in fonts.css (and the licenses) are committed.
+# The rest of the downloaded families stay local until deleted.
+*.ttf
+!Marcellus/Marcellus-Regular.ttf
+!IBM_Plex_Sans/static/IBMPlexSans-Light.ttf
+!IBM_Plex_Sans/static/IBMPlexSans-Regular.ttf
+!IBM_Plex_Sans/static/IBMPlexSans-Italic.ttf
+!IBM_Plex_Sans/static/IBMPlexSans-Medium.ttf
+!IBM_Plex_Sans/static/IBMPlexSans-SemiBold.ttf
+!IBM_Plex_Serif/IBMPlexSerif-Regular.ttf
+!IBM_Plex_Serif/IBMPlexSerif-Italic.ttf
+!IBM_Plex_Serif/IBMPlexSerif-SemiBold.ttf
+!IBM_Plex_Serif/IBMPlexSerif-SemiBoldItalic.ttf
+!IBM_Plex_Mono/IBMPlexMono-Regular.ttf
+!IBM_Plex_Mono/IBMPlexMono-Italic.ttf
+!IBM_Plex_Mono/IBMPlexMono-Medium.ttf
+!STIX_Two_Text/static/STIXTwoText-Regular.ttf
+!STIX_Two_Text/static/STIXTwoText-Italic.ttf

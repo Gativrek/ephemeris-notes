@@ -1,0 +1,11 @@
+# Source files are LF in the repository on every OS.
+* text=auto eol=lf
+
+# Fixture bytes are test data: never convert line endings or strip BOMs.
+apps/desktop/test/fixtures/** -text
+
+*.ttf binary
+*.woff2 binary
+*.png binary
+*.jpg binary
+*.pdf binary
