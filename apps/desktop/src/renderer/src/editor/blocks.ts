@@ -13,7 +13,8 @@ import { renderInline } from './inline';
 import { embedAloneOnLine, rangeActive } from './livePreview';
 import { blockRegistry } from './registry';
 import { DisplayMathWidget, PropertiesWidget, TableWidget, WarningWidget } from './widgets';
-import { NoteEmbedWidget, PluginBlockWidget } from './embeds';
+import { NoteEmbedWidget } from './embeds';
+import { PluginBlockWidget } from './pluginBlock';
 import { equationField } from './equations';
 
 /** Block nodes that can contain the blocks handled here. */
@@ -200,8 +201,6 @@ function build(state: EditorState): DecorationSet {
             parsed.args,
             state.doc.sliceString(bodyFrom, bodyTo),
             b.from,
-            bodyFrom,
-            bodyTo,
           ),
           block: true,
         }).range(aligned.from, aligned.to),

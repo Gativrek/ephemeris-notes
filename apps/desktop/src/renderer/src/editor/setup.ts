@@ -21,6 +21,16 @@ import { equationField } from './equations';
 export const contextCompartment = new Compartment();
 export const previewCompartment = new Compartment();
 export const editableCompartment = new Compartment();
+export const attrsCompartment = new Compartment();
+
+/** Content attributes; spell check follows Settings > Editor. */
+export function contentAttrs(spellcheck: boolean): Extension {
+  return EditorView.contentAttributes.of({
+    spellcheck: spellcheck ? 'true' : 'false',
+    'aria-label': 'Note',
+    autocapitalize: 'sentences',
+  });
+}
 
 /** Wraps the selection in `mark` (bold `**`, italic `*`), or removes it when already wrapped. */
 function toggleWrap(mark: string) {
@@ -96,6 +106,7 @@ export interface EditorOptions {
   source?: boolean;
   openExternal: ExternalOpener;
   onUpdate?: (view: EditorView, docChanged: boolean) => void;
+  spellcheck?: boolean;
   extra?: Extension[];
 }
 
@@ -135,11 +146,7 @@ export function editorExtensions(opts: EditorOptions): Extension[] {
     linkClicks(opts.openExternal),
     previewCompartment.of(previewExtensions(!!opts.source)),
     editableCompartment.of(editableExtensions(opts.readOnly)),
-    EditorView.contentAttributes.of({
-      spellcheck: 'true',
-      'aria-label': 'Note',
-      autocapitalize: 'sentences',
-    }),
+    attrsCompartment.of(contentAttrs(opts.spellcheck ?? true)),
     EditorView.updateListener.of((u) => {
       if (u.docChanged || u.selectionSet || u.focusChanged) opts.onUpdate?.(u.view, u.docChanged);
     }),

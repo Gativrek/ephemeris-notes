@@ -151,6 +151,47 @@ export interface VxBridge {
     makeVault(path: string): Promise<Result<VaultInfo>>;
     onChanged(cb: () => void): Unsubscribe;
   };
+  /** Installed plugins (SPECS 12.2) and their data storage (12.7). */
+  plugins: {
+    list(): Promise<Result<PluginInfo[]>>;
+    setEnabled(id: string, enabled: boolean): Promise<Result<null>>;
+    /** Shows a folder picker and copies the plugin in. */
+    install(): Promise<Result<PluginInfo | null>>;
+    storageRoot(scope: StorageScope, id: string, vaultPath: string | null): Promise<Result<string>>;
+    readText(
+      scope: StorageScope,
+      id: string,
+      vaultPath: string | null,
+      name: string,
+    ): Promise<Result<string | null>>;
+    readBinary(
+      scope: StorageScope,
+      id: string,
+      vaultPath: string | null,
+      name: string,
+    ): Promise<Result<Uint8Array | null>>;
+    writeText(
+      scope: StorageScope,
+      id: string,
+      vaultPath: string | null,
+      name: string,
+      text: string,
+    ): Promise<Result<null>>;
+    writeBinary(
+      scope: StorageScope,
+      id: string,
+      vaultPath: string | null,
+      name: string,
+      data: ArrayBuffer,
+    ): Promise<Result<null>>;
+    remove(scope: StorageScope, id: string, vaultPath: string | null, name: string): Promise<Result<null>>;
+    listFiles(
+      scope: StorageScope,
+      id: string,
+      vaultPath: string | null,
+      folder: string,
+    ): Promise<Result<FileEntry[]>>;
+  };
   /** Read-only app resources: pdf.js CMaps and standard fonts, by file name. */
   app: {
     pdfData(kind: 'cmap' | 'font', name: string): Promise<Result<Uint8Array>>;
@@ -275,6 +316,27 @@ export interface RenameResult {
   failed: Array<{ path: string; message: string }>;
 }
 
+export interface PluginManifestInfo {
+  id: string;
+  name: string;
+  version: string;
+  apiVersion: string;
+  main: string;
+  styles?: string;
+  description?: string;
+  author?: string;
+}
+
+export interface PluginInfo {
+  manifest: PluginManifestInfo;
+  enabled: boolean;
+  /** False when the manifest is invalid, a file is missing or apiVersion does not match. */
+  compatible: boolean;
+  problem?: string;
+}
+
+export type StorageScope = 'library' | 'vault';
+
 export interface LibraryStats {
   notes: Record<Domain, number>;
 }
@@ -303,6 +365,18 @@ export const BRIDGE_METHODS = {
   library: ['open', 'create', 'current', 'close', 'stats', 'files'],
   notes: ['create', 'templates', 'daily', 'addAttachment'],
   app: ['pdfData'],
+  plugins: [
+    'list',
+    'setEnabled',
+    'install',
+    'storageRoot',
+    'readText',
+    'readBinary',
+    'writeText',
+    'writeBinary',
+    'remove',
+    'listFiles',
+  ],
   vaults: ['list', 'get', 'create', 'update', 'moveImpact', 'move', 'remove', 'nonVaultFolders', 'makeVault'],
   ui: ['get', 'set'],
   fs: ['read', 'readBinary', 'write', 'create', 'rename', 'trash', 'mkdir', 'list', 'stat'],

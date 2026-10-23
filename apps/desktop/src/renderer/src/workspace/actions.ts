@@ -30,6 +30,11 @@ let notify: (msg: string) => void = (msg) => console.warn(msg);
 export function setNotifier(fn: (msg: string) => void): void {
   notify = fn;
 }
+/** A short message in the status bar. */
+export function notice(msg: string): void {
+  notify(msg);
+}
+
 export function report(err: unknown): void {
   notify(errorMessage(err));
 }

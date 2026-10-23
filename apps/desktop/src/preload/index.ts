@@ -58,6 +58,7 @@ const vx = {
   },
   notes: namespace('notes'),
   app: namespace('app'),
+  plugins: namespace('plugins'),
   fs: namespace('fs'),
   vaults: {
     ...vaultsNs,

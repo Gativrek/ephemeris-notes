@@ -1,0 +1,12 @@
+{
+  "name": "@vaults/sample-plugin",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "description": "Contract-test plugin that exercises every plugin API v1 service (SPECS 12.10).",
+  "scripts": {
+    "build": "node build.mjs",
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}

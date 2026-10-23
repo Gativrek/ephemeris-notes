@@ -1,6 +1,6 @@
 /**
- * Settings (SPECS 11.1): a full-screen panel over the workspace. M3 ships the Library
- * section; the other sections arrive in M5.
+ * Settings (SPECS 11.1): a full-screen panel over the workspace with the sections
+ * General, Editor, Math, Appearance, Library, Plugins, Help and About.
  */
 import { useEffect, useState, type ReactNode } from 'react';
 import type { Domain } from '@shared/bridge';
@@ -11,7 +11,9 @@ import { useApp } from '../../store/app';
 import { settingsStrings as s } from '../../strings/settings';
 import { openPath } from '../../workspace/actions';
 import { useIndexStatus } from '../../workspace/SearchBox';
+import { HelpSection } from './HelpSection';
 import { MathSection } from './MathSection';
+import { AboutSection, AppearanceSection, EditorSection, GeneralSection, PluginsSection } from './sections';
 
 export type SettingsSection = keyof typeof s.sections;
 
@@ -187,12 +189,17 @@ function LibrarySection() {
 
 export function Settings({
   onClose,
-  initial = 'library',
+  initial = 'general',
+  helpPage = null,
 }: {
   onClose: () => void;
   initial?: SettingsSection;
+  helpPage?: string | null;
 }) {
   const [section, setSection] = useState<SettingsSection>(initial);
+  const [page, setPage] = useState<string | null>(helpPage);
+  useEffect(() => setSection(initial), [initial]);
+  useEffect(() => setPage(helpPage), [helpPage]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -231,16 +238,14 @@ export function Settings({
         >
           <Icon name="close" />
         </button>
-        {section === 'library' ? (
-          <LibrarySection />
-        ) : section === 'math' ? (
-          <MathSection />
-        ) : (
-          <div className="vx-settings__page">
-            <h2 className="vx-settings__h">{s.sections[section]}</h2>
-            <p className="vx-settings__hint">{s.later}</p>
-          </div>
-        )}
+        {section === 'general' && <GeneralSection />}
+        {section === 'editor' && <EditorSection />}
+        {section === 'math' && <MathSection />}
+        {section === 'appearance' && <AppearanceSection />}
+        {section === 'library' && <LibrarySection />}
+        {section === 'plugins' && <PluginsSection />}
+        {section === 'help' && <HelpSection page={page} onPage={setPage} />}
+        {section === 'about' && <AboutSection />}
       </div>
     </div>
   );

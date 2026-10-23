@@ -247,3 +247,55 @@ test('wikilink autocomplete inserts the shortest unambiguous link', async () => 
     '[[Kalman Filter]]',
   );
 });
+
+test('the command palette runs core commands; Insert Link uses the shortest link', async () => {
+  const { page } = ctx;
+  await openNote(page, 'Notes', 'Lecture 10');
+  await editor(page).click();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.type(' see ');
+  await page.keyboard.press('ControlOrMeta+p');
+  await page.keyboard.type('insert link');
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('insert-link')).toBeVisible();
+  await page.keyboard.type('Kalman Filter');
+  await expect(page.getByTestId('insert-link').locator('.vx-row').first()).toContainText('Kalman Filter');
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('save-state')).toHaveText('Saved', { timeout: 5000 });
+  expect(await readFile(file('Academic/GNSS Study/Notes/Lectures/Lecture 10.md'), 'utf8')).toContain(
+    'see [[Kalman Filter]]',
+  );
+  await page.keyboard.press('ControlOrMeta+p');
+  await page.keyboard.type('toggle outline');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.vx-outline-wrap')).toHaveCount(0);
+});
+
+test('Settings > Editor applies font size and spell check; Help lists the core pages', async () => {
+  const { page } = ctx;
+  await openNote(page, 'Notes', 'Lecture 10');
+  await page.keyboard.press('ControlOrMeta+,');
+  await page.getByTestId('settings').getByRole('link', { name: 'Editor', exact: true }).click();
+  const size = page.getByRole('spinbutton', { name: 'Font size' });
+  await size.fill('22');
+  await size.press('Enter');
+  await page.getByRole('checkbox', { name: 'Spell check' }).uncheck();
+  await page.getByTestId('settings').getByRole('link', { name: 'Help', exact: true }).click();
+  const help = page.getByTestId('settings-help');
+  for (const title of [
+    'Getting started',
+    'Markdown basics',
+    'Links and embeds',
+    'Math and equation references',
+    'Search syntax',
+    'Keyboard shortcuts',
+    'Inbox contract',
+    'Using with Obsidian',
+  ])
+    await expect(help.getByRole('link', { name: title })).toBeVisible();
+  await help.getByRole('link', { name: 'Search syntax' }).click();
+  await expect(page.getByTestId('help-article')).toContainText('notes with both words');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.vx-editor .cm-scroller')).toHaveCSS('font-size', '22px');
+  await expect(editor(page)).toHaveAttribute('spellcheck', 'false');
+});

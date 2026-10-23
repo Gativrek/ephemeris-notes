@@ -157,6 +157,7 @@ test('Settings > Library finds ambiguous links and makes a Vault from a plain fo
   const { page } = ctx;
   await openVault(page, 0);
   await page.keyboard.press('ControlOrMeta+,');
+  await page.getByTestId('settings').getByRole('link', { name: 'Library' }).click();
   await expect(page.getByTestId('settings-library')).toBeVisible();
   await page.getByRole('button', { name: 'Find Ambiguous Links' }).click();
   await expect(page.getByTestId('ambiguous-list')).toContainText(

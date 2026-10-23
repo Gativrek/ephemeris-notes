@@ -343,8 +343,8 @@ body { margin: 0; font-family: var(--font-ui); color: var(--text); background: v
 /* ---------- Note editor surface (added in M2; CodeMirror) ---------- */
 .vx-editor { flex: 1 1 auto; min-height: 0; position: relative; background: var(--surface); }
 .vx-editor .cm-editor { height: 100%; outline: none; background: var(--surface); color: var(--note-text); }
-.vx-editor .cm-scroller { padding: var(--space-8) var(--space-6) 30vh; font: 400 18px/1.72 var(--font-note); }
-.vx-editor .cm-content { max-width: var(--size-note-measure); margin: 0 auto; padding: 0; caret-color: var(--ink); }
+.vx-editor .cm-scroller { padding: var(--space-8) var(--space-6) 30vh; font: 400 var(--editor-font-size, 18px)/1.72 var(--font-note); }
+.vx-editor .cm-content { max-width: var(--editor-measure, var(--size-note-measure)); margin: 0 auto; padding: 0; caret-color: var(--ink); }
 .vx-editor .cm-line { padding: 0; }
 .vx-editor .cm-cursor { border-left: 2px solid var(--ink); }
 .vx-editor .cm-selectionBackground, .vx-editor .cm-focused .cm-selectionBackground, .vx-editor .cm-content ::selection { background: var(--selection) !important; }
@@ -490,3 +490,41 @@ body { margin: 0; font-family: var(--font-ui); color: var(--text); background: v
 @media (prefers-reduced-motion: reduce) { .vx-math.is-flash { animation: none; outline: 2px solid var(--cyan); } }
 .vx-math__dup { display: block; margin-top: 4px; text-align: center; }
 .vx-eq-preview { padding: 4px 8px; font-size: 13px; }
+
+/* Plugin block frame (SPECS 12.8): container, optional caption, loading and error states. */
+.vx-plugin-block { position: relative; margin: 6px 0; min-height: 24px; }
+.vx-plugin-block__body { min-width: 0; }
+.vx-plugin-block__caption { margin: 6px 0 0; font: 400 13px/1.4 var(--font-ui); color: var(--muted); text-align: center; }
+.vx-plugin-block.is-loading { min-height: 64px; border: 1px dashed var(--line-note); border-radius: var(--radius-md); }
+.vx-plugin-block.is-loading::after { content: ''; position: absolute; left: 50%; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; border: 2px solid var(--line); border-top-color: var(--cyan-fill); border-radius: var(--radius-pill); animation: vx-spin .9s linear infinite; }
+.vx-plugin-block.is-error { border: 1px solid var(--danger); border-radius: var(--radius-md); background: var(--code-surface); }
+.vx-plugin-block__error { display: flex; flex-direction: column; gap: 8px; padding: 0 0 10px; }
+.vx-plugin-block__source { margin: 0; padding: 12px 16px; border-bottom: 1px solid var(--line-note); font: 400 14px/1.6 var(--font-mono); color: var(--ink); white-space: pre-wrap; overflow-x: auto; }
+.vx-plugin-block__message { margin: 0 16px; font: 400 13px/1.4 var(--font-ui); color: var(--danger); }
+.vx-plugin-block__error .vx-btn { align-self: flex-start; margin: 0 16px; }
+@keyframes vx-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .vx-plugin-block.is-loading::after { animation: none; } }
+
+/* Plugin overlay (ctx.ui.openOverlay): a workspace surface, no ornament. */
+.vx-plugin-overlay__backdrop { align-items: center; padding-top: 0; z-index: 30; }
+.vx-plugin-overlay { display: flex; flex-direction: column; background: var(--surface-raised); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: 0 24px 60px rgba(8,14,22,.22); overflow: hidden; }
+.vx-plugin-overlay--large { width: 80vw; height: 80vh; }
+.vx-plugin-overlay--full { width: calc(100vw - 2 * var(--space-5)); height: calc(100vh - 2 * var(--space-5)); }
+.vx-plugin-overlay__head { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 6px 0 16px; border-bottom: 1px solid var(--line); background: var(--surface-side); }
+.vx-plugin-overlay__title { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 14px/20px var(--font-ui); color: var(--ink); }
+.vx-plugin-overlay__dirty { width: 8px; height: 8px; border-radius: var(--radius-pill); background: var(--cyan-fill); }
+.vx-plugin-overlay__body { flex: 1 1 auto; min-height: 0; overflow: auto; position: relative; }
+
+/* Settings > Plugins and Settings > Help. */
+.vx-settings__plugin { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-3) 0 0 var(--space-4); border-left: 2px solid var(--line); }
+.vx-plugin-pane { min-width: 0; }
+.vx-help { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: var(--space-5); min-height: 100%; }
+.vx-help__nav { display: flex; flex-direction: column; gap: 2px; }
+.vx-help__nav .vx-row { cursor: pointer; }
+.vx-help__nav .vx-row[aria-current="page"] { background: var(--selection); color: var(--on-selection); }
+.vx-help__group { display: flex; flex-direction: column; gap: 2px; margin-top: var(--space-4); }
+.vx-help__group-title { padding: 0 8px 4px; color: var(--muted); }
+.vx-editor.vx-help__article { background: transparent; }
+.vx-editor.vx-help__article .cm-editor { height: auto; background: transparent; }
+.vx-editor.vx-help__article .cm-scroller { padding: 0 0 var(--space-8); }
+.vx-editor.vx-help__article .cm-content { margin: 0; }

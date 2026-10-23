@@ -7,6 +7,8 @@ import react from '@vitejs/plugin-react';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '../..');
+const appVersion = (JSON.parse(readFileSync(join(here, 'package.json'), 'utf8')) as { version: string })
+  .version;
 
 /**
  * pdf.js loads its JPEG 2000 and JBIG2 decoders with `import()` from `wasmUrl`. We ship
@@ -49,7 +51,7 @@ export default defineConfig({
   main: {
     resolve: { alias: { '@shared': resolve(here, 'src/shared') } },
     // The workspace package ships TypeScript sources: bundle it instead of requiring it.
-    build: { externalizeDeps: { exclude: ['@vaults/markdown'] } },
+    build: { externalizeDeps: { exclude: ['@vaults/markdown', '@vaults/plugin-api'] } },
   },
   preload: {
     resolve: { alias: { '@shared': resolve(here, 'src/shared') } },
@@ -59,6 +61,7 @@ export default defineConfig({
     },
   },
   renderer: {
+    define: { __APP_VERSION__: JSON.stringify(appVersion) },
     resolve: {
       alias: {
         '@shared': resolve(here, 'src/shared'),

@@ -22,8 +22,10 @@ describe('pnpm tokens', () => {
   it('defines every variable bundle.css uses', () => {
     const bundle = readFileSync(resolve(repo, 'design/components/bundle.css'), 'utf8');
     const used = new Set([...bundle.matchAll(/var\(--([a-z0-9-]+)/g)].map((m) => m[1]!));
-    // Set per component by the consumer, not tokens (see the component READMEs).
-    for (const local of ['domain', 'domain-soft', 'band-mark']) used.delete(local);
+    // Set per component by the consumer, not tokens (see the component READMEs), and the
+    // two Settings > Editor values the editor sets inline (with fallbacks).
+    for (const local of ['domain', 'domain-soft', 'band-mark', 'editor-font-size', 'editor-measure'])
+      used.delete(local);
     const defined = new Set([...css.matchAll(/--([a-z0-9-]+):/g)].map((m) => m[1]!));
     expect([...used].filter((v) => !defined.has(v))).toEqual([]);
   });

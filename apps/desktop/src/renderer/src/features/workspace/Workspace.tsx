@@ -4,7 +4,10 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import type { Backlink, VaultInfo } from '@shared/bridge';
-import { Settings } from '../settings/Settings';
+import { Settings, type SettingsSection } from '../settings/Settings';
+import { PluginOverlays } from '../../plugins/PluginOverlays';
+import { setPluginNotifier, startPlugins } from '../../plugins/host';
+import { usePlugins, type CommandEntry } from '../../plugins/store';
 import type { SearchHandle } from '../../workspace/SearchBox';
 import { useCatalog, wireCatalog } from '../../lib/catalog';
 import { currentTheme, onThemeChange } from '../../lib/theme';
@@ -13,6 +16,7 @@ import { unwrap, vx } from '../../lib/vx';
 import { useApp } from '../../store/app';
 import { workspaceStrings as s } from '../../strings/workspace';
 import { newNote, openDailyNote, setNotifier } from '../../workspace/actions';
+import { setDateLocale } from '../../workspace/tree';
 import { Rail, StatusBar, TitleBar, type SearchScopeKind } from '../../workspace/Chrome';
 import { closeItem, Desk } from '../../workspace/Desk';
 import { externalChange, externalDelete, getRecord, saveAll, useDocs } from '../../workspace/docs';
@@ -74,7 +78,13 @@ export function Workspace({ vaultPath }: { vaultPath: string }) {
   const active = useWorkspace((st) => st.desk.active);
   const activeTitle = useDocs((st) => (active ? st.meta[active]?.path : null));
   const searchRef = useRef<SearchHandle>(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsAt, setSettingsAt] = useState<{ section: SettingsSection; page: string | null } | null>(
+    null,
+  );
+  const toggleSettings = (section: SettingsSection = 'general', page: string | null = null) =>
+    setSettingsAt((cur) => (cur && cur.section === section && !page ? null : { section, page }));
+  const dateLanguage = useSettings((st) => st.get<string>('general.dateLanguage'));
+  setDateLocale(dateLanguage);
   const [scope, setScope] = useState<SearchScopeKind>('vault');
   const [notice, setNotice] = useNotice();
   const notePath = active && /\.md$/i.test(active) ? active : null;
@@ -83,6 +93,57 @@ export function Workspace({ vaultPath }: { vaultPath: string }) {
   useSettings((st) => st.loaded);
 
   useEffect(() => setNotifier(setNotice), [setNotice]);
+  useEffect(() => setPluginNotifier((m) => setNotice(m)), [setNotice]);
+
+  // Plugins load after the workspace's first paint (SPECS 12.3 step 6).
+  useEffect(() => {
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const raf = requestAnimationFrame(() => {
+      t = setTimeout(() => void startPlugins(), 0);
+    });
+    return () => {
+      cancelAnimationFrame(raf);
+      if (t) clearTimeout(t);
+    };
+  }, []);
+
+  // Core commands for the palette (SPECS 11.3).
+  useEffect(() => {
+    const c = s.commands.core;
+    const ws = () => useWorkspace.getState();
+    const core: Array<[string, string, () => void]> = [
+      ['search', c.search, () => searchRef.current?.focus()],
+      ['new-note', c.newNote, () => void newNote()],
+      ['open-note', c.openNote, () => useWorkspace.setState({ overlay: { kind: 'quickOpen' } })],
+      ['insert-link', c.insertLink, () => useWorkspace.setState({ overlay: { kind: 'insertLink' } })],
+      ['toggle-source', c.toggleSource, () => ws().setPanels({ source: !ws().source })],
+      ['toggle-sidebar', c.toggleSidebar, () => ws().setPanels({ sidebar: !ws().sidebar })],
+      ['toggle-outline', c.toggleOutline, () => ws().setPanels({ outline: !ws().outline })],
+      [
+        'close-item',
+        c.closeItem,
+        () => {
+          const d = ws().desk;
+          if (d.active && d.open.includes(d.active)) closeItem(d.active);
+        },
+      ],
+      ['daily', c.daily, () => void openDailyNote()],
+      ['settings', c.settings, () => setSettingsAt({ section: 'general', page: null })],
+      ['help', c.help, () => setSettingsAt({ section: 'help', page: null })],
+      ['switch-vault', c.switchVault, () => useApp.getState().showChooser()],
+      ['rebuild-index', c.rebuildIndex, () => void vx().index.rebuild()],
+    ];
+    const entries: CommandEntry[] = core.map(([id, title, run]) => ({
+      id: `core:${id}`,
+      title,
+      owner: 'core',
+      run,
+    }));
+    usePlugins.setState((st) => ({
+      commands: [...entries, ...st.commands.filter((x) => x.owner !== 'core')],
+    }));
+    return () => usePlugins.setState((st) => ({ commands: st.commands.filter((x) => x.owner !== 'core') }));
+  }, []);
   useEffect(() => wireCatalog(), []);
   useEffect(() => wireSettings(), []);
 
@@ -149,9 +210,12 @@ export function Workspace({ vaultPath }: { vaultPath: string }) {
       } else if (key === 'd' && e.shiftKey && !e.altKey) {
         e.preventDefault();
         void openDailyNote();
+      } else if (key === 'p' && !e.shiftKey && !e.altKey) {
+        e.preventDefault();
+        useWorkspace.setState({ overlay: ws.overlay?.kind === 'commands' ? null : { kind: 'commands' } });
       } else if (e.key === ',' && !e.shiftKey && !e.altKey) {
         e.preventDefault();
-        setSettingsOpen((o) => !o);
+        setSettingsAt((o) => (o ? null : { section: 'general', page: null }));
       }
     };
     window.addEventListener('keydown', onKey, true);
@@ -168,10 +232,10 @@ export function Workspace({ vaultPath }: { vaultPath: string }) {
       <Rail
         onSearch={() => searchRef.current?.focus()}
         onInbox={() => undefined}
-        onHelp={() => undefined}
-        onSettings={() => setSettingsOpen((o) => !o)}
+        onHelp={() => toggleSettings('help')}
+        onSettings={() => toggleSettings('general')}
         inboxEnabled={false}
-        helpEnabled={false}
+        helpEnabled
         settingsEnabled
       />
       {sidebar && <Sidebar vault={vault} />}
@@ -185,8 +249,15 @@ export function Workspace({ vaultPath }: { vaultPath: string }) {
         </div>
       )}
       <StatusBar vault={vault} extra={notice ? <span role="status">{notice}</span> : null} />
+      {settingsAt && (
+        <Settings
+          onClose={() => setSettingsAt(null)}
+          initial={settingsAt.section}
+          helpPage={settingsAt.page}
+        />
+      )}
       <Overlays />
-      {settingsOpen && <Settings onClose={() => setSettingsOpen(false)} />}
+      <PluginOverlays />
     </div>
   );
 }

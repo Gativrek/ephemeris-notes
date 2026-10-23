@@ -31,7 +31,53 @@ export const settingsStrings = {
     outside: 'Folders outside Domains',
     outsideHint: 'Indexed, searchable in All and linkable, but not shown in the sidebar.',
   },
-  later: 'More settings arrive with milestone M5.',
+  general: {
+    reopen: 'Reopen last Vault',
+    reopenHint: 'Open the Vault you used last instead of the chooser when the app starts.',
+    dateLanguage: 'Language for dates',
+    dateLanguageHint: 'Weekday names on daily notes.',
+  },
+  editor: {
+    fontSize: 'Font size',
+    fontSizeHint: 'Note text size in pixels.',
+    lineWidth: 'Line width',
+    lineWidthHint: 'Maximum width of the note column in pixels.',
+    autosave: 'Autosave delay',
+    autosaveHint:
+      'Milliseconds after the last edit before the note is saved. Notes also save on blur and close.',
+    spellcheck: 'Spell check',
+    spellcheckHint: 'The language follows the system dictionary.',
+  },
+  appearance: {
+    theme: 'Theme',
+    themeHint: 'The chooser stays light.',
+    themes: { system: 'System', light: 'Light', dark: 'Dark' },
+    outline: 'Outline style',
+    outlineHint: 'How the outline panel presents a note.',
+  },
+  plugins: {
+    trust:
+      'Plugins are trusted code. They run inside the app with access to your notes. Install only plugins you trust.',
+    install: 'Install from Folder…',
+    none: 'No plugins installed. Plugins live in the plugins folder of the app’s user data.',
+    enable: (name: string) => `Enable ${name}`,
+    states: {
+      disabled: 'Disabled',
+      loading: 'Loading…',
+      loaded: 'Enabled',
+      failed: 'Failed to load',
+      incompatible: 'Not compatible',
+    },
+    by: (author: string) => `by ${author}`,
+    paneFailed: 'This settings pane failed to load.',
+    installed: (name: string) => `Installed ${name}.`,
+  },
+  about: {
+    version: (v: string) => `Version ${v}`,
+    tagline: 'A desktop note app for a library of Markdown notes.',
+    license: 'MIT License.',
+    data: 'Your notes are plain Markdown files in your library. Nothing leaves this computer.',
+  },
 };
 
 export const mathSettingsStrings = {

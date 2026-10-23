@@ -1,36 +1,14 @@
 /**
  * The fenced-block renderer registry (SPECS 10.10): `language → renderer`. Plugins
- * register through `ctx.blocks` (M5); the core registers none in v1. Blocks without a
- * renderer render as plain code with a "No renderer for …" note.
+ * register through `ctx.blocks` (SPECS 12.4); the core registers none in v1. Blocks
+ * without a renderer render as plain code with a "No renderer for …" note.
  */
+import type { BlockRenderer } from '@vaults/plugin-api';
 
 export interface RegisteredRenderer {
+  /** The plugin id (shown in error states). */
   owner: string;
-  /** Mounts a rendering into `el`; returns a cleanup function. Errors are caught by the host. */
-  mount(
-    el: HTMLElement,
-    block: RenderBlock,
-    host: RenderHost,
-  ): (() => void) | void | Promise<(() => void) | void>;
-  /** Optional in-place update; return true when handled. */
-  update?(block: RenderBlock): boolean;
-}
-
-export interface RenderBlock {
-  language: string;
-  infoString: string;
-  args: { positional: string[]; named: Record<string, string> };
-  source: string;
-  version: number;
-  notePath: string;
-  vaultPath: string | null;
-  frontmatter: Readonly<Record<string, unknown>>;
-}
-
-export interface RenderHost {
-  readOnly: boolean;
-  signal: AbortSignal;
-  updateSource(next: string, opts?: { expectedVersion?: number }): Promise<boolean>;
+  renderer: BlockRenderer;
 }
 
 type Listener = () => void;
@@ -40,12 +18,12 @@ class BlockRegistry {
   private readonly listeners = new Set<Listener>();
   private version = 0;
 
-  register(language: string, renderer: RegisteredRenderer): () => void {
+  register(language: string, entry: RegisteredRenderer): () => void {
     const key = language.toLowerCase();
-    this.renderers.set(key, renderer);
+    this.renderers.set(key, entry);
     this.changed();
     return () => {
-      if (this.renderers.get(key) === renderer) {
+      if (this.renderers.get(key) === entry) {
         this.renderers.delete(key);
         this.changed();
       }
@@ -72,3 +50,13 @@ class BlockRegistry {
 }
 
 export const blockRegistry = new BlockRegistry();
+
+/** A stable number for a block body: changes whenever the source changes. */
+export function sourceVersion(source: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < source.length; i++) {
+    h ^= source.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0) ^ source.length;
+}

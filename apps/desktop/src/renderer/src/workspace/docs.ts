@@ -6,9 +6,15 @@
 import { EditorState, Transaction } from '@codemirror/state';
 import { create } from 'zustand';
 import type { TextFile } from '@shared/bridge';
+import { useSettings } from '../lib/settings';
 import { BridgeError, errorMessage, unwrap, vx } from '../lib/vx';
 
 export const AUTOSAVE_MS = 800;
+/** Settings > Editor > Autosave delay, clamped to a sane range. */
+function autosaveMs(): number {
+  const v = Number(useSettings.getState().get('editor.autosaveMs'));
+  return Number.isFinite(v) ? Math.min(10_000, Math.max(200, v)) : AUTOSAVE_MS;
+}
 
 export type Conflict = 'changed' | 'deleted' | null;
 
@@ -127,7 +133,7 @@ export function noteEdited(path: string, state: EditorState): void {
   rec.revision++;
   useDocs.getState().patch(path, { dirty: true, error: null });
   if (rec.timer) clearTimeout(rec.timer);
-  rec.timer = setTimeout(() => void saveDoc(path), AUTOSAVE_MS);
+  rec.timer = setTimeout(() => void saveDoc(path), autosaveMs());
 }
 
 /** Keeps the stored state current without marking it dirty (cursor moves). */
@@ -168,7 +174,7 @@ export async function saveDoc(path: string): Promise<void> {
   await rec.saving;
   // Edits made while saving get their own save.
   if (useDocs.getState().meta[path]?.dirty && !useDocs.getState().meta[path]?.conflict) {
-    rec.timer = setTimeout(() => void saveDoc(path), AUTOSAVE_MS);
+    rec.timer = setTimeout(() => void saveDoc(path), autosaveMs());
   }
 }
 

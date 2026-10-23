@@ -6,6 +6,7 @@ import { Workspace } from './features/workspace/Workspace';
 import { applyTheme } from './lib/theme';
 import { unwrap, vx } from './lib/vx';
 import { useApp } from './store/app';
+import { stopPlugins } from './plugins/host';
 import { saveAll } from './workspace/docs';
 
 export function App() {
@@ -25,7 +26,9 @@ export function App() {
     const offTheme = applyTheme();
     // Save before the window closes (SPECS 4.8 rule 8), whatever screen is showing.
     const offClose = vx().window.onBeforeClose(() => {
-      void saveAll().finally(() => void vx().window.readyToClose());
+      void saveAll()
+        .then(() => stopPlugins())
+        .finally(() => void vx().window.readyToClose());
     });
     return () => {
       offLib();

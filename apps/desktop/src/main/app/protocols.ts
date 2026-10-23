@@ -21,7 +21,10 @@ export function registerPrivilegedSchemes(): void {
       scheme: ASSET_SCHEME,
       privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true },
     },
-    { scheme: PLUGIN_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true } },
+    {
+      scheme: PLUGIN_SCHEME,
+      privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true },
+    },
   ]);
 }
 
@@ -158,6 +161,8 @@ export function handlePluginProtocol(resolve: PluginResolver): void {
     }
     const abs = await resolve(url.host, rel).catch(() => null);
     if (!abs) return notFound();
-    return fileResponse(abs, request);
+    // Module scripts load cross-origin from vx-app://, so they need CORS; plugin files
+    // change on reinstall, so nothing is cached.
+    return fileResponse(abs, request, { 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store' });
   });
 }

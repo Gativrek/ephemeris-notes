@@ -1,12 +1,11 @@
 /**
  * Note embeds (`![[Note]]`, `![[Note#Heading]]`, SPECS 10.7): the target section,
  * rendered read-only by the same editor, in a framed block with a link to open it.
- * At most three levels deep, with cycle detection. Also the plugin block widget.
+ * At most three levels deep, with cycle detection.
  */
 import { WidgetType, type EditorView } from '@codemirror/view';
 import { analyzeNote } from '@vaults/markdown';
 import { editorContext, type EditorContext } from './context';
-import { blockRegistry, type RenderBlock } from './registry';
 import { linkAttrs } from './widgets';
 
 const MAX_DEPTH = 3;
@@ -94,125 +93,5 @@ export class NoteEmbedWidget extends WidgetType {
   }
   override ignoreEvent(e: Event): boolean {
     return !(e.target as HTMLElement).closest('[data-vx-link]');
-  }
-}
-
-/**
- * A fenced block drawn by a registered renderer (SPECS 10.10, 12.8): loading state
- * after 300 ms, error state with the source, the message and a Retry button.
- */
-export class PluginBlockWidget extends WidgetType {
-  private cleanup: (() => void) | null = null;
-  private abort: AbortController | null = null;
-  constructor(
-    readonly language: string,
-    readonly infoString: string,
-    readonly args: RenderBlock['args'],
-    readonly source: string,
-    readonly from: number,
-    readonly bodyFrom: number,
-    readonly bodyTo: number,
-  ) {
-    super();
-  }
-  override eq(o: PluginBlockWidget): boolean {
-    return o.language === this.language && o.source === this.source && o.infoString === this.infoString;
-  }
-  toDOM(view: EditorView): HTMLElement {
-    const box = document.createElement('div');
-    box.className = 'vx-plugin-block';
-    box.dataset.language = this.language;
-    void this.mount(box, view);
-    box.addEventListener('dblclick', () => {
-      view.dispatch({ selection: { anchor: this.bodyFrom } });
-      view.focus();
-    });
-    return box;
-  }
-
-  private async mount(box: HTMLElement, view: EditorView): Promise<void> {
-    const renderer = blockRegistry.get(this.language);
-    if (!renderer) return;
-    const ctx = view.state.facet(editorContext);
-    this.abort?.abort();
-    this.abort = new AbortController();
-    box.replaceChildren();
-    const el = document.createElement('div');
-    el.className = 'vx-plugin-block__body';
-    box.append(el);
-    const loading = setTimeout(() => box.classList.add('is-loading'), 300);
-    const fm = (() => {
-      try {
-        return (
-          analyzeNote(view.state.doc.sliceString(0, Math.min(view.state.doc.length, 20000))).frontmatter
-            ?.data ?? {}
-        );
-      } catch {
-        return {};
-      }
-    })();
-    const block: RenderBlock = {
-      language: this.language,
-      infoString: this.infoString.trim().split(/\s+/).slice(1).join(' '),
-      args: this.args,
-      source: this.source,
-      version: view.state.doc.length ^ this.source.length,
-      notePath: ctx.path,
-      vaultPath: ctx.vaultPath,
-      frontmatter: fm,
-    };
-    const signal = this.abort.signal;
-    try {
-      const result = await renderer.mount(el, block, {
-        readOnly: view.state.readOnly,
-        signal,
-        updateSource: async (next) => {
-          if (view.state.readOnly || signal.aborted) return false;
-          view.dispatch({
-            changes: { from: this.bodyFrom, to: this.bodyTo, insert: next },
-            userEvent: `plugin.${renderer.owner}`,
-          });
-          return true;
-        },
-      });
-      if (typeof result === 'function') this.cleanup = result;
-    } catch (err) {
-      box.replaceChildren(this.errorState(err, renderer.owner, () => void this.mount(box, view)));
-    } finally {
-      clearTimeout(loading);
-      box.classList.remove('is-loading');
-      view.requestMeasure();
-    }
-  }
-
-  private errorState(err: unknown, owner: string, retry: () => void): HTMLElement {
-    const wrap = document.createElement('div');
-    wrap.className = 'vx-plugin-block__error';
-    const pre = document.createElement('pre');
-    pre.className = 'vx-plugin-block__source';
-    pre.textContent = this.source;
-    const msg = document.createElement('p');
-    msg.className = 'vx-plugin-block__message';
-    msg.textContent = `${owner}: ${err instanceof Error ? err.message : String(err)}`;
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'vx-btn vx-btn--small';
-    btn.textContent = 'Retry';
-    btn.addEventListener('click', retry);
-    wrap.append(pre, msg, btn);
-    return wrap;
-  }
-
-  override destroy(): void {
-    this.abort?.abort();
-    try {
-      this.cleanup?.();
-    } catch {
-      // A plugin's cleanup failing must not break the editor.
-    }
-    this.cleanup = null;
-  }
-  override ignoreEvent(): boolean {
-    return true;
   }
 }

@@ -11,7 +11,12 @@ import { isNote } from './library/walk';
 import { registerCoreHandlers, type MachineState } from './app/handlers';
 import { setDevOrigin } from './app/ipc';
 import { JsonStore } from './app/json-store';
-import { handleAppProtocol, handleAssetProtocol, registerPrivilegedSchemes } from './app/protocols';
+import {
+  handleAppProtocol,
+  handleAssetProtocol,
+  handlePluginProtocol,
+  registerPrivilegedSchemes,
+} from './app/protocols';
 import {
   APP_ORIGIN,
   CSP_PRODUCTION,
@@ -29,6 +34,8 @@ import { IndexClient } from './index/client';
 import createIndexWorker from './index/worker?nodeWorker';
 import { closeConfirmed, registerWorkspaceHandlers } from './app/workspace-handlers';
 import { registerAppHandlers } from './app/app-handlers';
+import { enabledPlugins, registerPluginHandlers } from './app/plugin-handlers';
+import { PluginManager } from './plugins/manager';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -204,6 +211,16 @@ async function main(): Promise<void> {
   registerVaultHandlers({ sessions, state, broadcast, rename: (from, to) => rename(from, to, true) });
   registerIndexHandlers({ sessions, index });
   registerAppHandlers(path.join(here, '../renderer'));
+
+  // Plugins (SPECS 12): per machine, in user data; served from vx-plugin://<id>/.
+  const plugins = new PluginManager(path.join(userData, 'plugins'), () => enabledPlugins(machineSettings));
+  handlePluginProtocol((id, rel) => plugins.resolveFile(id, rel));
+  registerPluginHandlers({
+    sessions,
+    manager: plugins,
+    settings: machineSettings,
+    isPackaged: app.isPackaged,
+  });
   registerWorkspaceHandlers({ sessions, testMode: testMode !== null });
 
   const last = state.get('lastLibrary');

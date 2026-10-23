@@ -2,9 +2,20 @@ import { useEffect, useMemo, useState } from 'react';
 import { Confirm, Palette } from '../components/Palette';
 import { Icon } from '../components/Icon';
 import { useCatalog } from '../lib/catalog';
-import { unwrap, vx } from '../lib/vx';
+import { errorMessage, unwrap, vx } from '../lib/vx';
+import { usePlugins } from '../plugins/store';
 import { workspaceStrings as s } from '../strings/workspace';
-import { baseName, createNoteIn, currentVault, openPath, performRename, report, trashPath } from './actions';
+import {
+  baseName,
+  createNoteIn,
+  currentVault,
+  notice,
+  openPath,
+  performRename,
+  report,
+  trashPath,
+} from './actions';
+import { currentEditor } from './EditorPane';
 import { useWorkspace } from './store';
 import { displayName } from './tree';
 
@@ -44,7 +55,66 @@ function TemplatePicker({ folder }: { folder: string }) {
   );
 }
 
-function QuickOpen() {
+/** Inserts `[[link]]` at the cursor; a selection becomes the alias. */
+function insertLink(link: string): void {
+  const view = currentEditor();
+  if (!view || view.state.readOnly) return;
+  const sel = view.state.selection.main;
+  const text = view.state
+    .sliceDoc(sel.from, sel.to)
+    .replace(/[\n\]|]/g, ' ')
+    .trim();
+  const insert = text ? `[[${link}|${text}]]` : `[[${link}]]`;
+  view.dispatch({
+    changes: { from: sel.from, to: sel.to, insert },
+    selection: { anchor: sel.from + insert.length },
+    userEvent: 'input.link',
+  });
+  view.focus();
+}
+
+function CommandPalette() {
+  const commands = usePlugins((st) => st.commands);
+  const plugins = usePlugins((st) => st.plugins);
+  const close = () => useWorkspace.setState({ overlay: null });
+  const items = useMemo(
+    () =>
+      commands.map((c) => ({
+        id: c.id,
+        label: c.title,
+        ...(c.owner === 'core'
+          ? {}
+          : { detail: plugins.find((p) => p.info.manifest.id === c.owner)?.info.manifest.name ?? c.owner }),
+      })),
+    [commands, plugins],
+  );
+  return (
+    <Palette
+      title={s.commands.title}
+      placeholder={s.commands.placeholder}
+      testId="command-palette"
+      empty={s.commands.empty}
+      items={items}
+      onClose={close}
+      onChoose={(it) => {
+        close();
+        const cmd = usePlugins.getState().commands.find((c) => c.id === it.id);
+        if (!cmd) return;
+        // Plugin commands are wrapped (SPECS 12.8): a throw becomes a status message.
+        void (async () => {
+          try {
+            await cmd.run();
+          } catch (err) {
+            console.error(`[${cmd.owner}] command ${cmd.id} failed`, err);
+            notice(s.commands.failed(cmd.title, errorMessage(err)));
+          }
+        })();
+      }}
+    />
+  );
+}
+
+function QuickOpen({ insert = false }: { insert?: boolean }) {
   const paths = useCatalog((st) => st.paths);
   const links = useCatalog((st) => st.links);
   const vault = currentVault();
@@ -73,15 +143,16 @@ function QuickOpen() {
   );
   return (
     <Palette
-      title={s.picker.quickOpen}
+      title={insert ? s.commands.core.insertLink : s.picker.quickOpen}
       placeholder={s.picker.filter}
-      testId="quick-open"
+      testId={insert ? 'insert-link' : 'quick-open'}
       empty={s.picker.quickOpenEmpty}
       items={items}
       onClose={close}
       onChoose={(it) => {
         close();
-        openPath(it.id);
+        if (insert) insertLink(links.shortestLink(it.id));
+        else openPath(it.id);
       }}
     />
   );
@@ -96,6 +167,10 @@ export function Overlays() {
       return <TemplatePicker folder={overlay.folder} />;
     case 'quickOpen':
       return <QuickOpen />;
+    case 'insertLink':
+      return <QuickOpen insert />;
+    case 'commands':
+      return <CommandPalette />;
     case 'confirmTrash':
       return (
         <Confirm

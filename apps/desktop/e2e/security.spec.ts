@@ -95,6 +95,7 @@ test('the bridge is one frozen object', async () => {
     'index',
     'library',
     'notes',
+    'plugins',
     'settings',
     'shell',
     'ui',

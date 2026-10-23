@@ -9,6 +9,7 @@ export const SETTING_DEFAULTS: Record<string, unknown> = {
   'appearance.theme': 'system',
   'appearance.outlineStyle': 'annotated',
   'general.reopenLastVault': false,
+  'general.dateLanguage': 'en-US',
   'editor.fontSize': 18,
   'editor.lineWidth': 700,
   'editor.autosaveMs': 800,

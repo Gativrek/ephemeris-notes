@@ -210,13 +210,23 @@ export function displayName(name: string): string {
   return name.toLowerCase().endsWith('.md') ? name.slice(0, -3) : name;
 }
 
+let dateLocale = 'en-US';
+/** Settings > General > Date language. */
+export function setDateLocale(locale: string): void {
+  try {
+    dateLocale = Intl.DateTimeFormat.supportedLocalesOf([locale]).length ? locale : 'en-US';
+  } catch {
+    dateLocale = 'en-US';
+  }
+}
+
 /** Weekday for a daily-note row ("Mon"), from its YYYY-MM-DD name. */
 export function dailyParts(name: string): { day: string; weekday: string; iso: string } {
   const iso = name.slice(0, 10);
   const d = new Date(`${iso}T12:00:00`);
   return {
     day: String(d.getDate()),
-    weekday: d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }),
+    weekday: d.toLocaleDateString(dateLocale, { weekday: 'long', month: 'short', day: 'numeric' }),
     iso,
   };
 }

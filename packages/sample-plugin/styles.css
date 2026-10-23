@@ -1,0 +1,49 @@
+/* Classes are prefixed with the plugin id (SPECS 12.2) and use design tokens only. */
+.sample-plugin-reverse {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border: 1px solid var(--line-note);
+  border-radius: var(--radius-md);
+  background: var(--surface-side);
+  font: 400 14px/1.5 var(--font-ui);
+  color: var(--text);
+}
+.sample-plugin-output {
+  flex: 1 0 100%;
+  font: 400 18px/1.5 var(--font-mono);
+  color: var(--ink);
+}
+.sample-plugin-theme,
+.sample-plugin-args,
+.sample-plugin-note,
+.sample-plugin-file,
+.sample-plugin-status {
+  flex: 1 0 100%;
+  font-size: 12px;
+  color: var(--muted);
+}
+.sample-plugin-reverse button,
+.sample-plugin-dirty,
+.sample-plugin-close {
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  color: var(--ink);
+  font: 500 13px/1 var(--font-ui);
+  cursor: pointer;
+}
+.sample-plugin-pane {
+  margin: 0;
+  font: 400 13px/1.4 var(--font-ui);
+  color: var(--text);
+}
+.sample-plugin-overlay-body {
+  margin: 16px;
+  font: 400 14px/1.5 var(--font-ui);
+  color: var(--text);
+}

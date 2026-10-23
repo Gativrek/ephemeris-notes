@@ -92,6 +92,9 @@ importers:
       '@vaults/markdown':
         specifier: workspace:*
         version: link:../../packages/markdown
+      '@vaults/plugin-api':
+        specifier: workspace:*
+        version: link:../../packages/plugin-api
       chokidar:
         specifier: ^5.0.0
         version: 5.0.0
@@ -147,6 +150,8 @@ importers:
       '@lezer/yaml':
         specifier: ^1.0.4
         version: 1.0.4
+
+  packages/plugin-api: {}
 
 packages:
 

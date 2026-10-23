@@ -1,10 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { EditorSelection, EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { analyzeNote } from '@vaults/markdown';
 import { refreshLinks, type EditorContext } from '../editor/context';
 import { parseMacros } from '../editor/math';
+import { blockRegistry } from '../editor/registry';
 import {
+  attrsCompartment,
+  contentAttrs,
   editableCompartment,
   editableExtensions,
   editorExtensions,
@@ -171,6 +174,7 @@ setStateFactory((path, text, readOnly) =>
         ctx: makeContext(path),
         readOnly,
         source: useWorkspace.getState().source,
+        spellcheck: useSettings.getState().get<boolean>('editor.spellcheck') !== false,
         openExternal,
         onUpdate: (view, docChanged) => {
           const p = editorStats.path || path;
@@ -283,6 +287,12 @@ function jumpTarget(
   return null;
 }
 
+let paneView: { view: EditorView; shown: () => string | null } | null = null;
+/** The workspace editor while it shows a note (Insert Link). */
+export function currentEditor(): EditorView | null {
+  return paneView && paneView.shown() ? paneView.view : null;
+}
+
 export function EditorPane() {
   const active = useWorkspace((st) => st.desk.active);
   const source = useWorkspace((st) => st.source);
@@ -290,6 +300,9 @@ export function EditorPane() {
   const meta = useDocs((st) => (active ? st.meta[active] : undefined));
   const catalogVersion = useCatalog((st) => st.version);
   const settings = useSettings((st) => st.values);
+  const spellcheck = settings['editor.spellcheck'] !== false;
+  const fontSize = Math.min(28, Math.max(12, Number(settings['editor.fontSize']) || 18));
+  const lineWidth = Math.min(1200, Math.max(480, Number(settings['editor.lineWidth']) || 700));
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const shownRef = useRef<string | null>(null);
@@ -302,6 +315,11 @@ export function EditorPane() {
     if (!hostRef.current) return;
     const view = new EditorView({ parent: hostRef.current, state: EditorState.create({ doc: '' }) });
     viewRef.current = view;
+    paneView = { view, shown: () => shownRef.current };
+    // Blocks seen before their renderer registers re-render when it does (SPECS 12.3).
+    const offRegistry = blockRegistry.onChange(() =>
+      queueMicrotask(() => viewRef.current === view && view.dispatch({ effects: refreshLinks.of(null) })),
+    );
     attachView({
       get path() {
         return shownRef.current ?? '';
@@ -314,7 +332,9 @@ export function EditorPane() {
       setState: (st) => view.setState(st),
     });
     return () => {
+      offRegistry();
       attachView(null);
+      paneView = null;
       view.destroy();
       viewRef.current = null;
     };
@@ -346,6 +366,9 @@ export function EditorPane() {
         view.dispatch({
           effects: [
             refreshLinks.of(null),
+            attrsCompartment.reconfigure(
+              contentAttrs(useSettings.getState().get<boolean>('editor.spellcheck') !== false),
+            ),
             previewCompartment.reconfigure(previewExtensions(useWorkspace.getState().source)),
             editableCompartment.reconfigure(
               editableExtensions(useDocs.getState().meta[active]?.readOnly ?? false),
@@ -384,6 +407,9 @@ export function EditorPane() {
   useEffect(() => {
     viewRef.current?.dispatch({ effects: refreshLinks.of(null) });
   }, [catalogVersion, settings]);
+  useEffect(() => {
+    viewRef.current?.dispatch({ effects: attrsCompartment.reconfigure(contentAttrs(spellcheck)) });
+  }, [spellcheck]);
 
   // Links into a note: scroll to the heading, block or line.
   useEffect(() => {
@@ -424,7 +450,13 @@ export function EditorPane() {
         ref={hostRef}
         className={`vx-editor${source ? ' is-source' : ''}`}
         data-testid="editor"
-        style={{ display: active && !isPdf ? undefined : 'none' }}
+        style={
+          {
+            display: active && !isPdf ? undefined : 'none',
+            '--editor-font-size': `${fontSize}px`,
+            '--editor-measure': `${lineWidth}px`,
+          } as CSSProperties
+        }
       />
     </div>
   );

@@ -18,6 +18,8 @@ export interface Desk {
 export type Overlay =
   | { kind: 'templates'; folder: string }
   | { kind: 'quickOpen' }
+  | { kind: 'insertLink' }
+  | { kind: 'commands' }
   | { kind: 'confirmTrash'; path: string }
   | { kind: 'createMissing'; target: string; folder: string }
   | { kind: 'renameLinks'; from: string; to: string; notes: Array<{ path: string; links: number }> }
