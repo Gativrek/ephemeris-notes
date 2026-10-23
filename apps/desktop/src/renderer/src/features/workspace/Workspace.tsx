@@ -6,8 +6,10 @@ import { useEffect, useRef, useState } from 'react';
 import type { Backlink, VaultInfo } from '@shared/bridge';
 import { Settings, type SettingsSection } from '../settings/Settings';
 import { PluginOverlays } from '../../plugins/PluginOverlays';
+import { isViewId, viewTitle } from '../../plugins/views';
 import { setPluginNotifier, startPlugins } from '../../plugins/host';
 import { usePlugins, type CommandEntry } from '../../plugins/store';
+import { noteCommandRun } from '../../plugins/activity';
 import type { SearchHandle } from '../../workspace/SearchBox';
 import { useCatalog, wireCatalog } from '../../lib/catalog';
 import { currentTheme, onThemeChange } from '../../lib/theme';
@@ -158,7 +160,11 @@ export function Workspace({ vaultPath }: { vaultPath: string }) {
   // Window title: "<note title> · <Vault name> · {AppName}" (SPECS 9.2).
   useEffect(() => {
     if (!vault) return;
-    const note = active ? active.slice(active.lastIndexOf('/') + 1).replace(/\.md$/i, '') : null;
+    const note = isViewId(active)
+      ? viewTitle(active ?? '')
+      : active
+        ? active.slice(active.lastIndexOf('/') + 1).replace(/\.md$/i, '')
+        : null;
     void vx().window.setTitle([note, vault.name, s.appName].filter(Boolean).join(' · '));
   }, [vault, active, activeTitle]);
 
@@ -200,6 +206,7 @@ export function Workspace({ vaultPath }: { vaultPath: string }) {
         e.stopPropagation();
         void (async () => {
           try {
+            if (cmd.owner !== 'core') noteCommandRun(cmd.owner);
             await cmd.run();
           } catch (err) {
             console.error(`[${cmd.owner}] command ${cmd.id} failed`, err);

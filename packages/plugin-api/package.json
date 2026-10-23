@@ -1,6 +1,6 @@
 {
   "name": "@vaults/plugin-api",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Public types for {AppName} plugins (plugin API v1).",
   "license": "MIT",
   "type": "module",

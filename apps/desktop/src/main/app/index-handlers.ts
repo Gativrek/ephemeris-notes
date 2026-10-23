@@ -9,6 +9,7 @@ import { DOMAINS } from '../library/library';
 import { normalizeLibraryPath } from '../library/paths';
 import { handle, obj, oneOf, str } from './ipc';
 import type { SessionManager } from './session';
+import { PLUGIN_ID } from '../plugins/manager';
 
 export function scopeArg(v: unknown): SearchScope {
   const o = obj(v, 'scope');
@@ -62,6 +63,31 @@ export function registerIndexHandlers(deps: { sessions: SessionManager; index: I
   handle('index', 'rebuild', () => need().call('rebuild'));
   handle('index', 'ambiguous', () => need().call('ambiguous'));
   handle('index', 'aliases', () => need().call('aliases'));
+  // Plugin extractors (SPECS 12.11.2). The spec is plain data; the worker validates it.
+  const pluginId = (v: unknown) => {
+    const id = str(v, 'pluginId', 64);
+    if (!PLUGIN_ID.test(id)) fail('INVALID_ARGUMENT', 'Invalid plugin id.');
+    return id;
+  };
+  handle('index', 'registerExtractor', async (_e, id, spec) => {
+    obj(spec, 'spec');
+    if (JSON.stringify(spec).length > 8192) fail('INVALID_ARGUMENT', 'The extractor spec is too large.');
+    try {
+      return await need().call('registerExtractor', pluginId(id), spec);
+    } catch (err) {
+      fail('INVALID_ARGUMENT', err instanceof Error ? err.message : String(err));
+    }
+  });
+  handle('index', 'unregisterExtractor', (_e, id, ex) =>
+    need().call('unregisterExtractor', pluginId(id), str(ex, 'id', 64)),
+  );
+  handle('index', 'queryRecords', (_e, id, q) => {
+    const o = obj(q, 'query');
+    return need().call('queryRecords', pluginId(id), {
+      ...o,
+      ...(o.scope !== undefined ? { scope: scopeArg(o.scope) } : {}),
+    });
+  });
   handle('index', 'linkImpact', async (_e, paths) => {
     if (!Array.isArray(paths) || paths.length > 1000) fail('INVALID_ARGUMENT', 'paths must be a list.');
     await need().flush();

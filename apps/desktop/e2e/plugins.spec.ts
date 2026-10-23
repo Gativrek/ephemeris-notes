@@ -258,3 +258,148 @@ test('an enabled plugin loads again on the next start, after the first paint', a
     // afterEach closes ctx again; a second close is harmless.
   }
 });
+
+// ---- API v2 (SPECS 12.11.6) ---------------------------------------------------------
+
+const V2_NOTE = [
+  '# V2 test',
+  '',
+  'Inline ::sample(abc) here, `::sample(code)` in code, and ::sample(skip) stays.',
+  '',
+  'sample-tag:: alpha first',
+  'sample-tag:: beta',
+  '',
+  '```sample-reverse',
+  'board',
+  '```',
+  '',
+  'End.',
+  '',
+].join('\n');
+
+async function openV2Note(page: Page): Promise<void> {
+  await page.getByTestId('section-tile').filter({ hasText: 'Notes' }).click();
+  await page.getByTestId('tree').getByRole('treeitem', { name: 'V2 Test' }).first().click();
+  await expect(page.locator('.vx-editor .cm-content')).toContainText('V2 test');
+}
+
+test('v2: inline widgets, extractors, outline entries, views and note edits', async () => {
+  const { page } = ctx;
+  const notePath = 'Academic/GNSS Study/Notes/V2 Test.md';
+  await writeFile(file(notePath), V2_NOTE);
+  await installAndEnable(page);
+  await page.keyboard.press('Escape');
+  await openV2Note(page);
+  if (!(await page.getByTestId('outline').isVisible())) await page.keyboard.press('ControlOrMeta+Shift+O');
+
+  // Inline: one widget; the match in inline code and the refused one stay text.
+  const inline = page.locator('.sample-plugin-inline');
+  await expect(inline).toHaveCount(1);
+  await expect(inline).toHaveText('cba');
+  await expect(page.locator('.vx-editor .cm-content')).toContainText('::sample(skip)');
+  await page.locator('.sample-plugin-inline-up').click();
+  await expect(page.locator('.sample-plugin-inline')).toHaveText('CBA');
+  await expect.poll(async () => readFile(file(notePath), 'utf8')).toContain('::sample(ABC)');
+
+  // Outline: the plugin's entry under the heading.
+  await expect(page.locator('.vx-outline__item--plugin[data-plugin="sample-plugin"]')).toHaveText(
+    /Sample block/,
+  );
+
+  // View: the board opens on the desk with live records from the extractor.
+  await page.locator('.sample-plugin-open-board').click();
+  const view = page.getByTestId('plugin-view');
+  await expect(view).toBeVisible();
+  await expect(page.getByTestId('desk-card').filter({ hasText: 'Sample board (0)' })).toBeVisible();
+  await expect(view.locator('.sample-plugin-board-record')).toHaveText(['alpha: first', 'beta: '], {
+    timeout: 15_000,
+  });
+  await expect(view.locator('.sample-plugin-board-md .katex')).toHaveCount(1);
+  await view.getByRole('button', { name: 'Click' }).click();
+  await expect(page.getByTestId('desk-card').filter({ hasText: 'Sample board (1)' })).toBeVisible();
+
+  // A new record reaches the view through index.onChanged.
+  await page.getByTestId('desk-card').filter({ hasText: 'V2 Test' }).click();
+  await page.locator('.vx-editor .cm-line', { hasText: 'End.' }).click();
+  await page.keyboard.press('End');
+  await page.keyboard.type('\nsample-tag:: gamma');
+  await expect(page.getByTestId('save-state')).toHaveText('Saved', { timeout: 5000 });
+  await page.getByTestId('desk-card').filter({ hasText: 'Sample board' }).click();
+  await expect(view.locator('.sample-plugin-board-record')).toHaveText(
+    ['alpha: first', 'beta: ', 'gamma: '],
+    {
+      timeout: 15_000,
+    },
+  );
+
+  // notes.edit after a click: one transaction in the open note, saved to disk.
+  await view.getByRole('button', { name: 'Append Line' }).click();
+  await expect(view.locator('.sample-plugin-board-status')).toHaveText('edit ok');
+  await expect.poll(async () => readFile(file(notePath), 'utf8')).toContain('Edited by the sample plugin.');
+
+  // onRequestClose keeps a dirty view open.
+  await view.getByRole('button', { name: 'Make Dirty' }).click();
+  await page.keyboard.press('ControlOrMeta+w');
+  await expect(view).toBeVisible();
+  await view.getByRole('button', { name: 'Save' }).click();
+  await page.keyboard.press('ControlOrMeta+w');
+  await expect(view).toHaveCount(0);
+
+  // Reopen, then disable: the card says what it needs; inline and outline entries go.
+  await page.getByTestId('desk-card').filter({ hasText: 'V2 Test' }).click();
+  await page.locator('.sample-plugin-open-board').click();
+  await expect(view).toBeVisible();
+  await page.keyboard.press('ControlOrMeta+,');
+  await page.getByTestId('settings').getByRole('link', { name: 'Plugins', exact: true }).click();
+  await page.getByRole('checkbox', { name: 'Enable Sample Plugin' }).uncheck();
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('desk-card').filter({ hasText: 'Needs Sample Plugin' })).toBeVisible();
+  await expect(page.getByTestId('view-missing')).toBeVisible();
+  await page.getByTestId('desk-card').filter({ hasText: 'V2 Test' }).click();
+  await expect(page.locator('.sample-plugin-inline')).toHaveCount(0);
+  await expect(page.locator('.vx-outline__item--plugin')).toHaveCount(0);
+});
+
+test('v2: view state survives a restart; notes.edit without a user action is refused', async () => {
+  await writeFile(file('Academic/GNSS Study/Notes/V2 Test.md'), V2_NOTE);
+  await ctx.close();
+  const userData = await tempDir('plugins-v2');
+  const openVault = async () => {
+    await expect(ctx.page.getByTestId('chooser')).toBeVisible();
+    await ctx.page.getByTestId('vault-card').filter({ hasText: 'GNSS Constellation Study' }).dblclick();
+    await expect(ctx.page.getByTestId('workspace')).toBeVisible();
+  };
+  try {
+    ctx = await launch({ userData });
+    await setPickFolder(ctx.app, lib);
+    await ctx.page.getByRole('button', { name: 'Open Library…' }).click();
+    await openVault();
+    await installAndEnable(ctx.page);
+    await ctx.page.keyboard.press('Escape');
+    await openV2Note(ctx.page);
+    await ctx.page.locator('.sample-plugin-open-board').click();
+    const view = ctx.page.getByTestId('plugin-view');
+    await view.getByRole('button', { name: 'Click' }).click();
+    await view.getByRole('button', { name: 'Click' }).click();
+    await expect(ctx.page.getByTestId('desk-card').filter({ hasText: 'Sample board (2)' })).toBeVisible();
+    await ctx.close();
+
+    ctx = await launch({ userData });
+    await openVault();
+    await expect(ctx.page.getByTestId('desk-card').filter({ hasText: 'Sample board (2)' })).toBeVisible();
+    await expect(ctx.page.getByTestId('plugin-view').locator('.sample-plugin-board-count')).toHaveText(
+      'clicks: 2',
+    );
+    // This load happened without any click: the plugin's probe edit was refused.
+    await expect
+      .poll(async () =>
+        JSON.parse(
+          await readFile(file('.vaults/plugin-data/sample-plugin/v2.json'), 'utf8').catch(() => '{}'),
+        ),
+      )
+      .toEqual({ loadEdit: 'notAllowed' });
+  } finally {
+    await ctx.close();
+    await rm(userData, { recursive: true, force: true });
+  }
+});

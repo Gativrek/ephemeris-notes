@@ -9,7 +9,9 @@ export type OutlineItem =
   | { kind: 'equation'; number: string | null; label?: string; line: number }
   | { kind: 'code'; lang: string; line: number }
   | { kind: 'block'; lang: string; line: number }
-  | { kind: 'embed'; target: string; line: number };
+  | { kind: 'embed'; target: string; line: number }
+  /** A plugin's entry (SPECS 12.11.3). */
+  | { kind: 'plugin'; plugin: string; label: string; glyph?: string; line: number; onClick?: () => void };
 
 export interface OutlineModel {
   headings: Array<{ level: number; text: string; line: number; items: OutlineItem[] }>;
@@ -69,6 +71,25 @@ export function buildOutline(
   });
   const lines = text.length ? text.split('\n').length : 1;
   return { headings, backlinks, lines, properties: s.frontmatter?.data ?? null };
+}
+
+/** Places plugin entries under the heading that contains each one's line. */
+export function addContributions(model: OutlineModel, entries: OutlineItem[]): OutlineModel {
+  if (!entries.length) return model;
+  const headings = model.headings.map((h) => ({ ...h, items: [...h.items] }));
+  for (const e of entries) {
+    let target = -1;
+    headings.forEach((h, i) => {
+      if (h.line <= e.line) target = i;
+    });
+    if (target < 0) {
+      if (headings[0]?.level !== 0) headings.unshift({ level: 0, text: 'Top', line: 1, items: [] });
+      target = 0;
+    }
+    headings[target]!.items.push(e);
+  }
+  for (const h of headings) h.items.sort((a, b) => a.line - b.line);
+  return { ...model, headings };
 }
 
 function strip(i: OutlineItem & { pos: number }): OutlineItem {

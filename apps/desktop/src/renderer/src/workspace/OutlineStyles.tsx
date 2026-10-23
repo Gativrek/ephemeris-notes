@@ -51,19 +51,22 @@ function lineAtClick(e: MouseEvent<HTMLElement>, lines: number): number {
   return Math.min(lines, Math.max(1, Math.floor(f * lines) + 1));
 }
 
-function itemLabel(it: OutlineItem): string {
+export function itemLabel(it: OutlineItem): string {
+  if (it.kind === 'plugin') return it.label;
   if (it.kind === 'link' || it.kind === 'embed') return it.target;
   if (it.kind === 'equation') return s.outline.equation(it.number, it.label ?? null);
   return it.lang || 'code';
 }
 
-function itemGlyph(it: OutlineItem): string {
+export function itemGlyph(it: OutlineItem): string {
+  if (it.kind === 'plugin') return it.glyph ?? '›';
   if (it.kind === 'link') return it.resolved ? '→' : '+';
   if (it.kind === 'embed') return '→';
   return it.kind === 'equation' ? '∑' : '{}';
 }
 
-function itemClass(it: OutlineItem): string {
+export function itemClass(it: OutlineItem): string {
+  if (it.kind === 'plugin') return 'plugin';
   if (it.kind === 'link' && !it.resolved) return 'missing';
   if (it.kind === 'link' || it.kind === 'embed') return 'link';
   return 'block';
@@ -94,6 +97,20 @@ function Backlinks({ model }: { model: OutlineModel }) {
       ))}
     </>
   );
+}
+
+/** Clicking an entry: follow a link, run a plugin entry's action, or scroll to its line. */
+export function activateItem(it: OutlineItem): void {
+  if (it.kind === 'link' && it.resolved) return openPath(it.resolved);
+  if (it.kind === 'plugin' && it.onClick) {
+    try {
+      it.onClick();
+    } catch (err) {
+      console.error(`[plugin ${it.plugin}] outline entry failed`, err);
+    }
+    return;
+  }
+  scrollToLine(it.line);
 }
 
 // ---- Margin track -----------------------------------------------------------------
@@ -264,8 +281,7 @@ function ItemLink({ it }: { it: OutlineItem }) {
       className={`vx-outline__item${cls === 'missing' ? ' vx-outline__item--missing' : cls === 'block' ? ' vx-outline__item--block' : ''}`}
       onClick={(e) => {
         e.preventDefault();
-        if (it.kind === 'link' && it.resolved) openPath(it.resolved);
-        else scrollToLine(it.line);
+        activateItem(it);
       }}
     >
       <span className="vx-outline__glyph">{itemGlyph(it)}</span>
@@ -322,20 +338,30 @@ export function Inspector({
           <>
             {model.headings.length === 0 && <span className="vx-row__meta">{s.outline.empty}</span>}
             {model.headings.map((h, i) => (
-              <a
-                key={`${h.line}-${i}`}
-                href="#"
-                className={`vx-outline__heading${h.level <= 1 ? ' vx-outline__heading--title' : ''}`}
-                aria-current={i === current ? 'location' : undefined}
-                style={{ paddingLeft: 8 + Math.max(0, h.level - 2) * 12 }}
-                onClick={(e) => {
-                  e.preventDefault();
-                  scrollToLine(h.line);
-                }}
-              >
-                {i === current && <span className="vx-diamond vx-diamond--cyan" aria-hidden="true" />}
-                <span className="vx-outline__text">{headingText(h)}</span>
-              </a>
+              <div key={`${h.line}-${i}`}>
+                <a
+                  href="#"
+                  className={`vx-outline__heading${h.level <= 1 ? ' vx-outline__heading--title' : ''}`}
+                  aria-current={i === current ? 'location' : undefined}
+                  style={{ paddingLeft: 8 + Math.max(0, h.level - 2) * 12 }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    scrollToLine(h.line);
+                  }}
+                >
+                  {i === current && <span className="vx-diamond vx-diamond--cyan" aria-hidden="true" />}
+                  <span className="vx-outline__text">{headingText(h)}</span>
+                </a>
+                {h.items.some((it) => it.kind === 'plugin') && (
+                  <div className="vx-outline__items">
+                    {h.items
+                      .filter((it) => it.kind === 'plugin')
+                      .map((it, j) => (
+                        <ItemLink key={j} it={it} />
+                      ))}
+                  </div>
+                )}
+              </div>
             ))}
           </>
         )}

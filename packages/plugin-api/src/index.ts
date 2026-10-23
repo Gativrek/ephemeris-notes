@@ -7,7 +7,7 @@
  * are major. A change here without a matching change to packages/sample-plugin fails CI.
  */
 
-export const API_VERSION = '1.0.0';
+export const API_VERSION = '1.1.0';
 
 export interface Disposable {
   dispose(): void;
@@ -45,6 +45,12 @@ export interface PluginContext {
   readonly commands: CommandRegistry;
   readonly theme: ThemeService;
   readonly log: Logger;
+  // ---- v2 (1.1.0, SPECS 12.11) ----
+  readonly inline: InlineRegistry;
+  readonly index: PluginIndex;
+  readonly outline: OutlineRegistry;
+  readonly views: ViewRegistry;
+  readonly notes: NoteEditor;
 }
 
 // ---- Blocks -------------------------------------------------------------
@@ -207,4 +213,143 @@ export interface Logger {
   info(...a: unknown[]): void;
   warn(...a: unknown[]): void;
   error(...a: unknown[]): void;
+}
+
+// ---- v2: inline decorations (SPECS 12.11.1) ------------------------------
+export interface InlineRegistry {
+  register(spec: InlineSpec): Disposable;
+}
+export interface InlineSpec {
+  /** Unique within the plugin. */
+  id: string;
+  /** Must have the `g` flag; `y` is refused. Matched line by line. */
+  match: RegExp;
+  /** Return false to leave a match as text (e.g. skip @eq: keys). */
+  accept?(m: InlineMatch): boolean;
+  widget(m: InlineMatch, host: InlineHost): HTMLElement | InlineView;
+  /** Default true: the source shows while the cursor is inside the match, like links. */
+  revealOnCursor?: boolean;
+  /** Optional hover card, shown in the core preview-card surface. */
+  hover?(m: InlineMatch, card: HTMLElement): void | (() => void);
+}
+export interface InlineMatch {
+  readonly text: string;
+  readonly groups: readonly (string | undefined)[];
+  readonly named: Readonly<Record<string, string | undefined>>;
+  /** Offsets in the note's LF text. */
+  readonly from: number;
+  readonly to: number;
+  readonly line: number;
+  readonly note: NoteRef;
+}
+export interface InlineView {
+  dom: HTMLElement;
+  /** Return true if updated in place. */
+  update?(m: InlineMatch): boolean;
+  dispose?(): void;
+}
+export interface InlineHost {
+  readonly readOnly: boolean;
+  readonly signal: AbortSignal;
+  /** Replaces the matched text (one transaction, `plugin.<id>`, undoable). Same rules as updateSource. */
+  replace(next: string): Promise<boolean>;
+  openOverlay(opts: OverlayOptions): OverlayHandle;
+}
+
+// ---- v2: index extractors (SPECS 12.11.2) --------------------------------
+export interface PluginIndex {
+  registerExtractor(spec: ExtractorSpec): Disposable;
+  query(q: IndexQuery): Promise<IndexRecord[]>;
+  /** Fires after records of this plugin change (debounced). */
+  onChanged(cb: () => void): Disposable;
+}
+export type ExtractorSpec = { id: string; version: number; where?: ExtractorWhere } & (
+  | {
+      kind: 'regex';
+      pattern: string;
+      flags?: '' | 'i' | 'u' | 'iu';
+      key: number | string;
+      value?: number | string;
+    }
+  | { kind: 'fence'; language: string }
+  | { kind: 'frontmatter'; field: string }
+);
+export interface ExtractorWhere {
+  /** Only notes whose frontmatter has these exact values, e.g. { flashcards: true }. */
+  frontmatter?: Record<string, string | number | boolean>;
+  /** Default true: skip code blocks, math and frontmatter. */
+  outsideCode?: boolean;
+}
+export interface IndexQuery {
+  extractor: string;
+  key?: string;
+  keyPrefix?: string;
+  path?: string;
+  scope?: { kind: 'vault'; vaultPath: string } | { kind: 'domain'; domain: Domain } | { kind: 'all' };
+  /** Default 1000, max 10000. */
+  limit?: number;
+}
+export interface IndexRecord {
+  readonly path: string;
+  readonly line: number;
+  readonly key: string;
+  readonly value: string | null;
+}
+
+// ---- v2: outline contributions (SPECS 12.11.3) ---------------------------
+export interface OutlineRegistry {
+  contribute(fn: (note: OutlineNote) => OutlineEntry[]): Disposable;
+}
+export interface OutlineNote {
+  readonly note: NoteRef;
+  readonly text: string;
+  readonly headings: ReadonlyArray<{ level: number; text: string; line: number }>;
+}
+export interface OutlineEntry {
+  line: number;
+  label: string;
+  /** One text glyph, shown in `faint` like the core arrows. */
+  glyph?: string;
+  onClick?(): void;
+}
+
+// ---- v2: views (SPECS 12.11.4) -------------------------------------------
+export interface ViewRegistry {
+  register(type: string, factory: ViewFactory): Disposable;
+  /** Opens (or focuses) a view on the desk. `key` makes it unique, e.g. a Vault path. */
+  open(type: string, opts?: { key?: string; state?: unknown; pin?: boolean }): Promise<void>;
+}
+export interface ViewFactory {
+  title(state: unknown): string;
+  /** A core icon name (design/components/Icon). */
+  icon?: string;
+  render(el: HTMLElement, state: unknown, host: ViewHost): ViewInstance | void;
+}
+export interface ViewHost {
+  readonly signal: AbortSignal;
+  setTitle(title: string): void;
+  setDirty(dirty: boolean): void;
+  /** Persisted with the desk (per machine), JSON, at most 16 KB. */
+  saveState(state: unknown): void;
+  close(): void;
+  /** Renders Markdown with the core renderer, read-only (math, images, plugin blocks). */
+  renderMarkdown(el: HTMLElement, markdown: string, from: NoteRef | null): Disposable;
+}
+export interface ViewInstance {
+  /** Return false to keep the item open (unsaved state). */
+  onRequestClose?(): boolean | Promise<boolean>;
+  dispose?(): void;
+}
+
+// ---- v2: note edits (SPECS 12.11.5) --------------------------------------
+export interface NoteEditor {
+  read(path: string): Promise<{ text: string; hash: string }>;
+  edit(
+    path: string,
+    edits: ReadonlyArray<{ from: number; to: number; insert: string }>,
+    opts: { expectedHash: string; reason: string },
+  ): Promise<
+    | { ok: true; hash: string }
+    | { ok: false; reason: 'conflict' | 'readOnly' | 'notFound' | 'notAllowed' | 'invalid' }
+  >;
 }

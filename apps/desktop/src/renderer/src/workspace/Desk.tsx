@@ -1,5 +1,6 @@
 import type { MouseEvent } from 'react';
-import { Icon } from '../components/Icon';
+import { ICON_NAMES, Icon, type IconName } from '../components/Icon';
+import { isViewId, parseViewId, requestViewClose, useViewCard } from '../plugins/views';
 import { unwrap, vx } from '../lib/vx';
 import { workspaceStrings as s } from '../strings/workspace';
 import { currentVault } from './actions';
@@ -26,11 +27,80 @@ function subOf(path: string, vaultPath: string, dailyFolder: string): string {
 
 export function closeItem(path: string): void {
   const ws = useWorkspace.getState();
+  // A plugin view may keep itself open (unsaved state, SPECS 12.11.4).
+  if (isViewId(path)) {
+    void requestViewClose(path).then((ok) => ok && useWorkspace.getState().closeItem(path));
+    return;
+  }
   ws.closeItem(path);
   if (!ws.desk.pinned.includes(path)) void closeDoc(path);
 }
 
+function ViewCard({ id, pinned, active }: { id: string; pinned: boolean; active: boolean }) {
+  const card = useViewCard(id);
+  const ws = useWorkspace.getState;
+  const onContext = async (e: MouseEvent) => {
+    e.preventDefault();
+    const choice = await unwrap(
+      vx().window.contextMenu([
+        { id: pinned ? 'unpin' : 'pin', label: pinned ? s.menu.unpin : s.menu.pin },
+        { id: 'close', label: s.menu.close, enabled: !pinned },
+        { id: 'others', label: s.menu.closeOthers },
+      ]),
+    ).catch(() => null);
+    if (choice === 'pin') ws().pin(id);
+    if (choice === 'unpin') ws().unpin(id);
+    if (choice === 'close') closeItem(id);
+    if (choice === 'others') for (const p of ws().desk.open) if (p !== id) closeItem(p);
+  };
+  const icon = card.icon && (ICON_NAMES as string[]).includes(card.icon) ? (card.icon as IconName) : 'note';
+  return (
+    <button
+      type="button"
+      role="tab"
+      className="vx-desk-card"
+      aria-selected={active}
+      title={card.title}
+      data-testid={pinned ? 'desk-pinned' : 'desk-card'}
+      data-path={id}
+      style={{ width: active ? 270 : 210 }}
+      onClick={() => ws().activate(id)}
+      onAuxClick={(e) => {
+        if (e.button === 1 && !pinned) closeItem(id);
+      }}
+      onMouseDown={(e) => e.button === 1 && e.preventDefault()}
+      onContextMenu={(e) => void onContext(e)}
+    >
+      <span className="vx-desk-card__thumb vx-desk-card__thumb--view">
+        <Icon name={icon} />
+      </span>
+      <span className="vx-desk-card__body">
+        <span className="vx-desk-card__title">
+          {card.title}
+          {card.dirty ? ' •' : ''}
+        </span>
+        <span className="vx-desk-card__sub">
+          {card.missing ??
+            (pinned ? (
+              <>
+                <span className="vx-diamond vx-diamond--gold" aria-hidden="true" />
+                {s.desk.pinned}
+              </>
+            ) : (
+              parseViewId(id)?.owner
+            ))}
+        </span>
+      </span>
+    </button>
+  );
+}
+
 function Card({ path, pinned, active }: { path: string; pinned: boolean; active: boolean }) {
+  if (isViewId(path)) return <ViewCard id={path} pinned={pinned} active={active} />;
+  return <NoteCard path={path} pinned={pinned} active={active} />;
+}
+
+function NoteCard({ path, pinned, active }: { path: string; pinned: boolean; active: boolean }) {
   const vault = currentVault();
   const dirty = useDocs((st) => st.meta[path]?.dirty ?? false);
   if (!vault) return null;
@@ -128,7 +198,7 @@ export function Desk() {
           type="button"
           className="vx-desk-clear"
           onClick={() => {
-            for (const p of desk.open) void closeDoc(p);
+            for (const p of desk.open) if (!isViewId(p)) void closeDoc(p);
             useWorkspace.getState().clearUnpinned();
           }}
         >

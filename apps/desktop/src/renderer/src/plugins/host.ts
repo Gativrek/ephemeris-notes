@@ -25,6 +25,7 @@ import { useCatalog } from '../lib/catalog';
 import { currentTheme, onThemeChange } from '../lib/theme';
 import { errorMessage, unwrap, vx } from '../lib/vx';
 import { newKey, usePlugins, type PluginState } from './store';
+import { indexService, inlineService, notesService, outlineService, viewsService } from './v2';
 
 interface Loaded {
   plugin: Plugin;
@@ -254,6 +255,12 @@ async function makeContext(manifest: PluginManifest, disposables: Disposable[]):
       token: (name) => getComputedStyle(document.documentElement).getPropertyValue(`--${name}`).trim(),
     },
     log: logger(id),
+    // v2 (SPECS 12.11)
+    inline: inlineService(id, track),
+    index: indexService(id, track, logger(id)),
+    outline: outlineService(id, track),
+    views: viewsService(id, track),
+    notes: notesService(id, logger(id)),
   };
 }
 

@@ -16,6 +16,7 @@ import { setReadOnlyFactory } from './embeds';
 import { linkClicks, linkPreview, vaultAutocomplete, type ExternalOpener } from './interactions';
 import { codeHighlight, findLanguage, markdownHighlight, sourceHeadingHighlight } from './languages';
 import { livePreview } from './livePreview';
+import { pluginInline, pluginInlineHover } from './pluginInline';
 import { equationField } from './equations';
 
 export const contextCompartment = new Compartment();
@@ -125,7 +126,9 @@ export function editorKeyBindings(): readonly KeyBinding[] {
 }
 
 export function previewExtensions(source: boolean): Extension {
-  return source ? [syntaxHighlighting(sourceHeadingHighlight)] : [livePreview, blockDecorations];
+  return source
+    ? [syntaxHighlighting(sourceHeadingHighlight)]
+    : [livePreview, blockDecorations, pluginInline, pluginInlineHover];
 }
 
 export function editableExtensions(readOnly: boolean): Extension {

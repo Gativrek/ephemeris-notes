@@ -21,10 +21,11 @@ import type { Backlink, IndexStatus, SearchHit, SearchScope } from '@shared/brid
 import { decodeText } from '../library/encoding';
 import { isTempFile } from '../library/atomic';
 import { walkFiles } from '../library/walk';
+import { compileExtractor, extract, type Extractor } from './extractors';
 import type { Db, Row, SqlValue } from './db';
 import { fold, parseQuery, snippets, toFtsMatch } from './query';
 
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 const MAX_INDEX_BYTES = 8 * 1024 * 1024;
 
 const SCHEMA = `
@@ -45,6 +46,10 @@ CREATE INDEX IF NOT EXISTS tags_path ON tags(path);
 CREATE TABLE IF NOT EXISTS equations (path TEXT, number TEXT, label TEXT, line INTEGER);
 CREATE INDEX IF NOT EXISTS equations_path ON equations(path);
 CREATE TABLE IF NOT EXISTS vaults (path TEXT PRIMARY KEY, name TEXT);
+CREATE TABLE IF NOT EXISTS plugin_records (plugin TEXT, extractor TEXT, path TEXT, line INTEGER, key TEXT, value TEXT);
+CREATE INDEX IF NOT EXISTS plugin_records_key ON plugin_records(plugin, extractor, key);
+CREATE INDEX IF NOT EXISTS plugin_records_path ON plugin_records(path);
+CREATE TABLE IF NOT EXISTS plugin_extractors (plugin TEXT, extractor TEXT, version INTEGER, PRIMARY KEY (plugin, extractor));
 CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(path UNINDEXED, title, body, tokenize = 'unicode61 remove_diacritics 2');
 `;
 
@@ -70,6 +75,8 @@ async function* walk(root: string, rel = ''): AsyncGenerator<{ rel: string; mtim
 }
 
 export interface IndexOptions {
+  /** Plugins whose extractor records changed (SPECS 12.11.2). */
+  onRecords?(plugins: string[]): void;
   numbering?: NumberingMode;
   /** Parses notes elsewhere (a worker pool) during a full sync; in place when absent. */
   analyze?: (text: string, numbering: NumberingMode) => Promise<NoteSummary>;
@@ -79,6 +86,167 @@ export interface IndexOptions {
 export class LibraryIndex {
   private catalog = new LinkCatalog([]);
   private status: IndexStatus = { state: 'idle', done: 0, total: 0 };
+  /** Active plugin extractors by `<plugin>/<id>`. */
+  private readonly extractors = new Map<string, Extractor>();
+  private readonly recordsChanged = new Set<string>();
+
+  // ---- Plugin extractors (SPECS 12.11.2) -------------------------------------------
+
+  /** Runs every active extractor over one note (inside the note's write). */
+  private extractInto(rel: string, text: string, s: NoteSummary): void {
+    for (const ex of this.extractors.values()) {
+      const started = performance.now();
+      let records;
+      try {
+        records = extract(ex, text, s);
+      } catch (err) {
+        console.error(`[index] extractor ${ex.plugin}/${ex.spec.id} failed on ${rel}`, err);
+        continue;
+      }
+      const ms = performance.now() - started;
+      if (ms > 250)
+        console.warn(`[index] extractor ${ex.plugin}/${ex.spec.id} took ${Math.round(ms)} ms on ${rel}`);
+      const ins = this.db.prepare(
+        'INSERT INTO plugin_records (plugin, extractor, path, line, key, value) VALUES (?, ?, ?, ?, ?, ?)',
+      );
+      for (const r of records) ins.run(ex.plugin, ex.spec.id, rel, r.line, r.key, r.value);
+      if (records.length) this.recordsChanged.add(ex.plugin);
+    }
+  }
+
+  /** Reports plugins whose records changed since the last call. */
+  flushRecordChanges(): void {
+    if (!this.recordsChanged.size) return;
+    const plugins = [...this.recordsChanged];
+    this.recordsChanged.clear();
+    this.opts.onRecords?.(plugins);
+  }
+
+  /**
+   * Activates an extractor. A new one, or a new `version`, re-extracts the whole
+   * library in the background; otherwise its stored records stay as they are.
+   */
+  async registerExtractor(plugin: string, raw: unknown): Promise<void> {
+    const ex = compileExtractor(plugin, raw);
+    this.extractors.set(`${plugin}/${ex.spec.id}`, ex);
+    const stored = this.db
+      .prepare('SELECT version FROM plugin_extractors WHERE plugin = ? AND extractor = ?')
+      .get(plugin, ex.spec.id);
+    if (stored && Number(stored.version) === ex.spec.version) return;
+    this.db.transaction(() => {
+      this.db
+        .prepare('DELETE FROM plugin_records WHERE plugin = ? AND extractor = ?')
+        .run(plugin, ex.spec.id);
+      this.db
+        .prepare('INSERT OR REPLACE INTO plugin_extractors (plugin, extractor, version) VALUES (?, ?, ?)')
+        .run(plugin, ex.spec.id, ex.spec.version);
+    });
+    await this.extractAll(ex);
+  }
+
+  unregisterExtractor(plugin: string, id: string): void {
+    // Records stay (re-enabling is instant) until the next rebuild.
+    this.extractors.delete(`${plugin}/${id}`);
+  }
+
+  private async extractAll(ex: Extractor): Promise<void> {
+    const paths = this.db
+      .prepare('SELECT path FROM notes')
+      .all()
+      .map((r) => String(r.path));
+    const total = paths.length;
+    const numbering = this.opts.numbering ?? 'all';
+    const BATCH = 100;
+    for (let i = 0; i < paths.length; i += BATCH) {
+      const batch = paths.slice(i, i + BATCH);
+      const texts = await Promise.all(
+        batch.map(async (rel) => {
+          try {
+            return decodeText(await fs.readFile(path.join(this.rootAbs, ...rel.split('/')))).text;
+          } catch {
+            return null;
+          }
+        }),
+      );
+      const summaries = await Promise.all(
+        texts.map((text) =>
+          text === null
+            ? null
+            : this.opts.analyze
+              ? this.opts.analyze(text, numbering)
+              : analyzeNote(text, { numbering }),
+        ),
+      );
+      this.db.transaction(() => {
+        const ins = this.db.prepare(
+          'INSERT INTO plugin_records (plugin, extractor, path, line, key, value) VALUES (?, ?, ?, ?, ?, ?)',
+        );
+        batch.forEach((rel, k) => {
+          const text = texts[k];
+          const s = summaries[k];
+          if (text === null || text === undefined || !s) return;
+          try {
+            for (const r of extract(ex, text, s)) ins.run(ex.plugin, ex.spec.id, rel, r.line, r.key, r.value);
+          } catch (err) {
+            console.error(`[index] extractor ${ex.plugin}/${ex.spec.id} failed on ${rel}`, err);
+          }
+        });
+      });
+      if (total > BATCH) this.setStatus({ state: 'indexing', done: Math.min(total, i + BATCH), total });
+      await new Promise((r) => setImmediate(r));
+    }
+    if (total > BATCH) this.setStatus({ state: 'idle', done: total, total });
+    this.recordsChanged.add(ex.plugin);
+  }
+
+  queryRecords(
+    plugin: string,
+    q: {
+      extractor?: unknown;
+      key?: unknown;
+      keyPrefix?: unknown;
+      path?: unknown;
+      scope?: SearchScope;
+      limit?: unknown;
+    },
+  ): Array<{ path: string; line: number; key: string; value: string | null }> {
+    if (typeof q.extractor !== 'string') throw new Error('A query needs an extractor id.');
+    const like = (s: string) => s.replace(/[\\%_]/g, '\\$&');
+    const where = ['plugin = ?', 'extractor = ?'];
+    const params: SqlValue[] = [plugin, q.extractor];
+    if (typeof q.key === 'string') {
+      where.push('key = ?');
+      params.push(q.key);
+    }
+    if (typeof q.keyPrefix === 'string') {
+      where.push("key LIKE ? ESCAPE '\\'");
+      params.push(`${like(q.keyPrefix)}%`);
+    }
+    if (typeof q.path === 'string') {
+      where.push('path = ?');
+      params.push(q.path);
+    }
+    const scope = q.scope;
+    if (scope?.kind === 'vault') {
+      where.push("path LIKE ? ESCAPE '\\'");
+      params.push(`${like(scope.vaultPath)}/%`);
+    } else if (scope?.kind === 'domain') {
+      where.push('path IN (SELECT path FROM notes WHERE domain = ?)');
+      params.push(scope.domain);
+    }
+    const limit = Math.min(10_000, Math.max(1, typeof q.limit === 'number' ? Math.floor(q.limit) : 1000));
+    return this.db
+      .prepare(
+        `SELECT path, line, key, value FROM plugin_records WHERE ${where.join(' AND ')} ORDER BY path, line LIMIT ?`,
+      )
+      .all(...params, limit)
+      .map((r) => ({
+        path: String(r.path),
+        line: Number(r.line),
+        key: String(r.key),
+        value: r.value === null ? null : String(r.value),
+      }));
+  }
 
   constructor(
     private readonly db: Db,
@@ -103,6 +271,8 @@ export class LibraryIndex {
         'equations',
         'vaults',
         'notes_fts',
+        'plugin_records',
+        'plugin_extractors',
       ]) {
         db.exec(`DROP TABLE IF EXISTS ${t};`);
       }
@@ -291,6 +461,8 @@ export class LibraryIndex {
     ]) {
       this.db.prepare(`DELETE FROM ${t} = ?`).run(rel);
     }
+    if (this.db.prepare('DELETE FROM plugin_records WHERE path = ?').run(rel).changes)
+      for (const ex of this.extractors.values()) this.recordsChanged.add(ex.plugin);
     if (alsoFile) this.db.prepare('DELETE FROM files WHERE path = ?').run(rel);
   }
 
@@ -306,6 +478,7 @@ export class LibraryIndex {
     this.deleteRows(rel, false);
     if (!note) return;
     const s = note.summary ?? analyzeNote(note.text, { numbering: this.opts.numbering ?? 'all' });
+    this.extractInto(rel, note.text, s);
     const fm = s.frontmatter?.data ?? null;
     const title = noteTitle(s, rel);
     const aliases = fm ? stringList(fm.aliases) : [];

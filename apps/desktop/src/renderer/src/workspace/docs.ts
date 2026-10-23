@@ -3,7 +3,7 @@
  * survive desk switches), autosave 800 ms after the last edit and on blur, switch and
  * close (SPECS 4.8 rule 8), and the external-change rules of SPECS 4.9.
  */
-import { EditorState, Transaction } from '@codemirror/state';
+import { EditorState, Transaction, type ChangeSpec } from '@codemirror/state';
 import { create } from 'zustand';
 import type { TextFile } from '@shared/bridge';
 import { useSettings } from '../lib/settings';
@@ -123,6 +123,19 @@ export async function openDoc(path: string): Promise<EditorState> {
     },
   }));
   return state;
+}
+
+/**
+ * Applies a change to an open note as one transaction (plugin note edits, SPECS
+ * 12.11.5): it joins the note's undo history and saves through the normal path.
+ */
+export function editOpenDoc(path: string, changes: ChangeSpec, userEvent: string): boolean {
+  const rec = records.get(path);
+  if (!rec) return false;
+  const tr = currentState(rec).update({ changes, userEvent });
+  setRecordState(rec, tr.state);
+  noteEdited(path, tr.state);
+  return true;
 }
 
 /** Called by the editor for every edit of the shown document. */

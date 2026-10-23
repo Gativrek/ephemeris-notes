@@ -37,6 +37,11 @@ help page
 \`\`\`
 `;
 
+interface BoardState {
+  clicks: number;
+  notePath: string | null;
+}
+
 class SamplePlugin implements Plugin {
   private ctx!: PluginContext;
   /** Mounted blocks, so a theme change can reach them. */
@@ -110,6 +115,118 @@ class SamplePlugin implements Plugin {
         if (t) t.textContent = `theme: ${theme}; ink: ${ctx.theme.token('ink')}`;
       }
     });
+
+    this.loadV2(ctx);
+  }
+
+  // ---- API v2 (SPECS 12.11.6) ------------------------------------------------------
+
+  private loadV2(ctx: PluginContext): void {
+    // Inline: ::sample(text) renders reversed; the button rewrites it in upper case.
+    ctx.inline.register({
+      id: 'sample',
+      match: /::sample\(([^)\n]*)\)/g,
+      accept: (m) => m.groups[1] !== 'skip',
+      widget: (m, host) => {
+        const span = el('span', 'inline', reverse(m.groups[1] ?? ''));
+        const up = el('button', 'inline-up', 'Up');
+        up.type = 'button';
+        up.addEventListener('click', () => {
+          void host.replace(`::sample(${(m.groups[1] ?? '').toUpperCase()})`);
+        });
+        const wrap = el('span', 'inline-wrap');
+        wrap.append(span, up);
+        return wrap;
+      },
+      hover: (m, card) => {
+        card.append(el('div', 'inline-card', `Sample: ${m.groups[1] ?? ''}`));
+      },
+    });
+
+    // Index: "sample-tag:: <tag> <rest>" lines across the library.
+    ctx.index.registerExtractor({
+      id: 'tags',
+      version: 1,
+      kind: 'regex',
+      pattern: '^sample-tag:: (?<tag>\\S+)(?: (?<rest>.*))?$',
+      key: 'tag',
+      value: 'rest',
+    });
+
+    // Outline: one entry per sample-reverse block.
+    ctx.outline.contribute(({ text }) =>
+      text
+        .split('\n')
+        .map((line, i) => ({ line, n: i + 1 }))
+        .filter((l) => /^```sample-reverse\b/.test(l.line))
+        .map((l) => ({ line: l.n, label: 'Sample block', glyph: '↺' })),
+    );
+
+    // Views: a board on the desk with saved state, live records and a note edit.
+    ctx.views.register('board', {
+      title: (state) => `Sample board (${(state as BoardState | undefined)?.clicks ?? 0})`,
+      icon: 'note',
+      render: (root, raw, host) => {
+        const state: BoardState = { clicks: 0, notePath: null, ...(raw as Partial<BoardState> | undefined) };
+        let dirty = false;
+        const count = el('p', 'board-count', `clicks: ${state.clicks}`);
+        const records = el('ul', 'board-records');
+        const status = el('p', 'board-status');
+        const md = el('div', 'board-md');
+        host.renderMarkdown(md, '**Board** with $x^2$ math.', null);
+        const click = el('button', 'board-click', 'Click');
+        click.type = 'button';
+        click.addEventListener('click', () => {
+          state.clicks++;
+          count.textContent = `clicks: ${state.clicks}`;
+          host.saveState(state);
+          host.setTitle(`Sample board (${state.clicks})`);
+        });
+        const makeDirty = el('button', 'board-dirty', 'Make Dirty');
+        makeDirty.type = 'button';
+        makeDirty.addEventListener('click', () => {
+          dirty = true;
+          host.setDirty(true);
+        });
+        const save = el('button', 'board-save', 'Save');
+        save.type = 'button';
+        save.addEventListener('click', () => {
+          dirty = false;
+          host.setDirty(false);
+        });
+        const append = el('button', 'board-append', 'Append Line');
+        append.type = 'button';
+        append.addEventListener('click', () => {
+          const path = state.notePath;
+          if (!path) return;
+          void (async () => {
+            const { text, hash } = await ctx.notes.read(path);
+            const r = await ctx.notes.edit(
+              path,
+              [{ from: text.length, to: text.length, insert: 'Edited by the sample plugin.\n' }],
+              { expectedHash: hash, reason: 'sample board: Append Line' },
+            );
+            status.textContent = r.ok ? 'edit ok' : `edit refused: ${r.reason}`;
+          })();
+        });
+        const show = async () => {
+          const list = await ctx.index.query({ extractor: 'tags' });
+          records.replaceChildren(...list.map((r) => el('li', 'board-record', `${r.key}: ${r.value ?? ''}`)));
+        };
+        void show();
+        const sub = ctx.index.onChanged(() => void show());
+        root.append(count, md, records, click, makeDirty, save, append, status);
+        return {
+          onRequestClose: () => !dirty,
+          dispose: () => sub.dispose(),
+        };
+      },
+    });
+
+    // notes.edit without a user action is refused: try once at load and remember why.
+    void ctx.notes
+      .edit('Inbox/sample-plugin-probe.md', [], { expectedHash: '', reason: 'load-time probe' })
+      .then((r) => ctx.storage.library.writeJson('v2.json', { loadEdit: r.ok ? 'ok' : r.reason }));
   }
 
   onunload(): void {
@@ -161,7 +278,16 @@ class SamplePlugin implements Plugin {
       });
       void h;
     });
-    box.append(out, theme, args, note, fileLine, upper, save, overlay, status);
+    // v2: open the board view for this note's Vault.
+    const board = el('button', 'open-board', 'Open Board');
+    board.type = 'button';
+    board.addEventListener('click', () => {
+      void ctx.views.open('board', {
+        key: info.note.vaultPath ?? 'library',
+        state: { clicks: 0, notePath: info.note.path },
+      });
+    });
+    box.append(out, theme, args, note, fileLine, upper, save, overlay, board, status);
     target.append(box);
     this.mounted.add(box);
 

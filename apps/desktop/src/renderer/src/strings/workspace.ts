@@ -190,6 +190,9 @@ export const workspaceStrings = {
     },
     failed: (title: string, msg: string) => `${title} failed: ${msg}`,
   },
+  views: {
+    needs: (plugin: string) => `Needs ${plugin}`,
+  },
   overlay: {
     close: 'Close',
     unsaved: 'Unsaved changes',

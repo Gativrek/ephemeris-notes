@@ -7,7 +7,8 @@
 import { syntaxTree } from '@codemirror/language';
 import { WidgetType, type EditorView } from '@codemirror/view';
 import type { SyntaxNode } from '@lezer/common';
-import type { BlockHost, BlockInfo, BlockView, Domain, OverlayOptions } from '@vaults/plugin-api';
+import type { EditorState } from '@codemirror/state';
+import type { BlockHost, BlockInfo, BlockView, Domain, NoteRef, OverlayOptions } from '@vaults/plugin-api';
 import { analyzeNote, domainOf } from '@vaults/markdown';
 import { editorContext } from './context';
 import { blockRegistry, sourceVersion, type RegisteredRenderer } from './registry';
@@ -24,6 +25,23 @@ let services: BlockServices = {
 /** The plugin host installs the overlay and log services. */
 export function setBlockServices(s: BlockServices): void {
   services = s;
+}
+export function blockServices(): BlockServices {
+  return services;
+}
+
+/** The note a block or inline match lives in (BlockInfo.note, InlineMatch.note). */
+export function noteRefOf(state: EditorState): NoteRef {
+  const ctx = state.facet(editorContext);
+  let frontmatter: Record<string, unknown>;
+  try {
+    frontmatter =
+      analyzeNote(state.doc.sliceString(0, Math.min(state.doc.length, 20000))).frontmatter?.data ?? {};
+  } catch {
+    frontmatter = {};
+  }
+  const domain = ctx.vaultPath ? (domainOf(ctx.vaultPath)?.toLowerCase() as Domain | undefined) : undefined;
+  return { path: ctx.path, vaultPath: ctx.vaultPath, domain: domain ?? null, frontmatter };
 }
 
 interface MountState {
@@ -71,23 +89,13 @@ export class PluginBlockWidget extends WidgetType {
   }
 
   private info(view: EditorView): BlockInfo {
-    const ctx = view.state.facet(editorContext);
-    let frontmatter: Record<string, unknown>;
-    try {
-      frontmatter =
-        analyzeNote(view.state.doc.sliceString(0, Math.min(view.state.doc.length, 20000))).frontmatter
-          ?.data ?? {};
-    } catch {
-      frontmatter = {};
-    }
-    const domain = ctx.vaultPath ? (domainOf(ctx.vaultPath)?.toLowerCase() as Domain | undefined) : undefined;
     return {
       language: this.language,
       infoString: this.infoString.trim().split(/\s+/).slice(1).join(' '),
       args: this.args,
       source: this.source,
       version: sourceVersion(this.source),
-      note: { path: ctx.path, vaultPath: ctx.vaultPath, domain: domain ?? null, frontmatter },
+      note: noteRefOf(view.state),
     };
   }
 
@@ -131,6 +139,7 @@ export class PluginBlockWidget extends WidgetType {
         // A plugin's dispose failing must not break the editor.
       }
     }
+    box.dataset.plugin = entry.owner;
     const st: MountState = { entry, view: null, abort: new AbortController(), rendering: true };
     states.set(box, st);
     box.replaceChildren();

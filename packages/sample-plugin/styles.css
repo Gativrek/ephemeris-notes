@@ -47,3 +47,57 @@
   font: 400 14px/1.5 var(--font-ui);
   color: var(--text);
 }
+.sample-plugin-inline-wrap {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 0 4px;
+  border-radius: var(--radius-xs);
+  background: var(--chip);
+}
+.sample-plugin-inline {
+  font: 400 0.9em/1.4 var(--font-mono);
+  color: var(--ink);
+}
+.sample-plugin-inline-up {
+  height: 20px;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  background: var(--surface-raised);
+  color: var(--ink);
+  font: 500 11px/1 var(--font-ui);
+  cursor: pointer;
+}
+.sample-plugin-inline-card {
+  font: 400 13px/1.4 var(--font-ui);
+  color: var(--text);
+}
+.sample-plugin-board-count,
+.sample-plugin-board-status {
+  margin: 16px;
+  font: 400 14px/1.5 var(--font-ui);
+  color: var(--text);
+}
+.sample-plugin-board-md {
+  margin: 0 16px;
+}
+.sample-plugin-board-records {
+  margin: 8px 16px;
+  font: 400 13px/1.5 var(--font-mono);
+  color: var(--text);
+}
+.sample-plugin-board-click,
+.sample-plugin-board-dirty,
+.sample-plugin-board-save,
+.sample-plugin-board-append {
+  margin-left: 16px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  color: var(--ink);
+  font: 500 13px/1 var(--font-ui);
+  cursor: pointer;
+}

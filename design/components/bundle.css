@@ -591,3 +591,16 @@ body { margin: 0; font-family: var(--font-ui); color: var(--text); background: v
 .vx-keyboard__keys { flex: 0 0 auto; }
 .vx-keyboard__keys .vx-chip { font: 400 12px/1.4 var(--font-mono); }
 .vx-keyboard__recording { outline: 1px solid var(--cyan); }
+
+/* Plugin API v2 (SPECS 12.11, M7). */
+/* Inline widgets: inline-level, never change the line structure. */
+.vx-inline { display: inline-block; max-width: 100%; vertical-align: baseline; cursor: text; }
+.vx-inline--error { text-decoration: underline dotted var(--danger); text-underline-offset: 3px; color: var(--text); font: inherit; }
+/* A plugin view on the desk fills the editor area. */
+.vx-plugin-view { flex: 1 1 auto; min-height: 0; overflow: auto; position: relative; background: var(--surface); }
+.vx-desk-card__thumb--view { display: flex; align-items: center; justify-content: center; color: var(--muted); background: var(--surface-raised); }
+/* Plugin outline entries: their glyph in faint, like the core arrows. */
+.vx-outline__item--plugin { color: var(--text); }
+.vx-margin__mark--plugin { background: var(--faint); }
+.vx-map__chip--plugin { color: var(--text); }
+.vx-desk-card__thumb--view .vx-icon { width: 14px; height: 14px; }

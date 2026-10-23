@@ -4,7 +4,14 @@
  * plugin removes exactly what it added.
  */
 import { create } from 'zustand';
-import type { HelpPage, OverlayOptions, SettingField } from '@vaults/plugin-api';
+import type {
+  HelpPage,
+  OutlineEntry,
+  OutlineNote,
+  OverlayOptions,
+  SettingField,
+  ViewFactory,
+} from '@vaults/plugin-api';
 import type { PluginInfo } from '@shared/bridge';
 
 export type PluginState = 'disabled' | 'loading' | 'loaded' | 'failed' | 'incompatible';
@@ -44,6 +51,20 @@ export interface OverlayEntry {
   dirty: boolean;
 }
 
+export interface OutlineContributor {
+  key: number;
+  owner: string;
+  fn: (note: OutlineNote) => OutlineEntry[];
+}
+
+export interface ViewType {
+  /** `<plugin>:<type>` */
+  id: string;
+  owner: string;
+  type: string;
+  factory: ViewFactory;
+}
+
 interface PluginStore {
   plugins: PluginRuntime[];
   commands: CommandEntry[];
@@ -51,6 +72,11 @@ interface PluginStore {
   help: HelpEntry[];
   overlays: OverlayEntry[];
   values: Record<string, Record<string, unknown>>;
+  outline: OutlineContributor[];
+  views: ViewType[];
+  /** Per desk item (`view:…`): a title set by the view, and its unsaved mark. */
+  viewTitles: Record<string, string>;
+  viewDirty: Record<string, boolean>;
 }
 
 export const usePlugins = create<PluginStore>(() => ({
@@ -60,6 +86,10 @@ export const usePlugins = create<PluginStore>(() => ({
   help: [],
   overlays: [],
   values: {},
+  outline: [],
+  views: [],
+  viewTitles: {},
+  viewDirty: {},
 }));
 
 let nextKey = 1;

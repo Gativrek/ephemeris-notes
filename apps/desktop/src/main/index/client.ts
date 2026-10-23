@@ -57,6 +57,8 @@ export class IndexClient {
         this.broadcast({ type: 'index.status', payload: m.status });
       } else if (m.type === 'changed') {
         this.broadcast({ type: 'index.changed', payload: null });
+      } else if (m.type === 'records') {
+        this.broadcast({ type: 'index.records', payload: m.plugins });
       }
     });
     worker.on('error', (err) => {

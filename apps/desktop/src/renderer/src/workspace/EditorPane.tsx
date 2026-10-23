@@ -5,6 +5,7 @@ import { analyzeNote } from '@vaults/markdown';
 import { refreshLinks, type EditorContext } from '../editor/context';
 import { parseMacros } from '../editor/math';
 import { blockRegistry } from '../editor/registry';
+import { inlineRegistry } from '../editor/pluginInline';
 import {
   attrsCompartment,
   contentAttrs,
@@ -39,6 +40,7 @@ import {
 import { closeItem } from './Desk';
 import { useWorkspace } from './store';
 import { PdfViewer } from '../pdf/PdfViewer';
+import { PluginViewPane, isViewId } from '../plugins/views';
 
 /** Live statistics for the status bar and outline. */
 export const editorStats = {
@@ -327,7 +329,9 @@ export function EditorPane() {
   const shownRef = useRef<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [shown, setShown] = useState(0);
-  const isPdf = !!active && /\.pdf$/i.test(active);
+  // A PDF or a plugin view (SPECS 12.11.4) takes the editor's place.
+  const isView = isViewId(active);
+  const isPdf = (!!active && /\.pdf$/i.test(active)) || isView;
 
   // One view for the pane; documents swap their states in and out.
   useEffect(() => {
@@ -342,9 +346,14 @@ export function EditorPane() {
     };
     view.scrollDOM.addEventListener('scroll', onScroll, { passive: true });
     // Blocks seen before their renderer registers re-render when it does (SPECS 12.3).
-    const offRegistry = blockRegistry.onChange(() =>
-      queueMicrotask(() => viewRef.current === view && view.dispatch({ effects: refreshLinks.of(null) })),
-    );
+    const redraw = () =>
+      queueMicrotask(() => viewRef.current === view && view.dispatch({ effects: refreshLinks.of(null) }));
+    const offBlocks = blockRegistry.onChange(redraw);
+    const offInline = inlineRegistry.onChange(redraw);
+    const offRegistry = () => {
+      offBlocks();
+      offInline();
+    };
     attachView({
       get path() {
         return shownRef.current ?? '';
@@ -473,7 +482,8 @@ export function EditorPane() {
           <span>{s.editor.emptyHint}</span>
         </div>
       )}
-      {isPdf && active && (
+      {isView && active && <PluginViewPane key={active} id={active} onClose={() => closeItem(active)} />}
+      {isPdf && !isView && active && (
         <PdfViewer key={active} path={active} page={jump?.path === active ? (jump.page ?? null) : null} />
       )}
       <div

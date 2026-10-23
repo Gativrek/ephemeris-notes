@@ -24,7 +24,10 @@ describe('satisfies', () => {
     expect(satisfies(v, r)).toBe(ok);
   });
 
-  it('API_VERSION is 1.0.0', () => {
-    expect(API_VERSION).toBe('1.0.0');
+  it('API_VERSION is 1.1.0, and v1 plugins still load (SPECS 12.9, 12.11)', () => {
+    expect(API_VERSION).toBe('1.1.0');
+    expect(satisfies(API_VERSION, '^1.0.0')).toBe(true);
+    expect(satisfies(API_VERSION, '^1.1.0')).toBe(true);
+    expect(satisfies(API_VERSION, '^2.0.0')).toBe(false);
   });
 });

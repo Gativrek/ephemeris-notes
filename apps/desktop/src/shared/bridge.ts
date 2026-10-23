@@ -236,6 +236,15 @@ export interface VxBridge {
     /** What renaming or moving `paths` would rewrite ("Update N links in M notes"). */
     linkImpact(paths: string[]): Promise<Result<LinkImpact>>;
     aliases(): Promise<Result<Array<[string, string[]]>>>;
+    /** Plugin extractors (SPECS 12.11.2): declarative specs applied by the index worker. */
+    registerExtractor(pluginId: string, spec: unknown): Promise<Result<null>>;
+    unregisterExtractor(pluginId: string, id: string): Promise<Result<null>>;
+    queryRecords(
+      pluginId: string,
+      query: unknown,
+    ): Promise<Result<Array<{ path: string; line: number; key: string; value: string | null }>>>;
+    /** Plugins whose records changed. */
+    onRecords(cb: (plugins: string[]) => void): Unsubscribe;
     onChanged(cb: () => void): Unsubscribe;
     onStatus(cb: (s: IndexStatus) => void): Unsubscribe;
   };
@@ -371,6 +380,7 @@ export type PushEvent =
   | { type: 'settings.changed'; payload: { key: string; value: unknown } }
   | { type: 'index.changed'; payload: null }
   | { type: 'index.status'; payload: IndexStatus }
+  | { type: 'index.records'; payload: string[] }
   | { type: 'vaults.changed'; payload: null }
   | { type: 'catalog.changed'; payload: null }
   | { type: 'app.beforeClose'; payload: null };
@@ -406,6 +416,9 @@ export const BRIDGE_METHODS = {
     'ambiguous',
     'linkImpact',
     'aliases',
+    'registerExtractor',
+    'unregisterExtractor',
+    'queryRecords',
   ],
   settings: ['get', 'set'],
   window: ['minimize', 'maximize', 'close', 'setTitle', 'contextMenu', 'setChrome', 'readyToClose'],

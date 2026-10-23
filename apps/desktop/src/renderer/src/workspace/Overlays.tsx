@@ -4,6 +4,7 @@ import { Icon } from '../components/Icon';
 import { useCatalog } from '../lib/catalog';
 import { errorMessage, unwrap, vx } from '../lib/vx';
 import { usePlugins } from '../plugins/store';
+import { noteCommandRun } from '../plugins/activity';
 import { workspaceStrings as s } from '../strings/workspace';
 import {
   baseName,
@@ -104,6 +105,7 @@ function CommandPalette() {
         // Plugin commands are wrapped (SPECS 12.8): a throw becomes a status message.
         void (async () => {
           try {
+            if (cmd.owner !== 'core') noteCommandRun(cmd.owner);
             await cmd.run();
           } catch (err) {
             console.error(`[${cmd.owner}] command ${cmd.id} failed`, err);

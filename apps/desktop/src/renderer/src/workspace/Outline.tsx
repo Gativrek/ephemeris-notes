@@ -4,7 +4,11 @@
  * come from the index (M3).
  */
 import { useEffect, useMemo, useState } from 'react';
-import { buildOutline, type OutlineModel } from './outlineModel';
+import { addContributions, buildOutline, type OutlineItem, type OutlineModel } from './outlineModel';
+import { domainOf } from '@vaults/markdown';
+import type { Domain } from '@vaults/plugin-api';
+import { usePlugins } from '../plugins/store';
+import { currentVault } from './actions';
 import { useCatalog } from '../lib/catalog';
 import { useSettings } from '../lib/settings';
 import { isCodeLanguage } from '../editor/languages';
@@ -14,9 +18,52 @@ import { getRecord } from './docs';
 import { editorStats } from './EditorPane';
 import { settleDelay } from './Chrome';
 import { useWorkspace } from './store';
-import { DocumentMap, Inspector, MarginTrack } from './OutlineStyles';
+import { DocumentMap, Inspector, MarginTrack, activateItem, itemGlyph } from './OutlineStyles';
 
 const MAX_ITEMS = 5;
+/** SPECS 12.11.3: entries per plugin per note, and the time a contributor may take. */
+const MAX_PLUGIN_ENTRIES = 200;
+const CONTRIBUTOR_BUDGET_MS = 5;
+
+/** Plugin outline entries for this note; slow or throwing contributors are skipped. */
+function pluginEntries(path: string, text: string, model: OutlineModel): OutlineItem[] {
+  const contributors = usePlugins.getState().outline;
+  if (!contributors.length) return [];
+  const vaultPath = currentVault()?.path ?? null;
+  const domain = vaultPath ? ((domainOf(vaultPath)?.toLowerCase() ?? null) as Domain | null) : null;
+  const note = { path, vaultPath, domain, frontmatter: model.properties ?? {} };
+  const headings = model.headings
+    .filter((h) => h.level > 0)
+    .map((h) => ({ level: h.level, text: h.text, line: h.line }));
+  const out: OutlineItem[] = [];
+  for (const c of contributors) {
+    const started = performance.now();
+    let entries: ReturnType<typeof c.fn>;
+    try {
+      entries = c.fn({ note, text, headings });
+    } catch (err) {
+      console.error(`[plugin ${c.owner}] outline contributor failed`, err);
+      continue;
+    }
+    if (performance.now() - started > CONTRIBUTOR_BUDGET_MS) {
+      console.warn(`[plugin ${c.owner}] outline contributor took over ${CONTRIBUTOR_BUDGET_MS} ms; skipped`);
+      continue;
+    }
+    if (!Array.isArray(entries)) continue;
+    for (const e of entries.slice(0, MAX_PLUGIN_ENTRIES)) {
+      if (!e || typeof e.line !== 'number' || typeof e.label !== 'string') continue;
+      out.push({
+        kind: 'plugin',
+        plugin: c.owner,
+        line: Math.max(1, Math.floor(e.line)),
+        label: e.label,
+        ...(typeof e.glyph === 'string' && e.glyph ? { glyph: [...e.glyph][0]! } : {}),
+        ...(typeof e.onClick === 'function' ? { onClick: e.onClick } : {}),
+      });
+    }
+  }
+  return out;
+}
 
 export function useOutline(
   path: string | null,
@@ -26,6 +73,7 @@ export function useOutline(
   const [line, setLine] = useState(1);
   const catalogVersion = useCatalog((st) => st.version);
   const numbering = useSettings((st) => st.values['math.numbering']);
+  const contributors = usePlugins((st) => st.outline);
   useEffect(() => {
     if (!path) {
       setModel(null);
@@ -42,12 +90,17 @@ export function useOutline(
       if (text === lastText && !forced) return;
       forced = false;
       lastText = text;
-      setModel(
-        buildOutline(text, path, (t) => useCatalog.getState().links.resolve(t, path).path, backlinks, {
+      const model = buildOutline(
+        text,
+        path,
+        (t) => useCatalog.getState().links.resolve(t, path).path,
+        backlinks,
+        {
           numbering: numbering === 'labeled' ? 'labeled' : 'all',
           isCodeLanguage,
-        }),
+        },
       );
+      setModel(addContributions(model, pluginEntries(path, text, model)));
     };
     let lastEdit = 0;
     const schedule = () => {
@@ -64,7 +117,7 @@ export function useOutline(
       clearInterval(poll);
       if (timer) clearTimeout(timer);
     };
-  }, [path, backlinks, catalogVersion, numbering]);
+  }, [path, backlinks, catalogVersion, numbering, contributors]);
   return { model, currentLine: line };
 }
 
@@ -128,6 +181,23 @@ function AnnotatedOutline({ model, currentLine }: { model: OutlineModel; current
             {items.length > 0 && (
               <div className="vx-outline__items">
                 {shown.map((it, j) => {
+                  if (it.kind === 'plugin') {
+                    return (
+                      <a
+                        key={j}
+                        href="#"
+                        className="vx-outline__item vx-outline__item--plugin"
+                        data-plugin={it.plugin}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          activateItem(it);
+                        }}
+                      >
+                        <span className="vx-outline__glyph">{itemGlyph(it)}</span>
+                        <span className="vx-outline__text">{it.label}</span>
+                      </a>
+                    );
+                  }
                   if (it.kind === 'link' || it.kind === 'embed') {
                     const missing = it.kind === 'link' && !it.resolved;
                     return (

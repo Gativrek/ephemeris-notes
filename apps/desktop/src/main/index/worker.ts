@@ -28,7 +28,8 @@ export type WorkerMessage =
   | { type: 'result'; id: number; ok: true; value: unknown }
   | { type: 'result'; id: number; ok: false; message: string }
   | { type: 'status'; status: ReturnType<LibraryIndex['getStatus']> }
-  | { type: 'changed' };
+  | { type: 'changed' }
+  | { type: 'records'; plugins: string[] };
 
 const port = parentPort;
 if (!port) throw new Error('index worker started outside a worker thread');
@@ -49,9 +50,13 @@ function open(): void {
   index = new LibraryIndex(db, init.rootAbs, {
     numbering: init.numbering,
     analyze: (text, numbering) => pool.analyze(text, numbering),
+    onRecords: (plugins) => post({ type: 'records', plugins }),
     onProgress: (status) => post({ type: 'status', status }),
   });
 }
+
+/** Extractors the renderer registered, re-applied after a rebuild. */
+const registered = new Map<string, { plugin: string; spec: unknown }>();
 
 let queue: Promise<unknown> = Promise.resolve();
 function serial<T>(fn: () => Promise<T>): Promise<T> {
@@ -76,11 +81,13 @@ const methods: Record<string, (...args: never[]) => unknown> = {
   refresh: (rels: string[]) =>
     serial(async () => {
       await index.refresh(rels);
+      index.flushRecordChanges();
       post({ type: 'changed' });
     }),
   sync: () =>
     serial(async () => {
       const r = await index.sync();
+      index.flushRecordChanges();
       if (r.indexed || r.removed) post({ type: 'changed' });
       return r;
     }),
@@ -92,6 +99,9 @@ const methods: Record<string, (...args: never[]) => unknown> = {
       await fs.rm(`${init.dbPath}-shm`, { force: true });
       open();
       await index.sync();
+      for (const r of registered.values())
+        await index.registerExtractor(r.plugin, r.spec).catch(() => undefined);
+      index.flushRecordChanges();
       post({ type: 'changed' });
       return null;
     }),
@@ -104,6 +114,21 @@ const methods: Record<string, (...args: never[]) => unknown> = {
         .map((r) => String(r.path));
       return planRename(index, paths, from, to);
     }),
+  registerExtractor: (plugin: string, spec: unknown) =>
+    serial(async () => {
+      await index.registerExtractor(plugin, spec);
+      const id = (spec as { id: string }).id;
+      registered.set(`${plugin}/${id}`, { plugin, spec });
+      index.flushRecordChanges();
+      return null;
+    }),
+  unregisterExtractor: (plugin: string, id: string) => {
+    registered.delete(`${plugin}/${id}`);
+    index.unregisterExtractor(plugin, id);
+    return null;
+  },
+  queryRecords: (plugin: string, q: Parameters<LibraryIndex['queryRecords']>[1]) =>
+    index.queryRecords(plugin, q),
   close: () => serial(async () => db.close()),
 };
 

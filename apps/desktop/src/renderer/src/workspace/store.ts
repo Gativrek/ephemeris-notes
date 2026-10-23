@@ -40,6 +40,9 @@ interface WorkspaceState {
   source: boolean;
   renaming: string | null;
   overlay: Overlay;
+  /** Saved state of plugin views on the desk (SPECS 12.11.4), per machine. */
+  viewStates: Record<string, unknown>;
+  setViewState(id: string, state: unknown): void;
   /** Pending jump inside the active note (heading, block or line). */
   jump: { path: string; heading?: string | null; block?: string | null; line?: number; page?: number } | null;
 
@@ -89,6 +92,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
   renaming: null,
   overlay: null,
   jump: null,
+  viewStates: {},
 
   async init(vaultPath, vaultId) {
     set({
@@ -103,9 +107,10 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
       moreTiles: false,
       inbox: false,
     });
-    const [desk, ws] = await Promise.all([
+    const [desk, ws, views] = await Promise.all([
       unwrap(vx().ui.get(`desk.${vaultId}`)).catch(() => null),
       unwrap(vx().ui.get(`workspace.${vaultId}`)).catch(() => null),
+      unwrap(vx().ui.get(`views.${vaultId}`)).catch(() => null),
     ]);
     if (get().vaultId !== vaultId) return;
     const d = desk as Partial<Desk> | null;
@@ -115,7 +120,9 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
       sidebar?: boolean;
       outline?: boolean;
     } | null;
-    const inVault = (p: unknown): p is string => typeof p === 'string' && under(p, vaultPath);
+    // Plugin views (`view:…`) live on the desk next to the Vault's notes.
+    const inVault = (p: unknown): p is string =>
+      typeof p === 'string' && (under(p, vaultPath) || p.startsWith('view:'));
     const open = Array.isArray(d?.open) ? d.open.filter(inVault).slice(0, MAX_OPEN) : [];
     const pinned = Array.isArray(d?.pinned) ? d.pinned.filter(inVault) : [];
     const active =
@@ -123,12 +130,20 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
         ? d.active
         : (open[0] ?? null);
     set({
+      viewStates: views && typeof views === 'object' ? (views as Record<string, unknown>) : {},
       desk: { open, pinned, active, recent: active ? [active] : [] },
       section: w && (w.section === null || inVault(w.section)) ? (w.section ?? null) : null,
       expanded: w?.expanded ?? {},
       sidebar: w?.sidebar ?? true,
       outline: w?.outline ?? window.innerWidth >= 1440,
     });
+  },
+
+  setViewState(id, state) {
+    const viewStates = { ...get().viewStates, [id]: state };
+    set({ viewStates });
+    const vaultId = get().vaultId;
+    if (vaultId) void vx().ui.set(`views.${vaultId}`, viewStates);
   },
 
   setSection(path) {

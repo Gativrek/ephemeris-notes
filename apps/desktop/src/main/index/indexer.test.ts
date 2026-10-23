@@ -213,3 +213,43 @@ describe('Obsidian compatibility (SPECS 17)', () => {
     void analyzeNote;
   });
 });
+
+describe('plugin extractors in the index (SPECS 12.11.2)', () => {
+  const spec = { id: 'tags', version: 1, kind: 'regex', pattern: '^sample-tag:: (?<tag>\\S+)', key: 'tag' };
+  const note = 'Academic/GNSS Study/Notes/Tags.md';
+
+  it('extracts on registration, follows edits, keeps records when disabled', async () => {
+    await fs.writeFile(file(note), 'sample-tag:: alpha\nsample-tag:: beta\n');
+    await index.sync();
+    const changed: string[][] = [];
+    const idx = new LibraryIndex(db, lib, { onRecords: (p) => changed.push(p) });
+    await idx.sync();
+    await idx.registerExtractor('sample', spec);
+    idx.flushRecordChanges();
+    expect(changed).toEqual([['sample']]);
+    expect(idx.queryRecords('sample', { extractor: 'tags' }).map((r) => `${r.key}@${r.line}`)).toEqual([
+      'alpha@1',
+      'beta@2',
+    ]);
+    expect(idx.queryRecords('sample', { extractor: 'tags', keyPrefix: 'be' })).toHaveLength(1);
+    expect(
+      idx.queryRecords('sample', {
+        extractor: 'tags',
+        scope: { kind: 'vault', vaultPath: 'Work/Acme Robotics' },
+      }),
+    ).toHaveLength(0);
+
+    await fs.writeFile(file(note), 'sample-tag:: gamma\n');
+    await idx.refresh([note]);
+    expect(idx.queryRecords('sample', { extractor: 'tags' }).map((r) => r.key)).toEqual(['gamma']);
+
+    // Same version again: nothing is re-extracted; disabling keeps the records.
+    await idx.registerExtractor('sample', spec);
+    idx.unregisterExtractor('sample', 'tags');
+    expect(idx.queryRecords('sample', { extractor: 'tags' }).map((r) => r.key)).toEqual(['gamma']);
+  });
+
+  it('refuses a spec that does not compile', async () => {
+    await expect(index.registerExtractor('sample', { ...spec, pattern: '(' })).rejects.toThrow(/compile/);
+  });
+});
