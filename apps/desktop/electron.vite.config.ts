@@ -50,8 +50,9 @@ function pdfjsDecoders(): Plugin {
 export default defineConfig({
   main: {
     resolve: { alias: { '@shared': resolve(here, 'src/shared') } },
-    // The workspace package ships TypeScript sources: bundle it instead of requiring it.
-    build: { externalizeDeps: { exclude: ['@vaults/markdown', '@vaults/plugin-api'] } },
+    // Everything is bundled (workspace packages ship TypeScript; chokidar and the rest
+    // too), so the packaged app needs no node_modules (electron-builder, M7).
+    build: { externalizeDeps: false },
   },
   preload: {
     resolve: { alias: { '@shared': resolve(here, 'src/shared') } },

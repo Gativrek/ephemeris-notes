@@ -1,0 +1,33 @@
+# Windows installer and portable exe (owner request, 2026-10-23).
+# The app is fully bundled by electron-vite (out/), so no node_modules are packaged.
+appId: dev.vaults.notes
+productName: Vaults
+copyright: Copyright (c) 2026 Gabriel. MIT License.
+directories:
+  output: release
+  buildResources: build
+files:
+  - out/**/*
+  - package.json
+  - '!**/*.map'
+npmRebuild: false
+asar: true
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+nsis:
+  artifactName: Vaults-Setup-${version}.${ext}
+  # Per-user install: no administrator prompt.
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Vaults
+  # Uninstalling never touches the library: notes live in the folder the user chose.
+  deleteAppDataOnUninstall: false
+portable:
+  artifactName: Vaults-${version}-portable.exe

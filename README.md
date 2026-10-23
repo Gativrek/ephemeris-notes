@@ -62,6 +62,8 @@ pnpm test:e2e     # end-to-end tests (Playwright, Electron)
 pnpm tokens       # regenerate CSS variables from design/tokens.json
 ```
 
+**Windows app:** `pnpm dist` builds `apps/desktop/release/Vaults-Setup-0.1.0.exe` (a per-user installer: no administrator prompt, install folder of your choice, Start menu and desktop shortcuts) and `Vaults-0.1.0-portable.exe` (runs without installing). They are not code-signed, so Windows SmartScreen asks once (More info, then Run anyway). `VX_PACKAGED=1 pnpm test:e2e` smoke-tests the packaged app.
+
 The performance budgets (SPECS 16) are measured on a generated 5,000-note library by an opt-in test: set `VX_PERF=1` and run `pnpm test:e2e`. It takes a few minutes and writes `apps/desktop/test-results/perf.json`.
 
 The sample plugin (`packages/sample-plugin`) builds with `node packages/sample-plugin/build.mjs` into `dist/`, a folder you can install from Settings > Plugins > Install from Folder….

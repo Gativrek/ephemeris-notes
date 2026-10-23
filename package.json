@@ -17,7 +17,8 @@
     "tokens": "node scripts/build-tokens.ts",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "dist": "pnpm --filter @vaults/desktop dist"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
