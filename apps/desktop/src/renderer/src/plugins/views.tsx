@@ -4,7 +4,7 @@
  * stays with "Needs <plugin>" and opens nothing.
  */
 import { useEffect, useRef } from 'react';
-import type { Disposable, NoteRef, ViewHost, ViewInstance } from '@vaults/plugin-api';
+import type { Disposable, NoteRef, ViewHost, ViewInstance } from '@ephemeris-notes/plugin-api';
 import type { EditorContext } from '../editor/context';
 import { createReadOnlyView } from '../editor/setup';
 import { assetUrl } from '../lib/asset';

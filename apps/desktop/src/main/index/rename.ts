@@ -5,7 +5,7 @@
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { LinkCatalog, relativePath, rewriteLinks } from '@vaults/markdown';
+import { LinkCatalog, relativePath, rewriteLinks } from '@ephemeris-notes/markdown';
 import { decodeText, sha256 } from '../library/encoding';
 import type { LibraryIndex } from './indexer';
 

@@ -79,7 +79,7 @@ export async function makePerfLibrary(root: string): Promise<PerfLibrary> {
     await writeFile(file, data);
   };
   const created = new Date().toISOString();
-  await put('.vaults/library.json', JSON.stringify({ schema: 1, id: randomUUID(), created }));
+  await put('.ephemeris/library.json', JSON.stringify({ schema: 1, id: randomUUID(), created }));
   await mkdir(join(root, 'Inbox'), { recursive: true });
   const vaults: string[] = [];
   for (const d of DOMAINS)

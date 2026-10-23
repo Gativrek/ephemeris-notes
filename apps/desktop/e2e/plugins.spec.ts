@@ -101,14 +101,14 @@ test('settings: install, enable, fields, pane, plugin settings and library stora
   await card.getByRole('checkbox', { name: 'Shout' }).check();
   await expect(card.locator('.sample-plugin-pane')).toHaveText('Sample pane: HI');
 
-  const settingsJson = file('.vaults/plugin-data/sample-plugin/settings.json');
+  const settingsJson = file('.ephemeris/plugin-data/sample-plugin/settings.json');
   await expect
     .poll(async () => (await exists(settingsJson)) && JSON.parse(await readFile(settingsJson, 'utf8')))
     .toEqual({
       greeting: 'Hi',
       shout: true,
     });
-  const state = JSON.parse(await readFile(file('.vaults/plugin-data/sample-plugin/state.json'), 'utf8'));
+  const state = JSON.parse(await readFile(file('.ephemeris/plugin-data/sample-plugin/state.json'), 'utf8'));
   expect(state).toEqual({ loads: 1 });
 
   // Help: the plugin's page is listed under its name and renders its block live.
@@ -250,7 +250,7 @@ test('an enabled plugin loads again on the next start, after the first paint', a
     await openVault();
     await openPluginNote(ctx.page);
     await expect(ctx.page.locator('.sample-plugin-output').first()).toHaveText('cba');
-    const state = JSON.parse(await readFile(file('.vaults/plugin-data/sample-plugin/state.json'), 'utf8'));
+    const state = JSON.parse(await readFile(file('.ephemeris/plugin-data/sample-plugin/state.json'), 'utf8'));
     expect(state).toEqual({ loads: 2 });
   } finally {
     await ctx.close();
@@ -394,7 +394,7 @@ test('v2: view state survives a restart; notes.edit without a user action is ref
     await expect
       .poll(async () =>
         JSON.parse(
-          await readFile(file('.vaults/plugin-data/sample-plugin/v2.json'), 'utf8').catch(() => '{}'),
+          await readFile(file('.ephemeris/plugin-data/sample-plugin/v2.json'), 'utf8').catch(() => '{}'),
         ),
       )
       .toEqual({ loadEdit: 'notAllowed' });

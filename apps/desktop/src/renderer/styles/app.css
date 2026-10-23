@@ -19,6 +19,11 @@ body {
   background: var(--surface);
   color: var(--text);
 }
+.vx-firstrun__icon {
+  width: 96px;
+  height: 96px;
+}
+
 .vx-firstrun__title {
   margin: 0;
   font: 300 34px/1 var(--font-ui);

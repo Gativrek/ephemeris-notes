@@ -80,6 +80,12 @@ importers:
       '@codemirror/view':
         specifier: ^6.43.15
         version: 6.43.15
+      '@ephemeris-notes/markdown':
+        specifier: workspace:*
+        version: link:../../packages/markdown
+      '@ephemeris-notes/plugin-api':
+        specifier: workspace:*
+        version: link:../../packages/plugin-api
       '@lezer/common':
         specifier: ^1.5.4
         version: 1.5.4
@@ -98,12 +104,6 @@ importers:
       '@types/react-dom':
         specifier: ^19.3.0
         version: 19.3.0(@types/react@19.3.0)
-      '@vaults/markdown':
-        specifier: workspace:*
-        version: link:../../packages/markdown
-      '@vaults/plugin-api':
-        specifier: workspace:*
-        version: link:../../packages/plugin-api
       '@vitejs/plugin-react':
         specifier: ^6.1.2
         version: 6.1.2(vite@8.3.5(@types/node@24.19.2)(jiti@2.7.0))

@@ -1,7 +1,7 @@
 import { plural } from '../lib/time';
 
 export const workspaceStrings = {
-  appName: '{AppName}',
+  appName: 'Ephemeris',
   rail: {
     vaults: 'Switch Vault',
     vaultsTitle: 'Switch Vault (Ctrl O)',

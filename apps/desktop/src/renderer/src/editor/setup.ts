@@ -9,7 +9,7 @@ import { syntaxHighlighting } from '@codemirror/language';
 import { highlightSelectionMatches, search, searchKeymap } from '@codemirror/search';
 import { Compartment, EditorSelection, EditorState, Prec, type Extension } from '@codemirror/state';
 import { EditorView, drawSelection, dropCursor, keymap, type KeyBinding } from '@codemirror/view';
-import { vaultsMarkdown } from '@vaults/markdown';
+import { vaultsMarkdown } from '@ephemeris-notes/markdown';
 import { blockDecorations } from './blocks';
 import { editorContext, revealSource, type EditorContext } from './context';
 import { setReadOnlyFactory } from './embeds';

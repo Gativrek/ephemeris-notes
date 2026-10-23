@@ -4,7 +4,7 @@
  * a facet so nested read-only views (embeds, help pages) share the same model.
  */
 import { Facet, StateEffect } from '@codemirror/state';
-import type { Resolution } from '@vaults/markdown';
+import type { Resolution } from '@ephemeris-notes/markdown';
 
 export interface OpenLinkRequest {
   /** Resolved library path, or null for a missing note. */

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import appIcon from '@design/assets/Logos/ephemeris-icon.svg';
 import { firstRunStrings as s } from '../../strings/firstrun';
 import { errorMessage, unwrap, vx } from '../../lib/vx';
 
@@ -37,6 +38,7 @@ export function FirstRun() {
 
   return (
     <main className="vx-firstrun" data-testid="first-run">
+      <img className="vx-firstrun__icon" src={appIcon} width={96} height={96} alt="" />
       <h1 className="vx-firstrun__title">{s.title}</h1>
       {pending ? (
         <>

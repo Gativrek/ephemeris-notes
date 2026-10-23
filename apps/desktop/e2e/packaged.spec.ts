@@ -1,6 +1,6 @@
 /**
- * Smoke test of the packaged Windows app (release/win-unpacked/Vaults.exe). Opt-in:
- * run `pnpm --filter @vaults/desktop dist` first, then set VX_PACKAGED=1. A packaged
+ * Smoke test of the packaged Windows app (release/win-unpacked/Ephemeris.exe). Opt-in:
+ * run `pnpm --filter @ephemeris-notes/desktop dist` first, then set VX_PACKAGED=1. A packaged
  * build has no test hooks, so the library is the "last library" in a fresh user-data
  * folder, and the window is a real one.
  */
@@ -22,7 +22,7 @@ test('the packaged app opens a library, edits a note, indexes, watches and rende
   const env: Record<string, string> = {};
   for (const [k, v] of Object.entries(process.env)) if (v !== undefined && !k.startsWith('VX_')) env[k] = v;
   const app = await electron.launch({
-    executablePath: path.join(appRoot, 'release/win-unpacked/Vaults.exe'),
+    executablePath: path.join(appRoot, 'release/win-unpacked/Ephemeris.exe'),
     env: { ...env, VX_USER_DATA: userData },
   });
   try {

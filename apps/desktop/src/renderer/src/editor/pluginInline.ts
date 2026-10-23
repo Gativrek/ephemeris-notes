@@ -16,7 +16,7 @@ import {
   type Tooltip,
   type ViewUpdate,
 } from '@codemirror/view';
-import type { InlineHost, InlineMatch, InlineSpec, InlineView, NoteRef } from '@vaults/plugin-api';
+import type { InlineHost, InlineMatch, InlineSpec, InlineView, NoteRef } from '@ephemeris-notes/plugin-api';
 import { refreshLinks, revealSource } from './context';
 import { blockServices, noteRefOf } from './pluginBlock';
 

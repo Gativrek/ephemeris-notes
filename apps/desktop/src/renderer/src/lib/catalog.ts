@@ -3,7 +3,7 @@
  * autocomplete. Refreshed whenever main reports that the file list changed.
  */
 import { create } from 'zustand';
-import { LinkCatalog } from '@vaults/markdown';
+import { LinkCatalog } from '@ephemeris-notes/markdown';
 import type { CatalogEntry } from '@shared/bridge';
 import { unwrap, vx } from './vx';
 

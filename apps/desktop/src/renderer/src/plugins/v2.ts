@@ -13,7 +13,7 @@ import type {
   OutlineRegistry,
   PluginIndex,
   ViewRegistry,
-} from '@vaults/plugin-api';
+} from '@ephemeris-notes/plugin-api';
 import { inlineRegistry } from '../editor/pluginInline';
 import { unwrap, vx } from '../lib/vx';
 import { currentEditor, editorStats } from '../workspace/EditorPane';

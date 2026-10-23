@@ -15,7 +15,7 @@ The library is an ordinary folder of Markdown files. Open it as a vault in Obsid
 
 ## Folders
 
-- Folders starting with `.` (`.vaults`, `.vault`, `.obsidian`, `.git`) are hidden in the app and skipped by the index, so Obsidian's own settings never appear here.
+- Folders starting with `.` (`.ephemeris`, `.vault`, `.obsidian`, `.git`) are hidden in the app and skipped by the index, so Obsidian's own settings never appear here.
 - Folders next to the Domains, such as an archive moved in from Obsidian, are indexed, searchable with the **All** scope and linkable, but not shown in the sidebar. Settings > Library lists them.
 
 ## Editing in both

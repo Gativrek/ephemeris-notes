@@ -2,7 +2,7 @@
  * Workspace actions shared by keys, menus and buttons: opening links and notes, new
  * notes, the daily note, rename and trash with the desk and documents following.
  */
-import { splitTarget } from '@vaults/markdown';
+import { splitTarget } from '@ephemeris-notes/markdown';
 import type { OpenLinkRequest } from '../editor/context';
 import { useCatalog } from '../lib/catalog';
 import { errorMessage, unwrap, vx } from '../lib/vx';

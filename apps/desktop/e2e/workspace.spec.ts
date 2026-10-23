@@ -399,7 +399,7 @@ test('Settings > Library: git auto-commit commits the library when it is a repos
   await page.getByRole('checkbox', { name: 'Commit to git automatically' }).check();
   await page.getByRole('button', { name: 'Commit Now' }).click();
   await expect(page.getByTestId('git-status')).toContainText(/Committed \d+ changes/);
-  expect(git('log', '--format=%s').trim()).toMatch(/^\{AppName\}: auto-commit \d{4}-/);
+  expect(git('log', '--format=%s').trim()).toMatch(/^Ephemeris: auto-commit \d{4}-/);
   await page.getByRole('button', { name: 'Commit Now' }).click();
   await expect(page.getByTestId('git-status')).toContainText('Nothing to commit.');
 });

@@ -16,7 +16,7 @@ import {
   type PluginManifest,
   type ScopedStorage,
   type SettingField,
-} from '@vaults/plugin-api';
+} from '@ephemeris-notes/plugin-api';
 import type { PluginInfo, StorageScope } from '@shared/bridge';
 import { setBlockServices } from '../editor/pluginBlock';
 import { blockRegistry } from '../editor/registry';
@@ -137,7 +137,7 @@ async function makeContext(manifest: PluginManifest, disposables: Disposable[]):
     return d;
   };
   const libraryRoot = await unwrap(vx().plugins.storageRoot('library', id, null)).catch(
-    () => `.vaults/plugin-data/${id}`,
+    () => `.ephemeris/plugin-data/${id}`,
   );
   const library = scoped(id, 'library', null, libraryRoot);
   // Plugin settings live in settings.json in library scope (SPECS 12.7).

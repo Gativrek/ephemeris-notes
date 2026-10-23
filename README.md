@@ -1,6 +1,6 @@
-# vaults
+# Ephemeris
 
-> Working codename. The product name is not chosen yet; the UI shows `{AppName}`.
+> Internally `ephemeris-notes` (repository, packages, app id and data folders). People only ever see **Ephemeris**.
 
 A personal desktop note app for technical work: Markdown notes, LaTeX math, wikilinks and PDFs, organized into **Vaults** under three **Domains** (Academic, Work, Personal). Vaults are picked from an ornamental, collection-screen-style chooser and edited in a calm workspace.
 
@@ -17,7 +17,7 @@ Notes are plain Markdown files. The library folder can be opened in Obsidian at 
 | [`GOALS.md`](GOALS.md) | Problem, vision, principles, goals and non-goals, roadmap, priority plugins, parked ideas, decisions log | First. The *why*. |
 | [`SPECS.md`](SPECS.md) | Source of truth for behavior: architecture, storage, editor, UI, index, plugin API, plugin specs, testing | Before writing or changing any code. |
 | [`KICKOFF.md`](KICKOFF.md) | Instructions for the coding agent: working agreement, milestones with acceptance criteria, guardrails | At the start of every implementation session. |
-| `design/` | The exported **Vaults Design System**: `README.md` (brand book and rules), `tokens.json` (source of truth for tokens), `components/` (guidelines and previews) | Before building any UI. |
+| `design/` | The exported **Ephemeris Design System**: `README.md` (brand book and rules), `tokens.json` (source of truth for tokens), `components/` (guidelines and previews) | Before building any UI. |
 
 If code and spec disagree, the spec wins, or the spec is updated first in the same change.
 
@@ -44,14 +44,16 @@ apps/desktop/            Electron app
   src/preload/           the narrow bridge exposed to the renderer
   src/renderer/          React UI, editor, plugin host
 packages/markdown/       shared Lezer Markdown extensions (editor and index)
-packages/plugin-api/     public plugin types (@vaults/plugin-api)
+packages/plugin-api/     public plugin types (@ephemeris-notes/plugin-api)
 packages/sample-plugin/  minimal plugin used as the API contract test
-design/                  exported Vaults Design System
+design/                  exported Ephemeris Design System
 scripts/                 build-tokens and other tooling
 GOALS.md  SPECS.md  KICKOFF.md  README.md
 ```
 
 ## Development
+
+The repository folder can have any name. After renaming or moving it, run `pnpm install` once: on Windows pnpm links `node_modules` with absolute paths, and the install re-links them (no download). `pnpm --filter @ephemeris-notes/desktop icons` re-renders the app icon from `design/assets/Logos`.
 
 ```
 pnpm install
@@ -62,7 +64,7 @@ pnpm test:e2e     # end-to-end tests (Playwright, Electron)
 pnpm tokens       # regenerate CSS variables from design/tokens.json
 ```
 
-**Windows app:** `pnpm dist` builds `apps/desktop/release/Vaults-Setup-0.1.0.exe` (a per-user installer: no administrator prompt, install folder of your choice, Start menu and desktop shortcuts) and `Vaults-0.1.0-portable.exe` (runs without installing). They are not code-signed, so Windows SmartScreen asks once (More info, then Run anyway). `VX_PACKAGED=1 pnpm test:e2e` smoke-tests the packaged app.
+**Windows app:** `pnpm dist` builds `apps/desktop/release/Ephemeris-Setup-0.1.0.exe` (a per-user installer: no administrator prompt, install folder of your choice, Start menu and desktop shortcuts) and `Ephemeris-0.1.0-portable.exe` (runs without installing). They are not code-signed, so Windows SmartScreen asks once (More info, then Run anyway). `VX_PACKAGED=1 pnpm test:e2e` smoke-tests the packaged app.
 
 The performance budgets (SPECS 16) are measured on a generated 5,000-note library by an opt-in test: set `VX_PERF=1` and run `pnpm test:e2e`. It takes a few minutes and writes `apps/desktop/test-results/perf.json`.
 
@@ -70,7 +72,7 @@ The sample plugin (`packages/sample-plugin`) builds with `node packages/sample-p
 
 ## Plugins
 
-The core ships no feature plugins. Priority plugins live in their own repositories, built against `@vaults/plugin-api`:
+The core ships no feature plugins. Priority plugins live in their own repositories, built against `@ephemeris-notes/plugin-api`:
 
 - **Diagrams**: Mermaid plus a drag-and-drop canvas for circle, square and diamond flowcharts.
 - **Text-to-image**: fighting-game notation (and other token languages) rendered as images through data-only profiles.

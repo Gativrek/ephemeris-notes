@@ -1,6 +1,6 @@
 /**
  * A small JSON document persisted atomically, used for per-machine state in the app's
- * user-data folder (SPECS 4.10) and for library-scope settings in `.vaults/`.
+ * user-data folder (SPECS 4.10) and for library-scope settings in `.ephemeris/`.
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';

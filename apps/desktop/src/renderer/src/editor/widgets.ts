@@ -2,7 +2,7 @@
  * Widgets drawn in place of Markdown source on inactive lines (SPECS 10.1–10.7, 10.10).
  */
 import { WidgetType, type EditorView } from '@codemirror/view';
-import type { YamlValue } from '@vaults/markdown';
+import type { YamlValue } from '@ephemeris-notes/markdown';
 import { editorContext } from './context';
 import { renderMath } from './math';
 

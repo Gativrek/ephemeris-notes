@@ -15,16 +15,16 @@ test('Create Library writes the skeleton and nothing else', async () => {
 
     const entries = (await readdir(folder)).sort();
     expect(entries).toEqual([
+      '.ephemeris',
       '.gitignore',
-      '.vaults',
       'Academic',
       'Inbox',
       'Personal',
       'Work',
       'existing.md',
     ]);
-    expect(await readdir(path.join(folder, '.vaults'))).toEqual(['library.json']);
-    const lib = JSON.parse(await readFile(path.join(folder, '.vaults/library.json'), 'utf8')) as Record<
+    expect(await readdir(path.join(folder, '.ephemeris'))).toEqual(['library.json']);
+    const lib = JSON.parse(await readFile(path.join(folder, '.ephemeris/library.json'), 'utf8')) as Record<
       string,
       unknown
     >;

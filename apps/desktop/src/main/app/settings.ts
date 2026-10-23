@@ -1,7 +1,7 @@
 /**
  * Settings (SPECS 11.1). Per-machine settings live in user data. Keys starting with
  * `library.` are library-scope (math macros and the like) and live in
- * `.vaults/settings.json`, so they sync with the notes.
+ * `.ephemeris/settings.json`, so they sync with the notes.
  */
 import type { PushEvent } from '@shared/bridge';
 import { fail } from '@shared/result';
@@ -9,7 +9,7 @@ import type { JsonStore } from './json-store';
 import type { LibrarySession } from './session';
 
 const KEY = /^[a-z][a-zA-Z0-9_.-]{0,127}$/;
-export const LIBRARY_SETTINGS_FILE = '.vaults/settings.json';
+export const LIBRARY_SETTINGS_FILE = '.ephemeris/settings.json';
 
 export function validateKey(key: unknown): string {
   if (typeof key !== 'string' || !KEY.test(key)) fail('INVALID_ARGUMENT', 'Invalid settings key.');

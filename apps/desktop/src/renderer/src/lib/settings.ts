@@ -1,6 +1,6 @@
 /**
  * Renderer view of settings (SPECS 11.1). Values load once and follow changes made
- * anywhere (Settings panel, another window, a synced `.vaults/settings.json`).
+ * anywhere (Settings panel, another window, a synced `.ephemeris/settings.json`).
  */
 import { create } from 'zustand';
 import { unwrap, vx } from './vx';

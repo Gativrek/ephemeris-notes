@@ -157,7 +157,7 @@ export function Workspace({ vaultPath }: { vaultPath: string }) {
     // Re-initialize only when a different Vault opens.
   }, [vault?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Window title: "<note title> · <Vault name> · {AppName}" (SPECS 9.2).
+  // Window title: "<note title> · <Vault name> · Ephemeris" (SPECS 9.2).
   useEffect(() => {
     if (!vault) return;
     const note = isViewId(active)

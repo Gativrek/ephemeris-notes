@@ -3,7 +3,7 @@
  * register through `ctx.blocks` (SPECS 12.4); the core registers none in v1. Blocks
  * without a renderer render as plain code with a "No renderer for …" note.
  */
-import type { BlockRenderer } from '@vaults/plugin-api';
+import type { BlockRenderer } from '@ephemeris-notes/plugin-api';
 
 export interface RegisteredRenderer {
   /** The plugin id (shown in error states). */

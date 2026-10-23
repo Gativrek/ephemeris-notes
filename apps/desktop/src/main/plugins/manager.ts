@@ -5,7 +5,7 @@
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { API_VERSION } from '@vaults/plugin-api';
+import { API_VERSION } from '@ephemeris-notes/plugin-api';
 import type { PluginInfo, PluginManifestInfo } from '@shared/bridge';
 import { fail } from '@shared/result';
 import { satisfies } from '@shared/semver';

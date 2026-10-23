@@ -95,14 +95,14 @@ const vaultJson = (v: Record<string, unknown>) => JSON.stringify({ schema: 1, ..
 rmSync(root, { recursive: true, force: true });
 
 put(
-  '.vaults/library.json',
+  '.ephemeris/library.json',
   JSON.stringify(
     { schema: 1, id: '3f2b8c1e-4d5a-4e6f-9a7b-1c2d3e4f5a6b', created: '2026-10-01T09:00:00.000Z' },
     null,
     2,
   ) + '\n',
 );
-put('.gitignore', lf(['.vaults/*.tmp', '**/.*.vx-tmp-*', '.obsidian/workspace*.json', '.trash/']));
+put('.gitignore', lf(['.ephemeris/*.tmp', '**/.*.vx-tmp-*', '.obsidian/workspace*.json', '.trash/']));
 
 put('Inbox/2026-10-20 081500 idea.md', lf(['Idea from the phone: try an adaptive R in the GNSS filter.']));
 put('Inbox/2026-10-21 223010 reading.md', lf(['# Reading list', '', '- Groves, chapter 14']));

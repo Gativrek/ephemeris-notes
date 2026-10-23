@@ -12,11 +12,26 @@ describe('pnpm tokens', () => {
     expect(readFileSync(OUTPUT, 'utf8')).toBe(css);
   });
 
-  it('matches the design system’s own preview copy', () => {
+  it('agrees with the design system’s own preview copy', () => {
+    // The export lays its file out differently (light block, dark block, then shared
+    // values), so compare values: every variable it defines has the same value here.
     const design = readFileSync(resolve(repo, 'design/tokens.css'), 'utf8');
-    const body = (s: string) => s.slice(s.indexOf(':root {'));
-    // The app copy adds one block (light-only scopes) after the design system's two.
-    expect(body(css).startsWith(body(design))).toBe(true);
+    const blocks = (s: string) =>
+      [...s.matchAll(/([^{}]+)\{([^}]*)\}/g)].map((m) => ({
+        dark: /data-theme="dark"/.test(m[1]!),
+        vars: new Map([...m[2]!.matchAll(/--([a-z0-9-]+):\s*([^;]+);/g)].map((v) => [v[1]!, v[2]!.trim()])),
+      }));
+    const merged = (s: string, dark: boolean) => {
+      const out = new Map<string, string>();
+      for (const b of blocks(s))
+        if (b.dark === dark) for (const [k, v] of b.vars) if (!out.has(k)) out.set(k, v);
+      return out;
+    };
+    for (const dark of [false, true]) {
+      const app = merged(css, dark);
+      const mismatched = [...merged(design, dark)].filter(([k, v]) => app.get(k) !== v);
+      expect(mismatched, dark ? 'dark' : 'light').toEqual([]);
+    }
   });
 
   it('defines every variable bundle.css uses', () => {

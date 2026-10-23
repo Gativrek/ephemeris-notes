@@ -1,7 +1,7 @@
 import { plural } from '../lib/time';
 
 export const chooserStrings = {
-  title: '{AppName}',
+  title: 'Ephemeris',
   domainsLabel: 'Domains',
   stat: (n: number) => ({
     value: n.toLocaleString('en-US'),

@@ -17,7 +17,7 @@ export interface LibraryInfo {
 
 export type LibraryOpenResult =
   | { kind: 'opened'; library: LibraryInfo }
-  /** The chosen folder has no `.vaults/library.json`. `token` lets `create` use it. */
+  /** The chosen folder has no `.ephemeris/library.json`. `token` lets `create` use it. */
   | { kind: 'not-library'; token: string; folder: string }
   | { kind: 'cancelled' };
 

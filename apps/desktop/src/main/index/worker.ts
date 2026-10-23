@@ -4,7 +4,7 @@
  */
 import fs from 'node:fs/promises';
 import { parentPort, workerData } from 'node:worker_threads';
-import type { NumberingMode } from '@vaults/markdown';
+import type { NumberingMode } from '@ephemeris-notes/markdown';
 import { openDb, type Db } from './db';
 import { LibraryIndex } from './indexer';
 import { planRename, type RenamePlanItem } from './rename';

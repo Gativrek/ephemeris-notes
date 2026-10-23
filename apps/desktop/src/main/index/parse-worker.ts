@@ -3,7 +3,7 @@
  * build parses several notes at once (SPECS 16, full index under 20 s).
  */
 import { parentPort } from 'node:worker_threads';
-import { analyzeNote, type NumberingMode } from '@vaults/markdown';
+import { analyzeNote, type NumberingMode } from '@ephemeris-notes/markdown';
 
 export type ParseRequest = { id: number; text: string; numbering: NumberingMode };
 

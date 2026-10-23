@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Domain, VaultInfo } from '@shared/bridge';
+import appIcon from '@design/assets/Logos/ephemeris-icon.svg';
 import { Icon } from '../../components/Icon';
 import { Hint, Kbd } from '../../components/Keycap';
 import { OrnamentFrame } from '../../components/OrnamentFrame';
@@ -154,7 +155,10 @@ export function Chooser() {
   return (
     <div className="vx-chooser vx-chooser-bg" data-theme="light" data-testid="chooser">
       <header className="vx-chooser__topbar">
-        <h1 className="vx-chooser__title">{s.title}</h1>
+        <h1 className="vx-chooser__title">
+          <img className="vx-chooser__icon" src={appIcon} width={48} height={48} alt="" />
+          <span className="vx-chooser__wordmark">{s.title}</span>
+        </h1>
         <div className="vx-chooser__stat" data-testid="chooser-stat">
           {stat && (
             <>

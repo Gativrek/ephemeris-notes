@@ -5,8 +5,8 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { addContributions, buildOutline, type OutlineItem, type OutlineModel } from './outlineModel';
-import { domainOf } from '@vaults/markdown';
-import type { Domain } from '@vaults/plugin-api';
+import { domainOf } from '@ephemeris-notes/markdown';
+import type { Domain } from '@ephemeris-notes/plugin-api';
 import { usePlugins } from '../plugins/store';
 import { currentVault } from './actions';
 import { useCatalog } from '../lib/catalog';

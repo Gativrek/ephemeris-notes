@@ -4,7 +4,7 @@
  * At most three levels deep, with cycle detection.
  */
 import { WidgetType, type EditorView } from '@codemirror/view';
-import { analyzeNote } from '@vaults/markdown';
+import { analyzeNote } from '@ephemeris-notes/markdown';
 import { editorContext, type EditorContext } from './context';
 import { linkAttrs } from './widgets';
 

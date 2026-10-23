@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { API_VERSION } from '@vaults/plugin-api';
+import { API_VERSION } from '@ephemeris-notes/plugin-api';
 import { satisfies } from './semver';
 
 describe('satisfies', () => {

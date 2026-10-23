@@ -16,7 +16,7 @@ import {
   type LinkRef,
   type NoteSummary,
   type NumberingMode,
-} from '@vaults/markdown';
+} from '@ephemeris-notes/markdown';
 import type { Backlink, IndexStatus, SearchHit, SearchScope } from '@shared/bridge';
 import { decodeText } from '../library/encoding';
 import { isTempFile } from '../library/atomic';

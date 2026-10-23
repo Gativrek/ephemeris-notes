@@ -32,7 +32,7 @@ describe('normalizeLibraryPath', () => {
     ['a\\b.md', 'INVALID_PATH'],
     ['a\0b', 'INVALID_PATH'],
     ['', 'INVALID_PATH'],
-    ['.vaults/library.json', 'FORBIDDEN'],
+    ['.ephemeris/library.json', 'FORBIDDEN'],
     ['Academic/V/.vault/vault.json', 'FORBIDDEN'],
   ])('rejects %j', (input, expected) => {
     expect(code(() => normalizeLibraryPath(input))).toBe(expected);
@@ -44,8 +44,8 @@ describe('normalizeLibraryPath', () => {
   });
 
   it('allows hidden segments only when asked', () => {
-    expect(normalizeLibraryPath('.vaults/settings.json', { allowHidden: true })).toBe(
-      '.vaults/settings.json',
+    expect(normalizeLibraryPath('.ephemeris/settings.json', { allowHidden: true })).toBe(
+      '.ephemeris/settings.json',
     );
   });
 });

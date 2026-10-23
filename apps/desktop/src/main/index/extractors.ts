@@ -3,7 +3,7 @@
  * notes as plain data (regex, fence or frontmatter); the index worker applies it. No
  * plugin code runs here: this worker has Node.
  */
-import type { NoteSummary } from '@vaults/markdown';
+import type { NoteSummary } from '@ephemeris-notes/markdown';
 
 export type ExtractorKind =
   | {

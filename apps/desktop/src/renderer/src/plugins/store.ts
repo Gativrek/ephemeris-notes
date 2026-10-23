@@ -11,7 +11,7 @@ import type {
   OverlayOptions,
   SettingField,
   ViewFactory,
-} from '@vaults/plugin-api';
+} from '@ephemeris-notes/plugin-api';
 import type { PluginInfo } from '@shared/bridge';
 
 export type PluginState = 'disabled' | 'loading' | 'loaded' | 'failed' | 'incompatible';

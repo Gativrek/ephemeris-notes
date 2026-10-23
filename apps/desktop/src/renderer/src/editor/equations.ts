@@ -7,7 +7,7 @@ import { syntaxTree } from '@codemirror/language';
 import { StateField, type EditorState } from '@codemirror/state';
 import { EditorView, WidgetType } from '@codemirror/view';
 import type { CompletionContext, CompletionResult } from '@codemirror/autocomplete';
-import { numberEquations } from '@vaults/markdown';
+import { numberEquations } from '@ephemeris-notes/markdown';
 import { editorContext, refreshLinks } from './context';
 import { renderMath } from './math';
 

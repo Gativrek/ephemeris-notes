@@ -6,7 +6,7 @@
 import { autocompletion, type CompletionContext, type CompletionResult } from '@codemirror/autocomplete';
 import { syntaxTree } from '@codemirror/language';
 import { EditorView, hoverTooltip, type Tooltip } from '@codemirror/view';
-import { analyzeNote, splitTarget } from '@vaults/markdown';
+import { analyzeNote, splitTarget } from '@ephemeris-notes/markdown';
 import { editorContext, revealSource, type EditorContext, type OpenLinkRequest } from './context';
 import { activeLines } from './livePreview';
 import { equationCompletions } from './equations';

@@ -3,7 +3,8 @@
  * Per-machine values go through `useSettings`; plugin values through the plugin host.
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import type { SettingField } from '@vaults/plugin-api';
+import type { SettingField } from '@ephemeris-notes/plugin-api';
+import appIcon from '@design/assets/Logos/ephemeris-icon.svg';
 import { editorKeyBindings } from '../../editor/setup';
 import { useCatalog } from '../../lib/catalog';
 import {
@@ -575,9 +576,14 @@ export function AboutSection() {
   return (
     <div className="vx-settings__page" data-testid="settings-about">
       <h2 className="vx-settings__h">{s.sections.about}</h2>
-      <Item label={ws.appName} hint={s.about.tagline}>
-        <span className="vx-settings__hint">{s.about.version(__APP_VERSION__)}</span>
-      </Item>
+      <div className="vx-about">
+        <img className="vx-about__icon" src={appIcon} width={64} height={64} alt="" />
+        <div>
+          <div className="vx-about__name">{ws.appName}</div>
+          <p className="vx-settings__hint">{s.about.tagline}</p>
+          <p className="vx-settings__hint">{s.about.version(__APP_VERSION__)}</p>
+        </div>
+      </div>
       <Item label={s.about.license} hint={s.about.data} />
     </div>
   );

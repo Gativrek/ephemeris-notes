@@ -1,5 +1,5 @@
 export const firstRunStrings = {
-  title: '{AppName}',
+  title: 'Ephemeris',
   hint: 'Open a library folder, or choose a folder to turn into a new library. A new library gets the Academic, Work and Personal Domains and an Inbox.',
   open: 'Open Library…',
   create: 'Create Library…',

@@ -42,7 +42,9 @@ import { PluginManager } from './plugins/manager';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
+// Per-machine data lives in `ephemeris-notes` (the internal name); people see "Ephemeris".
 if (process.env.VX_USER_DATA) app.setPath('userData', path.resolve(process.env.VX_USER_DATA));
+else app.setPath('userData', path.join(app.getPath('appData'), 'ephemeris-notes'));
 registerPrivilegedSchemes();
 if (isTestMode()) {
   // Test windows sit off screen and are never focused; keep them rendering at full speed.
@@ -98,7 +100,9 @@ function createWindow(saved: Bounds | null, onBounds: (b: Bounds) => void): Brow
     // Test runs never put a window on screen.
     ...(isTestMode() ? { x: -32000, y: -32000, skipTaskbar: true, focusable: true } : {}),
     backgroundColor: '#fbfcfc',
-    title: '{AppName}',
+    // Packaged builds take the icon from the executable; dev runs use the rendered PNG.
+    ...(app.isPackaged ? {} : { icon: path.join(here, '../../build/icon.png') }),
+    title: 'Ephemeris',
     webPreferences: {
       ...webPreferences(path.join(here, '../preload/index.cjs')),
       ...(isTestMode() ? { backgroundThrottling: false } : {}),
@@ -171,7 +175,7 @@ async function main(): Promise<void> {
   const settings = new Settings(machineSettings, broadcast);
   sessions.onOpenChanged((s) => settings.attach(s));
   sessions.onWatch((e) => {
-    if (e.path === '.vaults/settings.json') void settings.reloadLibrary();
+    if (e.path === '.ephemeris/settings.json') void settings.reloadLibrary();
   });
 
   handleAssetProtocol(async (rel) => {

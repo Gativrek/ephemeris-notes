@@ -1,6 +1,6 @@
 /**
  * Library identity, creation and opening (SPECS 4.1, 4.2, 4.10).
- * Opening reads only. Creating writes `.vaults/library.json`, the Domain folders,
+ * Opening reads only. Creating writes `.ephemeris/library.json`, the Domain folders,
  * `Inbox/` and `.gitignore`, and touches nothing else.
  */
 import { randomUUID } from 'node:crypto';
@@ -11,7 +11,7 @@ import { fail } from '@shared/result';
 import { atomicCreate, atomicWrite } from './atomic';
 import { decodeText, encodeText, stripBom } from './encoding';
 
-export const LIBRARY_DIR = '.vaults';
+export const LIBRARY_DIR = '.ephemeris';
 export const LIBRARY_FILE = 'library.json';
 export const INBOX_DIR = 'Inbox';
 
@@ -23,7 +23,7 @@ export const DOMAIN_FOLDERS: Record<Domain, string> = {
 };
 export const DOMAINS: Domain[] = ['academic', 'work', 'personal'];
 
-export const GITIGNORE_LINES = ['.vaults/*.tmp', '**/.*.vx-tmp-*', '.obsidian/workspace*.json', '.trash/'];
+export const GITIGNORE_LINES = ['.ephemeris/*.tmp', '**/.*.vx-tmp-*', '.obsidian/workspace*.json', '.trash/'];
 
 export interface LibraryFile {
   schema: 1;
@@ -45,7 +45,7 @@ async function isFolder(p: string): Promise<boolean> {
   }
 }
 
-/** Reads and validates `.vaults/library.json`. Returns null if the folder is not a library. */
+/** Reads and validates `.ephemeris/library.json`. Returns null if the folder is not a library. */
 export async function readLibrary(root: string): Promise<LibraryInfo | null> {
   let raw: string;
   try {

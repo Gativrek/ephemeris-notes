@@ -1,6 +1,6 @@
 /**
  * `vx.plugins`: installed plugins, enable and disable, install from a folder, and plugin
- * data storage in the library (SPECS 12.7): `.vaults/plugin-data/<id>/` and
+ * data storage in the library (SPECS 12.7): `.ephemeris/plugin-data/<id>/` and
  * `<Vault>/.vault/plugin-data/<id>/`. Writes are atomic.
  */
 import { BrowserWindow, dialog } from 'electron';
@@ -59,7 +59,7 @@ export function registerPluginHandlers(deps: {
     const s = oneOf(scope, 'scope', ['library', 'vault'] as const);
     const pid = str(id, 'id', 64);
     if (!PLUGIN_ID.test(pid)) fail('INVALID_ARGUMENT', 'Invalid plugin id.');
-    if (s === 'library') return `.vaults/plugin-data/${pid}`;
+    if (s === 'library') return `.ephemeris/plugin-data/${pid}`;
     const vp = normalizeLibraryPath(optStr(vaultPath, 'vaultPath', 1024));
     const v = await new VaultStore(sessions.require().fs).get(vp);
     if (!v) fail('NOT_FOUND', 'Not a Vault.');

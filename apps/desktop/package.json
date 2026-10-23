@@ -1,6 +1,6 @@
 {
-  "name": "@vaults/desktop",
-  "productName": "Vaults",
+  "name": "@ephemeris-notes/desktop",
+  "productName": "Ephemeris",
   "version": "0.1.0",
   "description": "A desktop note app for a library of Markdown notes.",
   "author": "Gabriel",
@@ -13,7 +13,8 @@
     "build": "electron-vite build",
     "typecheck": "tsc -p tsconfig.node.json && tsc -p tsconfig.preload.json && tsc -p tsconfig.web.json && tsc -p tsconfig.e2e.json",
     "test:e2e": "electron-vite build && playwright test",
-    "dist": "electron-vite build && electron-builder --win --config electron-builder.yml"
+    "dist": "electron-vite build && electron-builder --win --config electron-builder.yml",
+    "icons": "electron scripts/build-icons.mjs"
   },
   "devDependencies": {
     "@codemirror/autocomplete": "^6.20.4",
@@ -35,8 +36,8 @@
     "@playwright/test": "^1.64.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "@vaults/markdown": "workspace:*",
-    "@vaults/plugin-api": "workspace:*",
+    "@ephemeris-notes/markdown": "workspace:*",
+    "@ephemeris-notes/plugin-api": "workspace:*",
     "@vitejs/plugin-react": "^6.1.2",
     "chokidar": "^5.0.0",
     "electron": "^45.0.0",

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { EditorSelection, EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { analyzeNote } from '@vaults/markdown';
+import { analyzeNote } from '@ephemeris-notes/markdown';
 import { refreshLinks, type EditorContext } from '../editor/context';
 import { parseMacros } from '../editor/math';
 import { blockRegistry } from '../editor/registry';

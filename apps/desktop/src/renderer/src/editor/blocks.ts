@@ -7,7 +7,7 @@
 import { syntaxTree } from '@codemirror/language';
 import { StateField, type EditorState, type Range, type Transaction } from '@codemirror/state';
 import { Decoration, EditorView, type DecorationSet } from '@codemirror/view';
-import { analyzeNote, parseInfoString, splitTarget } from '@vaults/markdown';
+import { analyzeNote, parseInfoString, splitTarget } from '@ephemeris-notes/markdown';
 import { editorContext, refreshLinks, revealSource } from './context';
 import { renderInline } from './inline';
 import { embedAloneOnLine, rangeActive } from './livePreview';

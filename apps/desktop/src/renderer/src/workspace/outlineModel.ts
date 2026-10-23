@@ -2,7 +2,7 @@
  * The outline model (SPECS 9.6): built once per note from the live text plus the
  * index's backlinks. Every outline style renders this.
  */
-import { analyzeNote } from '@vaults/markdown';
+import { analyzeNote } from '@ephemeris-notes/markdown';
 
 export type OutlineItem =
   | { kind: 'link'; target: string; resolved: string | null; line: number }

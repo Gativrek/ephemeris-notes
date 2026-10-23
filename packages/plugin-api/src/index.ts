@@ -1,6 +1,6 @@
 /// <reference lib="dom" />
 /**
- * `@vaults/plugin-api`: the plugin API v1 (SPECS 12.4). Plugins are ES modules whose
+ * `@ephemeris-notes/plugin-api`: the plugin API v1 (SPECS 12.4). Plugins are ES modules whose
  * default export is a factory returning a Plugin. They use only `ctx`.
  *
  * Semver (SPECS 12.9): additions are minor releases; removals and signature changes
@@ -190,7 +190,7 @@ export interface ScopedStorage {
 }
 
 export interface PluginStorage {
-  /** .vaults/plugin-data/<id>/ */
+  /** .ephemeris/plugin-data/<id>/ */
   readonly library: ScopedStorage;
   /** <Vault>/.vault/plugin-data/<id>/ */
   vault(vaultPath: string): ScopedStorage;

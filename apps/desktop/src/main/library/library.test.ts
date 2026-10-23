@@ -16,14 +16,14 @@ describe('createLibrary', () => {
   it('creates library.json, the Domains, Inbox and .gitignore only', async () => {
     const info = await createLibrary(tmp, new Date('2026-10-23T00:00:00Z'));
     expect((await fs.readdir(tmp)).sort()).toEqual([
+      '.ephemeris',
       '.gitignore',
-      '.vaults',
       'Academic',
       'Inbox',
       'Personal',
       'Work',
     ]);
-    const lib = JSON.parse(await fs.readFile(path.join(tmp, '.vaults/library.json'), 'utf8')) as Record<
+    const lib = JSON.parse(await fs.readFile(path.join(tmp, '.ephemeris/library.json'), 'utf8')) as Record<
       string,
       unknown
     >;
@@ -38,7 +38,7 @@ describe('createLibrary', () => {
     await createLibrary(tmp);
     expect(await fs.readFile(path.join(tmp, 'Academic', 'keep.md'), 'utf8')).toBe('keep');
     expect(await fs.readFile(path.join(tmp, '.gitignore'), 'utf8')).toBe(
-      'node_modules/\r\n.trash/\r\n.vaults/*.tmp\r\n**/.*.vx-tmp-*\r\n.obsidian/workspace*.json\r\n',
+      'node_modules/\r\n.trash/\r\n.ephemeris/*.tmp\r\n**/.*.vx-tmp-*\r\n.obsidian/workspace*.json\r\n',
     );
   });
 
@@ -55,10 +55,10 @@ describe('readLibrary', () => {
   });
 
   it('validates schema and id', async () => {
-    await fs.mkdir(path.join(tmp, '.vaults'));
-    await fs.writeFile(path.join(tmp, '.vaults/library.json'), '{"schema":2,"id":"x"}');
+    await fs.mkdir(path.join(tmp, '.ephemeris'));
+    await fs.writeFile(path.join(tmp, '.ephemeris/library.json'), '{"schema":2,"id":"x"}');
     await expect(readLibrary(tmp)).rejects.toMatchObject({ code: 'NOT_A_LIBRARY' });
-    await fs.writeFile(path.join(tmp, '.vaults/library.json'), 'not json');
+    await fs.writeFile(path.join(tmp, '.ephemeris/library.json'), 'not json');
     await expect(readLibrary(tmp)).rejects.toMatchObject({ code: 'NOT_A_LIBRARY' });
   });
 });

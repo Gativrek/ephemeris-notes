@@ -8,8 +8,15 @@ import { syntaxTree } from '@codemirror/language';
 import { WidgetType, type EditorView } from '@codemirror/view';
 import type { SyntaxNode } from '@lezer/common';
 import type { EditorState } from '@codemirror/state';
-import type { BlockHost, BlockInfo, BlockView, Domain, NoteRef, OverlayOptions } from '@vaults/plugin-api';
-import { analyzeNote, domainOf } from '@vaults/markdown';
+import type {
+  BlockHost,
+  BlockInfo,
+  BlockView,
+  Domain,
+  NoteRef,
+  OverlayOptions,
+} from '@ephemeris-notes/plugin-api';
+import { analyzeNote, domainOf } from '@ephemeris-notes/markdown';
 import { editorContext } from './context';
 import { blockRegistry, sourceVersion, type RegisteredRenderer } from './registry';
 

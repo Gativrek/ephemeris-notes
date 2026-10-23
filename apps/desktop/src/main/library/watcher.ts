@@ -1,6 +1,6 @@
 /**
  * Library watcher (SPECS 4.9). Emits library-relative events, skipping hidden files
- * and folders (except `.vault/vault.json`, `.vaults/settings.json` and plugin data),
+ * and folders (except `.vault/vault.json`, `.ephemeris/settings.json` and plugin data),
  * temp files, and the echo of the app's own writes (matched by content hash).
  */
 import { readFile } from 'node:fs/promises';
@@ -22,8 +22,8 @@ const OWN_WRITE_TTL_MS = 10_000;
 export function isWatchedHidden(rel: string): boolean {
   const segs = rel.split('/');
   if (segs[0] === '.git' || segs[0] === '.obsidian' || segs[0] === '.trash') return false;
-  if (segs[0] === '.vaults') {
-    return segs.length === 1 || rel === '.vaults/settings.json' || segs[1] === 'plugin-data';
+  if (segs[0] === '.ephemeris') {
+    return segs.length === 1 || rel === '.ephemeris/settings.json' || segs[1] === 'plugin-data';
   }
   const i = segs.indexOf('.vault');
   if (i !== -1) {

@@ -13,7 +13,7 @@ import {
   type ViewUpdate,
 } from '@codemirror/view';
 import type { SyntaxNodeRef } from '@lezer/common';
-import { splitTarget } from '@vaults/markdown';
+import { splitTarget } from '@ephemeris-notes/markdown';
 import { editorContext, refreshLinks, revealSource } from './context';
 import { isCodeLanguage } from './languages';
 import { blockRegistry } from './registry';

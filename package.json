@@ -1,5 +1,5 @@
 {
-  "name": "vaults",
+  "name": "ephemeris-notes",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -8,17 +8,17 @@
     "node": ">=22.12"
   },
   "scripts": {
-    "dev": "pnpm --filter @vaults/desktop dev",
+    "dev": "pnpm --filter @ephemeris-notes/desktop dev",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "pnpm --filter @vaults/desktop test:e2e",
+    "test:e2e": "pnpm --filter @ephemeris-notes/desktop test:e2e",
     "tokens": "node scripts/build-tokens.ts",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "dist": "pnpm --filter @vaults/desktop dist"
+    "dist": "pnpm --filter @ephemeris-notes/desktop dist"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -3,7 +3,7 @@
  * `analyzeNote` in place; if a worker fails, the note is parsed on this thread instead.
  */
 import type { Worker } from 'node:worker_threads';
-import { analyzeNote, type NoteSummary, type NumberingMode } from '@vaults/markdown';
+import { analyzeNote, type NoteSummary, type NumberingMode } from '@ephemeris-notes/markdown';
 
 type Pending = { resolve: (s: NoteSummary) => void; text: string; numbering: NumberingMode };
 

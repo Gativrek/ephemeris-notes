@@ -1,7 +1,7 @@
 import { cp, readFile, readdir, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { analyzeNote, LinkCatalog, resolvesUniquelyInObsidian } from '@vaults/markdown';
+import { analyzeNote, LinkCatalog, resolvesUniquelyInObsidian } from '@ephemeris-notes/markdown';
 import { fixtureLibrary, launch, setPickFolder, tempDir, type Launched } from './helpers';
 
 let ctx: Launched;

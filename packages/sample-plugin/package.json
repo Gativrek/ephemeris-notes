@@ -1,5 +1,5 @@
 {
-  "name": "@vaults/sample-plugin",
+  "name": "@ephemeris-notes/sample-plugin",
   "version": "1.0.0",
   "private": true,
   "type": "module",

@@ -3,7 +3,7 @@
  * same parser and link resolution as the editor.
  */
 import type { SyntaxNode } from '@lezer/common';
-import { markdownParser, splitTarget } from '@vaults/markdown';
+import { markdownParser, splitTarget } from '@ephemeris-notes/markdown';
 import type { EditorContext } from './context';
 import { renderMath } from './math';
 import { linkAttrs, linkClass } from './widgets';

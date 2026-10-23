@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { LinkCatalog, analyzeNote, resolvesUniquelyInObsidian } from '@vaults/markdown';
+import { LinkCatalog, analyzeNote, resolvesUniquelyInObsidian } from '@ephemeris-notes/markdown';
 import { openDb, type Db } from './db';
 import { LibraryIndex } from './indexer';
 import { parseQuery, snippets, toFtsMatch } from './query';

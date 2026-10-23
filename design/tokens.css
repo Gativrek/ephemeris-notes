@@ -1,6 +1,6 @@
-/* Vaults Design System — generated from tokens.json for previewing only.
-   The app generates its own copy with `pnpm tokens` (SPECS 14). Do not edit by hand. */
-:root {
+/* Ephemeris Design System — generated from tokens.json */
+
+:root, [data-theme="light"] {
   --surface-chrome: #eceff2;
   --surface-side: #f3f5f7;
   --surface: #fbfcfc;
@@ -66,38 +66,6 @@
   --keycap: #4a525c;
   --keycap-strong: #2b3139;
   --on-keycap: #ffffff;
-  --font-display: Marcellus, Georgia, "Times New Roman", serif;
-  --font-ui: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
-  --font-note: "IBM Plex Serif", Georgia, serif;
-  --font-mono: "IBM Plex Mono", Consolas, "SF Mono", monospace;
-  --font-math: "STIX Two Text", "Cambria Math", "Times New Roman", serif;
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 24px;
-  --space-6: 32px;
-  --space-7: 44px;
-  --space-8: 56px;
-  --space-9: 72px;
-  --radius-xs: 2px;
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-  --radius-pill: 9999px;
-  --size-hit: 44px;
-  --size-titlebar: 44px;
-  --size-statusbar: 28px;
-  --size-rail: 56px;
-  --size-sidebar: 304px;
-  --size-desk: 64px;
-  --size-row: 30px;
-  --size-tile: 58px;
-  --size-note-measure: 700px;
-  --size-outline: 320px;
-  --size-card-width: 300px;
-  --size-card-height: 570px;
-  --size-chooser-topbar: 88px;
   --shadow-card: 0 8px 22px rgba(30,40,50,0.10);
   --shadow-card-selected: 0 0 0 2px #3cc8e6, 0 0 30px 6px rgba(52,192,228,0.55), 0 20px 44px rgba(20,60,80,0.18);
   --shadow-selected: 0 0 0 1px #1b8faf, 0 0 12px 1px rgba(52,192,228,0.30);
@@ -106,7 +74,8 @@
   --shadow-keycap: inset 0 -2px 0 rgba(0,0,0,0.35);
   --focus-ring: 0 0 0 2px #fbfcfc, 0 0 0 4px #13809e;
 }
-:root[data-theme="dark"] {
+
+[data-theme="dark"] {
   --surface-chrome: #121418;
   --surface-side: #15181c;
   --surface: #1b1f24;
@@ -148,4 +117,61 @@
   --domain-personal-soft: rgba(199,149,183,0.18);
   --shadow-selected: 0 0 0 1px #4fc8e4, 0 0 12px 1px rgba(79,200,228,0.30);
   --focus-ring: 0 0 0 2px #1b1f24, 0 0 0 4px #4fc8e4;
+  color-scheme: dark;
 }
+
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 44px;
+  --space-8: 56px;
+  --space-9: 72px;
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-pill: 9999px;
+  --size-hit: 44px;
+  --size-titlebar: 44px;
+  --size-statusbar: 28px;
+  --size-rail: 56px;
+  --size-sidebar: 304px;
+  --size-desk: 64px;
+  --size-row: 30px;
+  --size-tile: 58px;
+  --size-note-measure: 700px;
+  --size-outline: 320px;
+  --size-card-width: 300px;
+  --size-card-height: 570px;
+  --size-chooser-topbar: 88px;
+  --font-display: Marcellus, Georgia, "Times New Roman", serif;
+  --font-ui: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-note: "IBM Plex Serif", Georgia, serif;
+  --font-mono: "IBM Plex Mono", Consolas, "SF Mono", monospace;
+  --font-math: "STIX Two Text", "Cambria Math", "Times New Roman", serif;
+}
+
+.wordmark { font-family: var(--font-display); font-size: 36px; line-height: 1.2; font-weight: 400; letter-spacing: 0.01em; }
+.vault-card-name { font-family: var(--font-display); font-size: 38px; line-height: 1.06; font-weight: 400; }
+.note-title { font-family: var(--font-display); font-size: 40px; line-height: 1.15; font-weight: 400; }
+.domain-band { font-family: var(--font-display); font-size: 26px; line-height: 1.2; font-weight: 400; letter-spacing: 0.08em; }
+.vault-name { font-family: var(--font-display); font-size: 24px; line-height: 1.3; font-weight: 400; }
+.section-name { font-family: var(--font-display); font-size: 15px; line-height: 1.2; font-weight: 400; }
+.dialog-title { font-family: var(--font-ui); font-size: 34px; line-height: 1; font-weight: 300; }
+.note-heading { font-family: var(--font-ui); font-size: 22px; line-height: 1.3; font-weight: 600; }
+.button { font-family: var(--font-ui); font-size: 15px; line-height: 20px; font-weight: 500; }
+.ui-body { font-family: var(--font-ui); font-size: 14px; line-height: 20px; font-weight: 400; }
+.ui-folder { font-family: var(--font-ui); font-size: 14px; line-height: 20px; font-weight: 600; }
+.ui-small { font-family: var(--font-ui); font-size: 13px; line-height: 18px; font-weight: 400; }
+.ui-meta { font-family: var(--font-ui); font-size: 12px; line-height: 16px; font-weight: 400; }
+.label-caps { font-family: var(--font-ui); font-size: 11px; line-height: 16px; font-weight: 600; letter-spacing: 0.12em; }
+.note-body { font-family: var(--font-note); font-size: 18px; line-height: 1.72; font-weight: 400; }
+.snippet { font-family: var(--font-note); font-size: 13px; line-height: 1.55; font-weight: 400; }
+.code { font-family: var(--font-mono); font-size: 14px; line-height: 1.75; font-weight: 400; }
+.keycap-text { font-family: var(--font-mono); font-size: 13px; line-height: 1; font-weight: 500; }
+.math-display { font-family: var(--font-math); font-size: 22px; line-height: 46px; font-weight: 400; }
+.math-inline { font-family: var(--font-math); font-size: 19.5px; line-height: 1.72; font-weight: 400; }

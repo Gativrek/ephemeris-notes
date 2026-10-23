@@ -76,7 +76,7 @@ export class GitAutoCommit {
   constructor(
     private readonly run: GitRunner,
     private readonly settings: () => { enabled: boolean; intervalMinutes: number },
-    private readonly appName = '{AppName}',
+    private readonly appName = 'Ephemeris',
   ) {}
 
   setRoot(root: string | null): void {

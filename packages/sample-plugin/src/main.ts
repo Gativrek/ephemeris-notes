@@ -9,7 +9,7 @@ import type {
   Plugin,
   PluginContext,
   PluginFactory,
-} from '@vaults/plugin-api';
+} from '@ephemeris-notes/plugin-api';
 
 const ID = 'sample-plugin';
 

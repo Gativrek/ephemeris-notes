@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { analyzeNote } from '@vaults/markdown';
+import { analyzeNote } from '@ephemeris-notes/markdown';
 import { compileExtractor, extract } from './extractors';
 
 const run = (spec: unknown, text: string) => extract(compileExtractor('p', spec), text, analyzeNote(text));

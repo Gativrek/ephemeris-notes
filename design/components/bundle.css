@@ -201,7 +201,10 @@ body { margin: 0; font-family: var(--font-ui); color: var(--text); background: v
 /* The chooser is light-only: wrap it in [data-theme="light"] so themed tokens stay light. */
 .vx-chooser { position: relative; height: 100%; display: flex; flex-direction: column; overflow: hidden; }
 .vx-chooser__topbar { position: relative; z-index: 2; flex: 0 0 auto; height: var(--size-chooser-topbar); box-sizing: border-box; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 0 0 var(--space-9); background: linear-gradient(180deg, var(--chooser-topbar), var(--chooser-topbar-end)); border-bottom: 5px solid var(--chooser-topbar-rule); }
-.vx-chooser__title { margin: 0; font: 300 38px/1.2 var(--font-ui); color: var(--chooser-ink); white-space: nowrap; }
+.vx-chooser__title { margin: 0; display: flex; align-items: center; gap: var(--space-4); white-space: nowrap; }
+.vx-chooser__icon { flex: 0 0 auto; width: 48px; height: 48px; }
+/* The name in `wordmark`: Marcellus 36px in chooser-ink, never gold. */
+.vx-chooser__wordmark { font: 400 36px/1.2 var(--font-display); letter-spacing: 0.01em; color: var(--chooser-ink); }
 .vx-chooser__stat { display: flex; align-items: baseline; gap: 10px; font-size: 14px; letter-spacing: .02em; color: var(--chooser-muted); }
 .vx-chooser__stat-value { font: 400 26px/1 var(--font-display); color: var(--chooser-ink); }
 .vx-chooser__topbar .vx-domain-tabs { justify-self: end; padding-right: var(--space-6); }
@@ -604,3 +607,8 @@ body { margin: 0; font-family: var(--font-ui); color: var(--text); background: v
 .vx-margin__mark--plugin { background: var(--faint); }
 .vx-map__chip--plugin { color: var(--text); }
 .vx-desk-card__thumb--view .vx-icon { width: 14px; height: 14px; }
+
+/* About (Settings): the app icon beside its name. */
+.vx-about { display: flex; align-items: center; gap: var(--space-4); padding: var(--space-4) 0; border-top: 1px solid var(--line); }
+.vx-about__icon { flex: 0 0 auto; width: 64px; height: 64px; }
+.vx-about__name { font: 400 28px/1.2 var(--font-display); color: var(--ink); }
