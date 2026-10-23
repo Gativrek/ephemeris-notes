@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import type { Domain, VaultInfo } from '@shared/bridge';
 import appIcon from '@design/assets/Logos/ephemeris-icon.svg';
 import { Icon } from '../../components/Icon';
-import { setWindowChrome } from '../../lib/chrome';
+import { mixHex, setWindowChromeColors } from '../../lib/chrome';
 import { Hint, Kbd } from '../../components/Keycap';
 import { OrnamentFrame } from '../../components/OrnamentFrame';
 import { assetUrl } from '../../lib/asset';
@@ -49,8 +49,22 @@ export function Chooser() {
   useEffect(() => void performance.mark('vx-chooser'), []);
   const rootRef = useRef<HTMLDivElement>(null);
   // The window controls take the top bar's ground and ink (the chooser is light-only).
+  // The bar is a vertical gradient and the controls one solid colour: use the gradient's
+  // colour at the controls' vertical centre, where the eye compares them.
   useEffect(() => {
-    if (rootRef.current) setWindowChrome(rootRef.current, '--chooser-topbar', '--chooser-ink');
+    const root = rootRef.current;
+    const bar = root?.querySelector<HTMLElement>('.vx-chooser__topbar');
+    if (!root || !bar) return;
+    const css = getComputedStyle(root);
+    const top = css.getPropertyValue('--chooser-topbar').trim();
+    const end = css.getPropertyValue('--chooser-topbar-end').trim();
+    const controls = 44;
+    const span = bar.clientHeight || 83;
+    setWindowChromeColors(
+      mixHex(top, end, controls / 2 / span),
+      css.getPropertyValue('--chooser-ink').trim(),
+      controls,
+    );
   }, []);
   const itemCount = inDomain.length + 1;
   const pages = Math.max(1, Math.ceil(itemCount / PER_PAGE));

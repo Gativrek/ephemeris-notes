@@ -207,7 +207,8 @@ body { margin: 0; font-family: var(--font-ui); color: var(--text); background: v
 .vx-chooser__wordmark { font: 400 36px/1.2 var(--font-display); letter-spacing: 0.01em; color: var(--chooser-ink); }
 .vx-chooser__stat { display: flex; align-items: baseline; gap: 10px; font-size: 14px; letter-spacing: .02em; color: var(--chooser-muted); }
 .vx-chooser__stat-value { font: 400 26px/1 var(--font-display); color: var(--chooser-ink); }
-.vx-chooser__topbar .vx-domain-tabs { justify-self: end; padding-right: var(--space-6); }
+/* Beside the window controls the tabs sit close to them; without controls (macOS) they keep space-6. */
+.vx-chooser__topbar .vx-domain-tabs { justify-self: end; padding-right: max(var(--space-2), calc(var(--space-6) - (100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw)))); }
 /* The window controls overlay the top-right corner (title-bar overlay): keep clear of them,
    and let the bar move the window like a title bar. */
 .vx-chooser__topbar { padding-right: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw)); -webkit-app-region: drag; user-select: none; }
