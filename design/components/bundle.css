@@ -260,3 +260,162 @@ body { margin: 0; font-family: var(--font-ui); color: var(--text); background: v
 .vx-range { width: 100%; height: var(--size-hit); margin: 0; accent-color: var(--cyan-fill); cursor: pointer; }
 .vx-range-row { display: flex; align-items: center; gap: var(--space-4); }
 .vx-range-row__value { flex: 0 0 auto; min-width: 48px; text-align: right; font: 500 14px/1 var(--font-mono); color: var(--chooser-ink-2); }
+
+/* ---------- Workspace shell (added in M2) ---------- */
+/* Title bar 44 · rail 56 · sidebar 304 · desk 64 · outline 320 · status bar 28 (SPECS 9.1). */
+.vx-shell { height: 100%; display: grid; grid-template-rows: var(--size-titlebar) minmax(0, 1fr) var(--size-statusbar); grid-template-columns: var(--size-rail) auto minmax(0, 1fr) auto; grid-template-areas: "title title title title" "rail side main outline" "status status status status"; background: var(--surface); color: var(--text); }
+.vx-titlebar { grid-area: title; position: relative; display: flex; align-items: center; justify-content: center; gap: var(--space-3); padding: 0 var(--space-4); padding-left: max(var(--space-4), env(titlebar-area-x, 0px)); background: var(--surface-chrome); border-bottom: 1px solid var(--line); -webkit-app-region: drag; user-select: none; }
+.vx-titlebar button, .vx-titlebar input, .vx-titlebar label, .vx-titlebar [role="group"] { -webkit-app-region: no-drag; }
+.vx-titlebar .vx-search { width: 440px; }
+.vx-titlebar__scope { width: 216px; border-radius: var(--radius-md); overflow: hidden; }
+.vx-titlebar__scope > button { height: 30px; font-size: 12px; }
+.vx-rail { grid-area: rail; display: flex; flex-direction: column; align-items: center; gap: var(--space-1); padding: var(--space-2) 0; background: var(--surface-chrome); border-right: 1px solid var(--line); }
+.vx-rail__spacer { flex: 1 1 auto; }
+.vx-rail__badge { position: absolute; top: 6px; right: 6px; min-width: 16px; height: 16px; box-sizing: border-box; padding: 0 4px; border-radius: var(--radius-pill); background: var(--surface-hover); color: var(--ink); font: 600 10px/16px var(--font-ui); text-align: center; }
+.vx-rail .vx-icon-btn { position: relative; }
+.vx-side { grid-area: side; width: var(--size-sidebar); min-height: 0; box-sizing: border-box; display: flex; flex-direction: column; background: var(--surface-side); border-right: 1px solid var(--line); }
+.vx-side__scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0 var(--space-3) var(--space-3); }
+.vx-main { grid-area: main; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.vx-outline-wrap { grid-area: outline; min-height: 0; display: flex; }
+.vx-outline-wrap .vx-outline { overflow-y: auto; }
+.vx-statusbar { grid-area: status; display: flex; align-items: center; gap: var(--space-4); padding: 0 var(--space-4); background: var(--surface-chrome); border-top: 1px solid var(--line); font-size: 12px; line-height: 16px; color: var(--muted); white-space: nowrap; }
+.vx-statusbar__crumbs { display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.vx-statusbar__spacer { flex: 1 1 auto; }
+
+/* Vault header at the top of the sidebar: a cover crop, the name in gold, Domain and count. */
+.vx-vault-head { position: relative; flex: 0 0 auto; height: 112px; margin: 0 0 var(--space-3); overflow: hidden; border-bottom: 1px solid var(--line); }
+.vx-vault-head__cover { position: absolute; inset: 0; background-color: var(--chooser-panel-inset); background-size: cover; background-position: center; }
+.vx-vault-head__frost { position: absolute; inset: 0; background: linear-gradient(180deg, color-mix(in srgb, var(--surface-side) 10%, transparent) 0%, color-mix(in srgb, var(--surface-side) 88%, transparent) 62%, var(--surface-side) 100%); }
+.vx-vault-head__text { position: absolute; left: var(--space-4); right: var(--space-4); bottom: 12px; display: flex; flex-direction: column; gap: 2px; }
+.vx-vault-head__name { font: 400 24px/1.3 var(--font-display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vx-vault-head__meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.vx-vault-head__meta .vx-diamond { background: var(--domain); }
+.vx-side__label { display: flex; align-items: center; justify-content: space-between; height: 28px; }
+.vx-tile--daily::after { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--domain, var(--domain-academic)); }
+.vx-tile__name { overflow: hidden; text-overflow: ellipsis; }
+.vx-tile--more .vx-tile__name { color: var(--muted); }
+.vx-tree-head { display: flex; align-items: center; gap: 8px; height: 32px; margin-top: var(--space-3); }
+.vx-tree-head__title { flex: 1 1 auto; min-width: 0; font: 400 15px/1.2 var(--font-display); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vx-tree .vx-row { cursor: pointer; }
+.vx-tree .vx-row:hover { background: var(--surface-hover); }
+.vx-tree .vx-row[aria-current="page"]:hover { background: var(--selection); }
+.vx-tree .vx-row.is-drop { box-shadow: inset 0 0 0 1px var(--cyan); }
+.vx-row__input { flex: 1 1 auto; min-width: 0; height: 22px; box-sizing: border-box; padding: 0 6px; border: 1px solid var(--cyan-fill); border-radius: var(--radius-sm); background: var(--surface-raised); color: var(--ink); font: inherit; outline: none; }
+/* Other attachments: the extension as a neutral badge, like the PDF badge. */
+.vx-ext { flex: 0 0 auto; width: 26px; box-sizing: border-box; padding: 1px 0; border-radius: var(--radius-xs); background: var(--chip); color: var(--on-chip); font: 600 9px/1.4 var(--font-ui); letter-spacing: .04em; text-align: center; text-transform: uppercase; }
+
+/* Desk add and clear. */
+.vx-desk { overflow-x: auto; overflow-y: hidden; }
+.vx-desk-card { flex: 0 0 auto; }
+.vx-desk-card__thumb--date { display: flex; align-items: center; justify-content: center; border-color: var(--domain, var(--domain-academic)); border-top-width: 4px; font-size: 10px; font-weight: 600; color: var(--ink); background: var(--surface); }
+.vx-desk-card__thumb--pdf { display: flex; align-items: flex-end; justify-content: center; padding-bottom: 3px; background: var(--surface); }
+.vx-desk-card__thumb--pdf .vx-pdf { font-size: 7px; padding: 0 2px; }
+.vx-desk-card__thumb--note { background: var(--surface); }
+.vx-desk-clear { appearance: none; margin: 0 0 0 auto; padding: 0 var(--space-2); height: 32px; border: 0; border-radius: var(--radius-md); background: transparent; color: var(--muted); font: 400 12px/1 var(--font-ui); cursor: pointer; white-space: nowrap; }
+.vx-desk-clear:hover { background: var(--surface-hover); color: var(--ink); }
+
+/* Banners above the editor: external changes, notices (SPECS 4.9). */
+.vx-banner { flex: 0 0 auto; display: flex; align-items: center; gap: var(--space-3); min-height: 44px; box-sizing: border-box; padding: 6px var(--space-4); background: var(--surface-side); border-bottom: 1px solid var(--line); font-size: 14px; color: var(--ink); }
+.vx-banner__mark { flex: 0 0 auto; width: 8px; height: 8px; transform: rotate(45deg); background: var(--cyan); }
+.vx-banner--warn .vx-banner__mark { background: var(--danger); }
+.vx-banner__text { flex: 1 1 auto; min-width: 0; }
+
+/* Workspace buttons are smaller than the dialog's. */
+.vx-btn--small { height: 32px; padding: 0 14px; font-size: 13px; border-color: var(--line); border-radius: var(--radius-md); }
+.vx-btn--small.vx-btn--primary { padding: 0 14px; border-color: var(--ink); }
+
+/* Picker / command palette (SPECS 11.3): workspace surfaces, no ornament. */
+.vx-overlay { position: fixed; inset: 0; z-index: 20; display: flex; align-items: flex-start; justify-content: center; padding-top: 96px; background: color-mix(in srgb, var(--surface-chrome) 55%, transparent); }
+.vx-palette { width: 640px; max-width: calc(100vw - 2 * var(--space-6)); max-height: calc(100vh - 160px); display: flex; flex-direction: column; background: var(--surface-raised); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: 0 24px 60px rgba(8,14,22,.22); overflow: hidden; }
+.vx-palette__input { height: 48px; box-sizing: border-box; padding: 0 var(--space-4); border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--ink); font: 400 16px/1.3 var(--font-ui); outline: none; }
+.vx-palette__title { padding: var(--space-3) var(--space-4) 0; }
+.vx-palette__list { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: var(--space-2); }
+.vx-palette .vx-row { cursor: pointer; }
+.vx-palette .vx-row[aria-selected="true"] { background: var(--selection); color: var(--on-selection); }
+.vx-palette__empty { padding: var(--space-4); font-size: 13px; color: var(--muted); }
+.vx-palette__foot { display: flex; justify-content: flex-end; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); }
+.vx-palette__body { padding: var(--space-4); font-size: 14px; line-height: 20px; color: var(--text); }
+
+/* Empty editor. */
+.vx-empty { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-3); color: var(--muted); font-size: 14px; }
+.vx-empty__title { font: 400 24px/1.3 var(--font-display); color: var(--ink); }
+
+/* ---------- Note editor surface (added in M2; CodeMirror) ---------- */
+.vx-editor { flex: 1 1 auto; min-height: 0; position: relative; background: var(--surface); }
+.vx-editor .cm-editor { height: 100%; outline: none; background: var(--surface); color: var(--note-text); }
+.vx-editor .cm-scroller { padding: var(--space-8) var(--space-6) 30vh; font: 400 18px/1.72 var(--font-note); }
+.vx-editor .cm-content { max-width: var(--size-note-measure); margin: 0 auto; padding: 0; caret-color: var(--ink); }
+.vx-editor .cm-line { padding: 0; }
+.vx-editor .cm-cursor { border-left: 2px solid var(--ink); }
+.vx-editor .cm-selectionBackground, .vx-editor .cm-focused .cm-selectionBackground, .vx-editor .cm-content ::selection { background: var(--selection) !important; }
+.vx-editor .cm-gutters { display: none; }
+.vx-editor .cm-panels { background: var(--surface-side); color: var(--text); border-color: var(--line); font: 400 13px/1.4 var(--font-ui); }
+.vx-editor .cm-panels input, .vx-editor .cm-panels button { font: inherit; }
+.vx-editor .cm-searchMatch { background: var(--chip); outline: 1px solid var(--line); }
+.vx-editor .cm-searchMatch-selected { background: var(--selection); }
+.vx-editor .cm-tooltip { border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-raised); color: var(--text); font: 400 13px/1.4 var(--font-ui); box-shadow: 0 12px 32px rgba(8,14,22,.16); }
+.vx-editor .cm-tooltip-autocomplete ul li[aria-selected] { background: var(--selection); color: var(--on-selection); }
+.vx-editor .cm-completionDetail { margin-left: 8px; color: var(--muted); font-style: normal; font-size: 12px; }
+.vx-editor.is-source .cm-scroller { font: 400 15px/1.7 var(--font-mono); }
+
+/* Line roles in live preview. */
+.vx-cm-title { font: 400 40px/1.15 var(--font-display); color: var(--ink); }
+.vx-cm-h1 { font: 400 32px/1.2 var(--font-display); color: var(--ink); }
+.vx-cm-h2 { padding-top: 22px !important; font: 600 22px/1.3 var(--font-ui); color: var(--ink); }
+.vx-cm-h3 { padding-top: 14px !important; font: 600 18px/1.35 var(--font-ui); color: var(--ink); }
+.vx-cm-h4, .vx-cm-h5, .vx-cm-h6 { font: 600 16px/1.4 var(--font-ui); color: var(--ink); }
+.vx-cm-quote { border-left: 2px solid var(--line); padding-left: 16px !important; color: var(--muted); }
+.vx-cm-mark { color: var(--faint); }
+.vx-cm-strong { font-weight: 600; color: var(--ink); }
+.vx-cm-em { font-style: italic; }
+.vx-cm-strike { text-decoration: line-through; color: var(--muted); }
+.vx-cm-code { font: 400 .86em/1 var(--font-mono); padding: 1px 4px; border-radius: var(--radius-xs); background: var(--code-surface); color: var(--ink); }
+.vx-cm-link { color: var(--link); text-decoration: underline; text-decoration-color: var(--link-underline); text-decoration-thickness: 1px; text-underline-offset: 3px; cursor: pointer; }
+.vx-cm-link--missing { color: var(--link-missing); text-decoration-style: dashed; text-decoration-color: currentColor; }
+.vx-cm-link--ambiguous { text-decoration-style: dotted; }
+.vx-cm-url { color: var(--muted); }
+.vx-cm-tag { padding: 1px 6px; border-radius: 3px; background: var(--chip); color: var(--on-chip); font: 400 .78em/1.4 var(--font-ui); }
+.vx-cm-blockid { color: var(--faint); font: 400 .72em/1 var(--font-mono); }
+.vx-cm-hr { display: block; height: 1px; margin: 12px 0; background: var(--line-note); }
+.vx-cm-task { width: 15px; height: 15px; margin: 0 8px 0 0; vertical-align: -2px; accent-color: var(--cyan-fill); cursor: pointer; }
+.vx-cm-task-done { color: var(--muted); text-decoration: line-through; }
+.vx-cm-html { font: 400 .9em/1.6 var(--font-mono); color: var(--muted); }
+.vx-cm-meta { font: 400 14px/1.75 var(--font-mono); color: var(--muted); }
+
+/* Code lines in the editor follow the CodeBlock card. */
+.vx-cm-codeline { padding: 0 16px 0 64px !important; background: var(--code-surface); border-left: 1px solid var(--line-note); border-right: 1px solid var(--line-note); font: 400 14px/1.75 var(--font-mono); color: var(--ink); position: relative; }
+.vx-cm-codeline::before { content: attr(data-ln); position: absolute; left: 16px; width: 30px; text-align: right; color: var(--code-gutter); font: inherit; }
+.vx-cm-codeline--first { border-top: 1px solid var(--line-note); border-top-left-radius: var(--radius-md); border-top-right-radius: var(--radius-md); padding-top: 4px !important; }
+.vx-cm-codeline--last { border-bottom: 1px solid var(--line-note); border-bottom-left-radius: var(--radius-md); border-bottom-right-radius: var(--radius-md); padding-bottom: 4px !important; }
+.vx-cm-codeline--fence { color: var(--muted); padding-left: 16px !important; }
+.vx-cm-codeline--fence::before { content: none; }
+.vx-editor .vx-code { margin: 0; }
+
+/* Rendered blocks: math, embeds, properties, plugin blocks. */
+.vx-editor .vx-math { margin: 6px 0; padding: 6px 48px 6px 0; text-align: center; cursor: text; }
+.vx-math__num { position: absolute; right: 0; top: 50%; transform: translateY(-50%); font: 400 16px/1 var(--font-note); color: var(--muted); }
+.vx-math-error { color: var(--danger); font: 400 14px/1.6 var(--font-mono); white-space: pre-wrap; }
+.vx-math-src { font: 400 15px/1.7 var(--font-mono); color: var(--ink); }
+.vx-embed { margin: 6px 0; border: 1px solid var(--line-note); border-radius: var(--radius-md); background: var(--surface); }
+.vx-embed__bar { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 8px 0 14px; border-bottom: 1px solid var(--line-note); font: 400 12px/1 var(--font-ui); color: var(--muted); }
+.vx-embed__body { padding: 4px 18px 10px; max-height: 480px; overflow: auto; }
+.vx-embed__body .cm-scroller { padding: 0 !important; font-size: 16px; }
+.vx-embed__body .cm-content { max-width: none; }
+.vx-embed-img { display: inline-block; max-width: 100%; border-radius: var(--radius-sm); vertical-align: bottom; }
+.vx-embed-video { display: block; max-width: 100%; border-radius: var(--radius-sm); }
+.vx-props { margin: 0 0 18px; padding: 10px 14px; display: grid; grid-template-columns: max-content minmax(0, 1fr); column-gap: 18px; row-gap: 4px; border: 1px solid var(--line-note); border-radius: var(--radius-md); background: var(--surface-side); font: 400 13px/1.6 var(--font-ui); cursor: text; }
+.vx-props__key { color: var(--muted); }
+.vx-props__value { color: var(--text); min-width: 0; overflow-wrap: anywhere; }
+.vx-props__value .vx-chip { margin: 0 4px 2px 0; font-size: 12px; padding: 1px 7px; }
+.vx-props--error { grid-template-columns: 1fr; border-color: var(--danger); }
+.vx-props__warn { color: var(--danger); }
+.vx-block-note { display: block; margin: 4px 0 0; font: 400 12px/1.4 var(--font-ui); color: var(--muted); }
+.vx-table-wrap { overflow-x: auto; margin: 4px 0; }
+.vx-table { border-collapse: collapse; font: 400 15px/1.5 var(--font-ui); color: var(--text); }
+.vx-table th, .vx-table td { padding: 6px 12px; border: 1px solid var(--line-note); text-align: left; }
+.vx-table th { background: var(--surface-side); font-weight: 600; color: var(--ink); }
+
+/* Link preview card (hover, SPECS 10.2). */
+.vx-preview-card { width: 420px; max-height: 320px; overflow: hidden; padding: 10px 14px; }
+.vx-preview-card__title { font: 600 13px/1.4 var(--font-ui); color: var(--ink); margin-bottom: 4px; }
+.vx-preview-card__body { font: 400 14px/1.6 var(--font-note); color: var(--note-text); white-space: pre-wrap; }

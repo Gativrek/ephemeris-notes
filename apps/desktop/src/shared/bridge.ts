@@ -119,6 +119,9 @@ export interface VxBridge {
     current(): Promise<Result<LibraryInfo | null>>;
     close(): Promise<Result<null>>;
     stats(): Promise<Result<LibraryStats>>;
+    /** Every visible file in the library; `version` changes whenever the list does. */
+    files(): Promise<Result<{ version: number; files: CatalogEntry[] }>>;
+    onFilesChanged(cb: () => void): Unsubscribe;
     onChanged(cb: (library: LibraryInfo | null) => void): Unsubscribe;
   };
   fs: {
@@ -148,6 +151,18 @@ export interface VxBridge {
     makeVault(path: string): Promise<Result<VaultInfo>>;
     onChanged(cb: () => void): Unsubscribe;
   };
+  /** Note actions that write on explicit request (SPECS 4.5). */
+  notes: {
+    create(
+      vaultPath: string,
+      folder: string,
+      title: string,
+      template: string | null,
+    ): Promise<Result<string>>;
+    templates(vaultPath: string): Promise<Result<string[]>>;
+    daily(vaultPath: string): Promise<Result<{ path: string; created: boolean }>>;
+    addAttachment(vaultPath: string, fileName: string, bytes: ArrayBuffer): Promise<Result<string>>;
+  };
   /** Per-machine UI state for the open library (SPECS 4.10): desk, pins, last Vault. */
   ui: {
     get(key: string): Promise<Result<unknown>>;
@@ -171,6 +186,13 @@ export interface VxBridge {
     maximize(): Promise<Result<null>>;
     close(): Promise<Result<null>>;
     setTitle(title: string): Promise<Result<null>>;
+    /** Native context menu; resolves the chosen item id, or null. */
+    contextMenu(items: ContextMenuItem[]): Promise<Result<string | null>>;
+    /** Colours of the native window controls, from the theme tokens. */
+    setChrome(colors: { background: string; symbols: string }): Promise<Result<null>>;
+    /** Main asks before closing; the renderer saves, then calls this. */
+    onBeforeClose(cb: () => void): Unsubscribe;
+    readyToClose(): Promise<Result<null>>;
   };
   shell: {
     /** http(s) only, and only after a user click. */
@@ -182,6 +204,20 @@ export interface VxBridge {
     onFileCreated(cb: (e: FileEvent) => void): Unsubscribe;
     onFileDeleted(cb: (e: FileEvent) => void): Unsubscribe;
   };
+}
+
+export interface CatalogEntry {
+  path: string;
+  size: number;
+  mtime: number;
+}
+
+export interface ContextMenuItem {
+  id: string;
+  label: string;
+  enabled?: boolean;
+  /** Draws a separator before this item. */
+  separatorBefore?: boolean;
 }
 
 export interface LibraryStats {
@@ -202,16 +238,19 @@ export type PushEvent =
   | { type: 'library.changed'; payload: LibraryInfo | null }
   | { type: 'settings.changed'; payload: { key: string; value: unknown } }
   | { type: 'index.changed'; payload: null }
-  | { type: 'vaults.changed'; payload: null };
+  | { type: 'vaults.changed'; payload: null }
+  | { type: 'catalog.changed'; payload: null }
+  | { type: 'app.beforeClose'; payload: null };
 
 /** Bridge surface as a method list, so preload and main agree on channels. */
 export const BRIDGE_METHODS = {
-  library: ['open', 'create', 'current', 'close', 'stats'],
+  library: ['open', 'create', 'current', 'close', 'stats', 'files'],
+  notes: ['create', 'templates', 'daily', 'addAttachment'],
   vaults: ['list', 'get', 'create', 'update', 'moveImpact', 'move', 'remove', 'nonVaultFolders', 'makeVault'],
   ui: ['get', 'set'],
   fs: ['read', 'readBinary', 'write', 'create', 'rename', 'trash', 'mkdir', 'list', 'stat'],
   index: ['search', 'backlinks', 'resolve', 'outline', 'notesIn'],
   settings: ['get', 'set'],
-  window: ['minimize', 'maximize', 'close', 'setTitle'],
+  window: ['minimize', 'maximize', 'close', 'setTitle', 'contextMenu', 'setChrome', 'readyToClose'],
   shell: ['openExternal', 'revealInFolder'],
 } as const;

@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { app, BrowserWindow, Menu, session, shell } from 'electron';
 import { EVENT_CHANNEL, type Domain, type LibraryStats, type PushEvent } from '@shared/bridge';
 import { DOMAIN_FOLDERS, DOMAINS } from './library/library';
-import { isNote, walkFiles } from './library/walk';
+import { isNote } from './library/walk';
 import { registerCoreHandlers, type MachineState } from './app/handlers';
 import { notImplemented, setDevOrigin } from './app/ipc';
 import { JsonStore } from './app/json-store';
@@ -24,11 +24,19 @@ import { SessionManager } from './app/session';
 import { installTestMode, isTestMode } from './app/test-mode';
 import { Settings } from './app/settings';
 import { registerVaultHandlers } from './app/vault-handlers';
+import { closeConfirmed, registerWorkspaceHandlers } from './app/workspace-handlers';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
 if (process.env.VX_USER_DATA) app.setPath('userData', path.resolve(process.env.VX_USER_DATA));
 registerPrivilegedSchemes();
+if (isTestMode()) {
+  // Test windows sit off screen and are never focused; keep them rendering at full speed.
+  app.commandLine.appendSwitch('disable-renderer-backgrounding');
+  app.commandLine.appendSwitch('disable-background-timer-throttling');
+  app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+  app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
+}
 
 const devUrl = !app.isPackaged ? process.env.ELECTRON_RENDERER_URL : undefined;
 const devOrigin = devUrl ? new URL(devUrl).origin : null;
@@ -56,10 +64,20 @@ function installMenu(): void {
   );
 }
 
-function createWindow(): BrowserWindow {
+type Bounds = { x: number; y: number; width: number; height: number; maximized: boolean };
+
+function createWindow(saved: Bounds | null, onBounds: (b: Bounds) => void): BrowserWindow {
+  const mac = process.platform === 'darwin';
   const win = new BrowserWindow({
-    width: 1600,
-    height: 1000,
+    width: saved?.width ?? 1600,
+    height: saved?.height ?? 1000,
+    ...(saved && !isTestMode() ? { x: saved.x, y: saved.y } : {}),
+    // Custom title bar (SPECS 9.2): native controls drawn over it (macOS traffic
+    // lights; Windows and Linux use the title-bar overlay, GOALS Q15 decision).
+    titleBarStyle: 'hidden',
+    ...(mac
+      ? { trafficLightPosition: { x: 16, y: 14 } }
+      : { titleBarOverlay: { color: '#eceff2', symbolColor: '#1b1f25', height: 44 } }),
     minWidth: 1280,
     minHeight: 800,
     show: false,
@@ -78,7 +96,37 @@ function createWindow(): BrowserWindow {
       if (input.type === 'keyDown' && input.key === 'F12') win.webContents.toggleDevTools();
     });
   }
-  if (!isTestMode()) win.once('ready-to-show', () => win.show());
+  if (!isTestMode()) {
+    win.once('ready-to-show', () => {
+      if (saved?.maximized) win.maximize();
+      win.show();
+    });
+  } else {
+    // Shown without focus at an off-screen position: rendering runs, the desktop is untouched.
+    win.once('ready-to-show', () => win.showInactive());
+  }
+  const remember = () => {
+    if (win.isMinimized() || win.isFullScreen()) return;
+    const maximized = win.isMaximized();
+    const b = maximized ? (saved ?? win.getNormalBounds()) : win.getBounds();
+    onBounds({ ...b, maximized });
+  };
+  win.on('resized', remember);
+  win.on('moved', remember);
+  win.on('maximize', remember);
+  win.on('unmaximize', remember);
+  // Save before closing (SPECS 4.8 rule 8): ask the renderer, close once it answers.
+  win.on('close', (event) => {
+    if (closeConfirmed.has(win) || win.webContents.isDestroyed()) return;
+    event.preventDefault();
+    win.webContents.send(EVENT_CHANNEL, { type: 'app.beforeClose', payload: null });
+    setTimeout(() => {
+      if (!win.isDestroyed()) {
+        closeConfirmed.add(win);
+        win.close();
+      }
+    }, 4000);
+  });
   void win.loadURL(devUrl ?? `${APP_ORIGIN}/index.html`);
   return win;
 }
@@ -120,8 +168,10 @@ async function main(): Promise<void> {
   const stats = async (): Promise<LibraryStats> => {
     const s = sessions.require();
     const notes = { academic: 0, work: 0, personal: 0 } as Record<Domain, number>;
+    const { files } = await s.catalog.list();
     for (const d of DOMAINS) {
-      for await (const f of walkFiles(s.root.root, DOMAIN_FOLDERS[d])) if (isNote(f.rel)) notes[d]++;
+      const prefix = `${DOMAIN_FOLDERS[d]}/`;
+      for (const f of files) if (f.path.startsWith(prefix) && isNote(f.path)) notes[d]++;
     }
     return { notes };
   };
@@ -135,6 +185,7 @@ async function main(): Promise<void> {
     reveal: testMode?.reveal ?? ((abs) => shell.showItemInFolder(abs)),
   });
   registerVaultHandlers({ sessions, state, broadcast });
+  registerWorkspaceHandlers({ sessions, testMode: testMode !== null });
   for (const m of ['search', 'backlinks', 'resolve', 'outline', 'notesIn']) notImplemented('index', m);
 
   const last = state.get('lastLibrary');
@@ -142,9 +193,11 @@ async function main(): Promise<void> {
     await sessions.open(last).catch(() => state.set('lastLibrary', null));
   }
 
-  createWindow();
+  const savedBounds = (state.get('windowBounds') as Bounds | undefined) ?? null;
+  const open = () => createWindow(savedBounds, (b) => state.set('windowBounds', b));
+  open();
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) open();
   });
 
   let flushed = false;

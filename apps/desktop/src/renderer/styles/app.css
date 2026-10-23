@@ -41,6 +41,10 @@ body {
   color: var(--danger);
 }
 
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}
+
 /* The hidden attribute wins over component display rules. */
 [hidden] {
   display: none !important;

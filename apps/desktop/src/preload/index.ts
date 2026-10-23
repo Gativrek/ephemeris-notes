@@ -54,7 +54,9 @@ const vx = {
   library: {
     ...libraryNs,
     onChanged: (cb: Listener) => subscribe('library.changed', cb),
+    onFilesChanged: (cb: Listener) => subscribe('catalog.changed', cb),
   },
+  notes: namespace('notes'),
   fs: namespace('fs'),
   vaults: {
     ...vaultsNs,
@@ -70,7 +72,10 @@ const vx = {
     onChanged: (cb: (key: string, value: unknown) => void) =>
       subscribe('settings.changed', ((p: { key: string; value: unknown }) => cb(p.key, p.value)) as Listener),
   },
-  window: namespace('window'),
+  window: {
+    ...namespace('window'),
+    onBeforeClose: (cb: Listener) => subscribe('app.beforeClose', cb),
+  },
   shell: {
     ...shellNs,
     // External links open only in response to a real user gesture (SPECS 3.2).

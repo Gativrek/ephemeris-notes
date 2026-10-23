@@ -9,6 +9,8 @@ const repoRoot = resolve(here, '../..');
 export default defineConfig({
   main: {
     resolve: { alias: { '@shared': resolve(here, 'src/shared') } },
+    // The workspace package ships TypeScript sources: bundle it instead of requiring it.
+    build: { externalizeDeps: { exclude: ['@vaults/markdown'] } },
   },
   preload: {
     resolve: { alias: { '@shared': resolve(here, 'src/shared') } },

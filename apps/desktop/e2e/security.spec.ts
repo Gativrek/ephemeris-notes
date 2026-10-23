@@ -93,6 +93,7 @@ test('the bridge is one frozen object', async () => {
     'fs',
     'index',
     'library',
+    'notes',
     'settings',
     'shell',
     'ui',

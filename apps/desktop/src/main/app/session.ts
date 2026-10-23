@@ -5,6 +5,7 @@
 import { stat } from 'node:fs/promises';
 import type { LibraryInfo, PushEvent } from '@shared/bridge';
 import { fail } from '@shared/result';
+import { FileCatalog } from '../library/catalog';
 import { LibraryFs, type FsDeps } from '../library/fileio';
 import { readLibrary } from '../library/library';
 import { LibraryRoot } from '../library/paths';
@@ -15,6 +16,7 @@ export interface LibrarySession {
   root: LibraryRoot;
   fs: LibraryFs;
   watcher: LibraryWatcher;
+  catalog: FileCatalog;
 }
 
 export type Broadcast = (event: PushEvent) => void;
@@ -56,9 +58,19 @@ export class SessionManager {
     await this.close(false);
     const root = await LibraryRoot.create(folder);
     let watcher: LibraryWatcher | null = null;
+    const catalog = new FileCatalog(root.root);
+    void catalog.build();
+    let catalogTimer: NodeJS.Timeout | null = null;
+    const catalogChanged = (rels: string[]) => {
+      void Promise.all(rels.map((r) => catalog.refresh(r))).then(() => {
+        if (catalogTimer) clearTimeout(catalogTimer);
+        catalogTimer = setTimeout(() => this.broadcast({ type: 'catalog.changed', payload: null }), 120);
+      });
+    };
     const fs = new LibraryFs(root, {
       trash: this.trash,
       onOwnWrite: (rel, hash) => watcher?.ownWrites.expect(rel, hash),
+      afterChange: catalogChanged,
       // Windows refuses to move a folder while the watcher holds handles inside it,
       // and chokidar's unwatch does not release them: restart the watcher instead.
       aroundMove: async (fromAbs, _toAbs, fn) => {
@@ -77,11 +89,12 @@ export class SessionManager {
       },
     });
     watcher = new LibraryWatcher(root, (e) => {
+      catalogChanged([e.path]);
       for (const fn of this.watchListeners) fn(e);
       this.broadcast({ type: `file.${e.type}`, payload: { path: e.path, kind: e.kind } });
     });
     await watcher.start();
-    this.session = { info, root, fs, watcher };
+    this.session = { info, root, fs, watcher, catalog };
     for (const fn of this.openListeners) await fn(this.session);
     this.broadcast({ type: 'library.changed', payload: info });
     return info;

@@ -33,6 +33,13 @@ argument. Types live in `src/shared/bridge.ts`.
 | `library.close()` | `null` | |
 | `library.stats()` | `{ notes: Record<Domain, number> }` | |
 | `library.onChanged(cb)` | unsubscribe | |
+| `library.files()` / `library.onFilesChanged(cb)` | `{ version, files: { path, size, mtime }[] }` | The file catalog: every visible file. |
+| `notes.create(vaultPath, folder, title, template)` | path | Unique name in `folder`; template variables expanded. |
+| `notes.templates(vaultPath)` | paths | Markdown files in the Vault's template folder. |
+| `notes.daily(vaultPath)` | `{ path, created }` | Today's daily note (SPECS 4.5). |
+| `notes.addAttachment(vaultPath, fileName, bytes)` | path | Copies into the attachment folder with `name 1.png`-style names. |
+| `vaults.*` | | List, get, create, update, moveImpact, move, remove (typed name), nonVaultFolders, makeVault. |
+| `ui.get(key)` / `ui.set(key, value)` | | Per-machine UI state for the open library (desk, pins, last Vault). |
 | `fs.read(path)` | `TextFile` | LF text, `hash` (SHA-256 of raw bytes), `eol`, `mixedEol`, `bom`, `finalNewline`, `readOnly` (not UTF-8). |
 | `fs.readBinary(path)` | `Uint8Array` | Up to 512 MB. |
 | `fs.write(path, text, expectedHash)` | `{ path, hash, mtime }` | `CONFLICT` if the disk changed; `NOT_UTF8` for read-only files; unchanged text is a no-op. |
@@ -44,6 +51,9 @@ argument. Types live in `src/shared/bridge.ts`.
 | `index.*` | | `NOT_IMPLEMENTED` until M3. |
 | `settings.get(key)` / `set(key, value)` / `onChanged(cb)` | | Keys `library.*` are stored in `.vaults/settings.json`; others per machine. |
 | `window.minimize/maximize/close/setTitle` | `null` | |
+| `window.contextMenu(items)` | item id or `null` | Native menu. Test mode returns `globalThis.__vxContextMenuChoice`. |
+| `window.setChrome({ background, symbols })` | `null` | Title-bar overlay colours (`#rrggbb`). |
+| `window.onBeforeClose(cb)` / `window.readyToClose()` | | Main asks before closing; the renderer saves, then confirms. Main closes anyway after 4 s. |
 | `shell.openExternal(url)` / `revealInFolder(path)` | `null` | |
 | `events.onFileChanged/Created/Deleted(cb)` | unsubscribe | External changes only; the app's own writes are filtered by hash. |
 

@@ -1,0 +1,70 @@
+/**
+ * The file catalog: every visible file in the library with its size and mtime, kept up
+ * to date from the watcher and from the app's own operations. The renderer resolves
+ * links against it (SPECS 5); the M3 index builds on it.
+ */
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import type { CatalogEntry } from '@shared/bridge';
+import { isTempFile } from './atomic';
+import { walkFiles } from './walk';
+
+export class FileCatalog {
+  private readonly files = new Map<string, CatalogEntry>();
+  private ready: Promise<void> | null = null;
+  private version = 0;
+
+  constructor(private readonly rootAbs: string) {}
+
+  /** Walks the library once. Safe to call repeatedly. */
+  build(): Promise<void> {
+    this.ready ??= (async () => {
+      for await (const f of walkFiles(this.rootAbs))
+        this.files.set(f.rel, { path: f.rel, size: f.size, mtime: f.mtimeMs });
+      this.version++;
+    })();
+    return this.ready;
+  }
+
+  async list(): Promise<{ version: number; files: CatalogEntry[] }> {
+    await this.build();
+    return { version: this.version, files: [...this.files.values()] };
+  }
+
+  get(rel: string): CatalogEntry | undefined {
+    return this.files.get(rel);
+  }
+
+  get changeVersion(): number {
+    return this.version;
+  }
+
+  private static visible(rel: string): boolean {
+    return !rel.split('/').some((s) => s.startsWith('.') || isTempFile(s));
+  }
+
+  /** Re-reads `rel` from disk: adds, updates or removes it (and, for folders, its content). */
+  async refresh(rel: string): Promise<void> {
+    await this.build();
+    if (!FileCatalog.visible(rel)) return;
+    const abs = path.join(this.rootAbs, ...rel.split('/'));
+    let st;
+    try {
+      st = await fs.stat(abs);
+    } catch {
+      st = null;
+    }
+    const prefix = `${rel}/`;
+    if (!st) {
+      this.files.delete(rel);
+      for (const k of [...this.files.keys()]) if (k.startsWith(prefix)) this.files.delete(k);
+    } else if (st.isDirectory()) {
+      for (const k of [...this.files.keys()]) if (k.startsWith(prefix)) this.files.delete(k);
+      for await (const f of walkFiles(this.rootAbs, rel))
+        this.files.set(f.rel, { path: f.rel, size: f.size, mtime: f.mtimeMs });
+    } else {
+      this.files.set(rel, { path: rel, size: st.size, mtime: st.mtimeMs });
+    }
+    this.version++;
+  }
+}
