@@ -28,6 +28,7 @@ import { registerIndexHandlers, renameWithLinks } from './app/index-handlers';
 import { IndexClient } from './index/client';
 import createIndexWorker from './index/worker?nodeWorker';
 import { closeConfirmed, registerWorkspaceHandlers } from './app/workspace-handlers';
+import { registerAppHandlers } from './app/app-handlers';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -202,6 +203,7 @@ async function main(): Promise<void> {
   });
   registerVaultHandlers({ sessions, state, broadcast, rename: (from, to) => rename(from, to, true) });
   registerIndexHandlers({ sessions, index });
+  registerAppHandlers(path.join(here, '../renderer'));
   registerWorkspaceHandlers({ sessions, testMode: testMode !== null });
 
   const last = state.get('lastLibrary');

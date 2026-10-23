@@ -33,3 +33,18 @@ export const settingsStrings = {
   },
   later: 'More settings arrive with milestone M5.',
 };
+
+export const mathSettingsStrings = {
+  title: 'Math',
+  numbering: 'Number equations',
+  numberingHint:
+    'All display equations (as in the design), or only labeled ones (as pandoc-crossref numbers them for export).',
+  all: 'All display equations',
+  labeled: 'Labeled only',
+  format: 'Reference format',
+  formatHint: 'How @eq:label references read in notes.',
+  macros: 'KaTeX macros',
+  macrosHint: 'One per line: \\name = definition. Stored with the library, so they sync with your notes.',
+  macroErrors: (lines: number[]) =>
+    `Lines ${lines.join(', ')} are not "\\name = definition". Nothing was saved.`,
+};

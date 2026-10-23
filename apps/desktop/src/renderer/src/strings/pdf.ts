@@ -1,0 +1,16 @@
+export const pdfStrings = {
+  toolbar: 'PDF tools',
+  thumbnails: 'Thumbnails',
+  previous: 'Previous page',
+  next: 'Next page',
+  pageNumber: 'Page number',
+  page: (n: number) => `Page ${n}`,
+  zoomIn: 'Zoom in',
+  zoomOut: 'Zoom out',
+  fitWidth: 'Fit Width',
+  find: 'Find in document',
+  matches: (current: number, total: number) => `${current} of ${total}`,
+  failed: (msg: string) => `This PDF could not be opened: ${msg}`,
+  embedOpen: (name: string, page: number | null) => (page ? `${name}, page ${page}` : name),
+  embedFailed: 'This PDF page could not be rendered.',
+};

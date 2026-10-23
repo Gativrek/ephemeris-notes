@@ -57,6 +57,7 @@ const vx = {
     onFilesChanged: (cb: Listener) => subscribe('catalog.changed', cb),
   },
   notes: namespace('notes'),
+  app: namespace('app'),
   fs: namespace('fs'),
   vaults: {
     ...vaultsNs,

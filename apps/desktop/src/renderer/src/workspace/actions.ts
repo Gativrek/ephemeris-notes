@@ -36,7 +36,13 @@ export function report(err: unknown): void {
 
 export function openPath(
   path: string,
-  opts?: { background?: boolean; heading?: string | null; block?: string | null; line?: number },
+  opts?: {
+    background?: boolean;
+    heading?: string | null;
+    block?: string | null;
+    line?: number;
+    page?: number | null;
+  },
 ): void {
   if (!OPENABLE.test(path)) {
     void vx().shell.revealInFolder(path);
@@ -44,13 +50,14 @@ export function openPath(
   }
   const ws = useWorkspace.getState();
   ws.openItem(path, opts?.background ? { background: true } : undefined);
-  if (!opts?.background && (opts?.heading || opts?.block || opts?.line)) {
+  if (!opts?.background && (opts?.heading || opts?.block || opts?.line || opts?.page)) {
     useWorkspace.setState({
       jump: {
         path,
         heading: opts.heading ?? null,
         block: opts.block ?? null,
         ...(opts.line ? { line: opts.line } : {}),
+        ...(opts.page ? { page: opts.page } : {}),
       },
     });
   }
@@ -58,7 +65,7 @@ export function openPath(
 
 export function openLink(req: OpenLinkRequest): void {
   if (req.path) {
-    openPath(req.path, { background: req.newItem, heading: req.heading, block: req.block });
+    openPath(req.path, { background: req.newItem, heading: req.heading, block: req.block, page: req.page });
     return;
   }
   // Missing note: offer to create it in the current section (SPECS 5 rule 5).

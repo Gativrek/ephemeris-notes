@@ -36,7 +36,7 @@ interface WorkspaceState {
   renaming: string | null;
   overlay: Overlay;
   /** Pending jump inside the active note (heading, block or line). */
-  jump: { path: string; heading?: string | null; block?: string | null; line?: number } | null;
+  jump: { path: string; heading?: string | null; block?: string | null; line?: number; page?: number } | null;
 
   init(vaultPath: string, vaultId: string): Promise<void>;
   setSection(path: string | null): void;

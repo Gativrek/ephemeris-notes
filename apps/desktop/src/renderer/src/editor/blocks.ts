@@ -7,13 +7,14 @@
 import { syntaxTree } from '@codemirror/language';
 import { StateField, type EditorState, type Range, type Transaction } from '@codemirror/state';
 import { Decoration, EditorView, type DecorationSet } from '@codemirror/view';
-import { analyzeNote, numberEquations, parseInfoString, splitTarget } from '@vaults/markdown';
+import { analyzeNote, parseInfoString, splitTarget } from '@vaults/markdown';
 import { editorContext, refreshLinks, revealSource } from './context';
 import { renderInline } from './inline';
 import { embedAloneOnLine, rangeActive } from './livePreview';
 import { blockRegistry } from './registry';
 import { DisplayMathWidget, PropertiesWidget, TableWidget, WarningWidget } from './widgets';
 import { NoteEmbedWidget, PluginBlockWidget } from './embeds';
+import { equationField } from './equations';
 
 /** Block nodes that can contain the blocks handled here. */
 const CONTAINERS = new Set(['Document', 'BulletList', 'OrderedList', 'ListItem', 'Blockquote']);
@@ -106,11 +107,26 @@ function build(state: EditorState): DecorationSet {
     },
   });
 
-  const numbers = numberEquations(mathBlocks, ctx.numbering);
-  mathBlocks.forEach((m, i) => {
-    if (rangeActive(state, m.from, m.to)) return;
+  // Numbers come from the equation field (shared with references and autocomplete).
+  const eqs = state.field(equationField, false) ?? [];
+  const numberAt = new Map(eqs.map((e) => [e.from, e] as const));
+  mathBlocks.forEach((m) => {
+    const eq = numberAt.get(m.from);
     const aligned = lineAligned(state, m.from, m.to);
-    const widget = new DisplayMathWidget(m.tex, numbers[i] ?? null, m.label, m.from);
+    // A duplicate label warns on its second occurrence (SPECS 10.4), active or not.
+    if (eq?.duplicate && m.label) {
+      decos.push(
+        Decoration.widget({
+          widget: new WarningWidget(
+            `Duplicate label ${m.label}: references go to the first equation with it.`,
+          ),
+          block: true,
+          side: 1,
+        }).range(aligned ? aligned.to : m.to),
+      );
+    }
+    if (rangeActive(state, m.from, m.to)) return;
+    const widget = new DisplayMathWidget(m.tex, eq?.number ?? null, m.label, m.from);
     if (aligned) decos.push(Decoration.replace({ widget, block: true }).range(aligned.from, aligned.to));
     else decos.push(Decoration.replace({ widget }).range(m.from, m.to));
   });

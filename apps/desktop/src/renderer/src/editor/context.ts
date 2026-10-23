@@ -32,6 +32,8 @@ export interface EditorContext {
   files(): string[];
   numbering: 'all' | 'labeled';
   macros: Record<string, string>;
+  /** "Eq. (3)", "(3)" or "Equation 3" (Settings > Math). */
+  refFormat: 'eq' | 'paren' | 'word';
   /** Embed nesting: the chain of notes rendering this one (cycle detection, 3 levels). */
   embedChain: string[];
 }
@@ -47,6 +49,7 @@ const NOOP: EditorContext = {
   files: () => [],
   numbering: 'all',
   macros: {},
+  refFormat: 'eq',
   embedChain: [],
 };
 

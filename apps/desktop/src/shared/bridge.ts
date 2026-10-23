@@ -151,6 +151,10 @@ export interface VxBridge {
     makeVault(path: string): Promise<Result<VaultInfo>>;
     onChanged(cb: () => void): Unsubscribe;
   };
+  /** Read-only app resources: pdf.js CMaps and standard fonts, by file name. */
+  app: {
+    pdfData(kind: 'cmap' | 'font', name: string): Promise<Result<Uint8Array>>;
+  };
   /** Note actions that write on explicit request (SPECS 4.5). */
   notes: {
     create(
@@ -298,6 +302,7 @@ export type PushEvent =
 export const BRIDGE_METHODS = {
   library: ['open', 'create', 'current', 'close', 'stats', 'files'],
   notes: ['create', 'templates', 'daily', 'addAttachment'],
+  app: ['pdfData'],
   vaults: ['list', 'get', 'create', 'update', 'moveImpact', 'move', 'remove', 'nonVaultFolders', 'makeVault'],
   ui: ['get', 'set'],
   fs: ['read', 'readBinary', 'write', 'create', 'rename', 'trash', 'mkdir', 'list', 'stat'],

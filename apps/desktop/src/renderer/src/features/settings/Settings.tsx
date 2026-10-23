@@ -11,6 +11,7 @@ import { useApp } from '../../store/app';
 import { settingsStrings as s } from '../../strings/settings';
 import { openPath } from '../../workspace/actions';
 import { useIndexStatus } from '../../workspace/SearchBox';
+import { MathSection } from './MathSection';
 
 export type SettingsSection = keyof typeof s.sections;
 
@@ -232,6 +233,8 @@ export function Settings({
         </button>
         {section === 'library' ? (
           <LibrarySection />
+        ) : section === 'math' ? (
+          <MathSection />
         ) : (
           <div className="vx-settings__page">
             <h2 className="vx-settings__h">{s.sections[section]}</h2>

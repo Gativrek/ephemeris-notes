@@ -457,3 +457,36 @@ body { margin: 0; font-family: var(--font-ui); color: var(--text); background: v
 .vx-select, .vx-input--small { height: 32px; box-sizing: border-box; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-raised); color: var(--ink); font: 400 13px/1 var(--font-ui); }
 .vx-textarea { width: 100%; min-height: 120px; box-sizing: border-box; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-raised); color: var(--ink); font: 400 13px/1.6 var(--font-mono); resize: vertical; }
 .vx-switch { width: 18px; height: 18px; accent-color: var(--cyan-fill); }
+
+/* ---------- PDF viewer (desk item, SPECS 10.8; added in M4) ---------- */
+.vx-pdf-view { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; background: var(--surface-side); }
+.vx-pdf-bar { flex: 0 0 auto; height: 44px; box-sizing: border-box; display: flex; align-items: center; gap: 6px; padding: 0 var(--space-3); background: var(--surface-side); border-bottom: 1px solid var(--line); }
+.vx-pdf-bar__sep { width: 1px; height: 22px; margin: 0 4px; background: var(--line); }
+.vx-pdf-bar__spacer { flex: 1 1 auto; }
+.vx-pdf-bar__page { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.vx-pdf-bar__page .vx-input--small { width: 48px; text-align: center; }
+.vx-pdf-bar__find { width: 260px; }
+.vx-pdf-body { position: relative; flex: 1 1 auto; min-height: 0; display: flex; }
+.vx-pdf-thumbs { flex: 0 0 auto; width: 148px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; gap: var(--space-3); padding: var(--space-3) 0; background: var(--surface-side); border-right: 1px solid var(--line); }
+.vx-pdf-thumb { appearance: none; margin: 0; padding: 4px; display: flex; flex-direction: column; align-items: center; gap: 4px; border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; cursor: pointer; }
+.vx-pdf-thumb[aria-current="page"] { border-color: var(--cyan); box-shadow: var(--shadow-selected); }
+.vx-pdf-thumb__img { display: block; min-width: 112px; min-height: 80px; background: var(--surface-raised); box-shadow: 0 0 0 1px var(--line); }
+.vx-pdf-thumb__n { font-size: 11px; color: var(--muted); }
+/* pdf.js requires an absolutely positioned scroll container. */
+.vx-pdf-body > .vx-pdf-container { position: absolute; inset: 0; overflow: auto; outline: none; }
+.vx-pdf-thumbs + .vx-pdf-container { left: 148px !important; }
+.vx-pdf-container .pdfViewer { padding: var(--space-4) 0; }
+.vx-pdf-container .pdfViewer .page { box-shadow: 0 0 0 1px var(--line); border: 0; margin: 12px auto; }
+.vx-pdf-container .textLayer ::selection { background: var(--cyan-glow); }
+
+/* A PDF page embedded in a note: ![[paper.pdf#page=3]]. */
+.vx-pdf-embed { margin: 6px 0; display: inline-flex; flex-direction: column; gap: 6px; padding: 8px; border: 1px solid var(--line-note); border-radius: var(--radius-md); background: var(--surface-side); }
+.vx-pdf-embed__page canvas { display: block; box-shadow: 0 0 0 1px var(--line); }
+
+/* Equation references (SPECS 10.4) and the flash on arrival. */
+.vx-eqref { cursor: pointer; }
+.vx-math.is-flash { animation: vx-flash 1.2s ease-out; }
+@keyframes vx-flash { 0% { background: var(--cyan-glow); } 100% { background: transparent; } }
+@media (prefers-reduced-motion: reduce) { .vx-math.is-flash { animation: none; outline: 2px solid var(--cyan); } }
+.vx-math__dup { display: block; margin-top: 4px; text-align: center; }
+.vx-eq-preview { padding: 4px 8px; font-size: 13px; }

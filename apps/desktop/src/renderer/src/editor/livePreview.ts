@@ -17,6 +17,8 @@ import { splitTarget } from '@vaults/markdown';
 import { editorContext, refreshLinks, revealSource } from './context';
 import { isCodeLanguage } from './languages';
 import { blockRegistry } from './registry';
+import { EqRefWidget, equationByLabel, formatRef } from './equations';
+import { PdfPageWidget } from './pdfWidget';
 import {
   CheckboxWidget,
   CodeBarWidget,
@@ -50,10 +52,16 @@ export function activeLines(state: EditorState): Set<number> {
   return out;
 }
 
-/** True when any selection range touches [from, to] (inclusive). */
+/**
+ * True when any selection range touches the lines of [from, to]: the line or block that
+ * holds the cursor shows its source (SPECS 10.1), including text after a block on its
+ * last line.
+ */
 export function rangeActive(state: EditorState, from: number, to: number): boolean {
   if (!state.facet(revealSource)) return false;
-  return state.selection.ranges.some((r) => r.from <= to && r.to >= from);
+  const a = state.doc.lineAt(from).from;
+  const b = state.doc.lineAt(to).to;
+  return state.selection.ranges.some((r) => r.from <= b && r.to >= a);
 }
 
 /** Position of the first level-1 heading, which takes the note-title style. */
@@ -190,9 +198,20 @@ function buildDecorations(view: EditorView): DecorationSet {
           case 'BlockId':
             decos.push(mark('vx-cm-blockid').range(nf, nt));
             return false;
-          case 'CrossRef':
-            decos.push(mark('vx-cm-link').range(nf, nt));
+          case 'CrossRef': {
+            const text = state.doc.sliceString(nf, nt);
+            // Equation references render as "Eq. (3)"; @fig: and @tbl: stay reserved text.
+            if (text.startsWith('@eq:') && !isActiveAt(nf)) {
+              const label = text.slice(1);
+              const eq = equationByLabel(state, label);
+              decos.push(
+                Decoration.replace({
+                  widget: new EqRefWidget(label, formatRef(eq?.number ?? null, ctx.refFormat), !eq),
+                }).range(nf, nt),
+              );
+            } else decos.push(mark('vx-cm-link').range(nf, nt));
             return false;
+          }
           case 'HTMLTag':
           case 'HTMLBlock':
           case 'Comment':
@@ -249,6 +268,15 @@ function buildDecorations(view: EditorView): DecorationSet {
                   Decoration.replace({
                     widget: new ImageWidget(ctx.assetUrl(res.path), parts.target, width),
                   }).range(nf, nt),
+                );
+                return false;
+              }
+              if (/\.pdf$/i.test(res.path)) {
+                decos.push(
+                  Decoration.replace({ widget: new PdfPageWidget(res.path, parts.page, parts.target) }).range(
+                    nf,
+                    nt,
+                  ),
                 );
                 return false;
               }

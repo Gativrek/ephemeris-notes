@@ -16,6 +16,7 @@ import { setReadOnlyFactory } from './embeds';
 import { linkClicks, linkPreview, vaultAutocomplete, type ExternalOpener } from './interactions';
 import { codeHighlight, findLanguage, markdownHighlight, sourceHeadingHighlight } from './languages';
 import { livePreview } from './livePreview';
+import { equationField } from './equations';
 
 export const contextCompartment = new Compartment();
 export const previewCompartment = new Compartment();
@@ -109,6 +110,7 @@ export function editableExtensions(readOnly: boolean): Extension {
 export function editorExtensions(opts: EditorOptions): Extension[] {
   return [
     contextCompartment.of(editorContext.of(opts.ctx)),
+    equationField,
     markdown({ extensions: vaultsMarkdown, codeLanguages: (info) => findLanguage(info), addKeymap: true }),
     syntaxHighlighting(codeHighlight),
     syntaxHighlighting(markdownHighlight),

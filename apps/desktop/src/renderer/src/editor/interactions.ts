@@ -9,6 +9,7 @@ import { EditorView, hoverTooltip, type Tooltip } from '@codemirror/view';
 import { analyzeNote, splitTarget } from '@vaults/markdown';
 import { editorContext, revealSource, type EditorContext, type OpenLinkRequest } from './context';
 import { activeLines } from './livePreview';
+import { equationCompletions } from './equations';
 
 function requestFrom(el: HTMLElement, ctx: EditorContext, newItem: boolean): OpenLinkRequest | null {
   const target = el.dataset.target;
@@ -195,7 +196,7 @@ async function wikiCompletions(cx: CompletionContext): Promise<CompletionResult 
 }
 
 export const vaultAutocomplete = autocompletion({
-  override: [wikiCompletions],
+  override: [wikiCompletions, equationCompletions],
   icons: false,
   activateOnTyping: true,
   maxRenderedOptions: 60,

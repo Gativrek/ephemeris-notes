@@ -35,6 +35,7 @@ import {
 } from './docs';
 import { closeItem } from './Desk';
 import { useWorkspace } from './store';
+import { PdfViewer } from '../pdf/PdfViewer';
 
 /** Live statistics for the status bar and outline. */
 export const editorStats = {
@@ -83,6 +84,10 @@ function makeContext(path: string): EditorContext {
     },
     get macros() {
       return parseMacros(useSettings.getState().get('library.math.macros'));
+    },
+    get refFormat() {
+      const f = useSettings.getState().get<string>('math.referenceFormat');
+      return f === 'paren' || f === 'word' ? f : 'eq';
     },
     embedChain: [],
   };
@@ -412,11 +417,8 @@ export function EditorPane() {
           <span>{s.editor.emptyHint}</span>
         </div>
       )}
-      {isPdf && (
-        <div className="vx-empty" data-testid="pdf-placeholder">
-          <span className="vx-pdf">PDF</span>
-          <span>{s.editor.pdfSoon}</span>
-        </div>
+      {isPdf && active && (
+        <PdfViewer key={active} path={active} page={jump?.path === active ? (jump.page ?? null) : null} />
       )}
       <div
         ref={hostRef}

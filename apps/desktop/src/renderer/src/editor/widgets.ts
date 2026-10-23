@@ -88,10 +88,18 @@ export class InlineMathWidget extends WidgetType {
   toDOM(view: EditorView): HTMLElement {
     const el = renderMath(this.tex, this.display, view.state.facet(editorContext).macros);
     el.classList.add('vx-math-inline');
+    // KaTeX output has no text positions: a click puts the cursor inside the math, revealing it.
+    el.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      const pos = view.posAtDOM(el);
+      view.dispatch({ selection: { anchor: pos + (this.display ? 2 : 1) } });
+      view.focus();
+    });
     return el;
   }
   override ignoreEvent(): boolean {
-    return false;
+    return true;
   }
 }
 
@@ -110,6 +118,7 @@ export class DisplayMathWidget extends WidgetType {
   toDOM(view: EditorView): HTMLElement {
     const fig = document.createElement('figure');
     fig.className = 'vx-math';
+    fig.dataset.from = String(this.from);
     fig.setAttribute('aria-label', this.label ? `Equation ${this.label}` : 'Equation');
     if (this.label) fig.dataset.label = this.label;
     fig.append(renderMath(this.tex, true, view.state.facet(editorContext).macros));

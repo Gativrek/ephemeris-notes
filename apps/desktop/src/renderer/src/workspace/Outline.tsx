@@ -6,6 +6,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { buildOutline, type OutlineModel } from './outlineModel';
 import { useCatalog } from '../lib/catalog';
+import { useSettings } from '../lib/settings';
+import { isCodeLanguage } from '../editor/languages';
 import { workspaceStrings as s } from '../strings/workspace';
 import { openPath } from './actions';
 import { getRecord } from './docs';
@@ -21,6 +23,7 @@ export function useOutline(
   const [model, setModel] = useState<OutlineModel | null>(null);
   const [line, setLine] = useState(1);
   const catalogVersion = useCatalog((st) => st.version);
+  const numbering = useSettings((st) => st.values['math.numbering']);
   useEffect(() => {
     if (!path) {
       setModel(null);
@@ -28,14 +31,21 @@ export function useOutline(
     }
     let timer: ReturnType<typeof setTimeout> | null = null;
     let lastText = '';
+    let forced = true;
     const rebuild = () => {
       const rec = getRecord(path);
       if (!rec) return;
       const text = rec.state.doc.toString();
       if (editorStats.path === path) setLine(editorStats.line);
-      if (text === lastText) return;
+      if (text === lastText && !forced) return;
+      forced = false;
       lastText = text;
-      setModel(buildOutline(text, path, (t) => useCatalog.getState().links.resolve(t, path).path, backlinks));
+      setModel(
+        buildOutline(text, path, (t) => useCatalog.getState().links.resolve(t, path).path, backlinks, {
+          numbering: numbering === 'labeled' ? 'labeled' : 'all',
+          isCodeLanguage,
+        }),
+      );
     };
     const schedule = () => {
       if (timer) clearTimeout(timer);
@@ -49,7 +59,7 @@ export function useOutline(
       clearInterval(poll);
       if (timer) clearTimeout(timer);
     };
-  }, [path, backlinks, catalogVersion]);
+  }, [path, backlinks, catalogVersion, numbering]);
   return { model, currentLine: line };
 }
 
