@@ -8,7 +8,7 @@ import { useCatalog } from '../lib/catalog';
 import { errorMessage, unwrap, vx } from '../lib/vx';
 import { useApp } from '../store/app';
 import { workspaceStrings as s } from '../strings/workspace';
-import { closeDoc, externalChange, getRecord, renamed, saveAll } from './docs';
+import { closeDoc, externalChange, getRecord, renamed, saveAll, useDocs } from './docs';
 import { useWorkspace } from './store';
 
 export const OPENABLE = /\.(md|pdf)$/i;
@@ -171,9 +171,12 @@ export async function performRename(from: string, to: string, updateLinks: boole
 
 export async function trashPath(path: string): Promise<void> {
   try {
-    for (const p of [path]) await closeDoc(p).catch(() => undefined);
+    // A folder takes its open notes with it.
+    const inside = Object.keys(useDocs.getState().meta).filter((p) => p === path || p.startsWith(`${path}/`));
+    for (const p of inside.length ? inside : [path]) await closeDoc(p).catch(() => undefined);
     await unwrap(vx().fs.trash(path));
     useWorkspace.getState().removePath(path);
+    useWorkspace.setState((st) => ({ sectionsVersion: st.sectionsVersion + 1 }));
     void useCatalog.getState().load();
   } catch (err) {
     report(err);
@@ -187,4 +190,63 @@ export function parentOf(path: string): string {
 
 export function baseName(path: string): string {
   return path.slice(path.lastIndexOf('/') + 1);
+}
+
+// ---- Sections (top-level folders of a Vault, SPECS 4.4) ----------------------------
+
+/** Why `name` cannot be a section of the current Vault, or null. */
+export function sectionNameProblem(name: string, from: string | null): string | null {
+  const v = currentVault();
+  if (!name) return s.section.empty;
+  if (name.startsWith('.') || name.startsWith('_')) return s.section.hidden;
+  if (/[\\/]/.test(name)) return s.section.slash;
+  if (v && name.toLowerCase() === v.settings.daily.toLowerCase() && from !== `${v.path}/${v.settings.daily}`)
+    return s.section.daily;
+  const taken = v
+    ? useCatalog
+        .getState()
+        .paths.filter((p) => p.startsWith(`${v.path}/`))
+        .map((p) =>
+          p
+            .slice(v.path.length + 1)
+            .split('/')[0]!
+            .toLowerCase(),
+        )
+    : [];
+  const self = from ? baseName(from).toLowerCase() : null;
+  if (taken.includes(name.toLowerCase()) && name.toLowerCase() !== self) return s.section.exists;
+  return null;
+}
+
+/** Creates the folder and selects it. Resolves with an error message, or null. */
+export async function createSection(name: string): Promise<string | null> {
+  const v = currentVault();
+  if (!v) return null;
+  // An empty folder is not in the file catalog: ask the disk too.
+  if ((await vx().fs.stat(`${v.path}/${name}`)).ok) return s.section.exists;
+  const r = await vx().fs.mkdir(`${v.path}/${name}`);
+  if (!r.ok) return r.error.code === 'EXISTS' ? s.section.exists : r.error.message;
+  await useCatalog.getState().load();
+  useWorkspace.setState((st) => ({ sectionsVersion: st.sectionsVersion + 1 }));
+  useWorkspace.getState().setSection(r.value.path);
+  return null;
+}
+
+/** Renames a section; links into it are offered for update like any rename (SPECS 5). */
+export async function renameSection(from: string, name: string): Promise<string | null> {
+  const to = `${parentOf(from)}/${name}`;
+  if (to === from) return null;
+  // A case-only rename is the same folder; anything else must not exist yet.
+  if (to.toLowerCase() !== from.toLowerCase() && (await vx().fs.stat(to)).ok) return s.section.exists;
+  await renamePath(from, to);
+  useWorkspace.setState((st) => ({ sectionsVersion: st.sectionsVersion + 1 }));
+  return null;
+}
+
+/** Asks first, showing how many notes the section holds. */
+export function askDeleteSection(path: string): void {
+  const notes = useCatalog
+    .getState()
+    .paths.filter((p) => p.startsWith(`${path}/`) && /\.md$/i.test(p)).length;
+  useWorkspace.setState({ overlay: { kind: 'deleteSection', path, notes } });
 }

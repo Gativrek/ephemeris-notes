@@ -73,7 +73,8 @@ export function registerWorkspaceHandlers(deps: { sessions: SessionManager; test
       (globalThis.__vxContextMenus ??= []).push(items);
       const choice = globalThis.__vxContextMenuChoice ?? null;
       globalThis.__vxContextMenuChoice = undefined;
-      return choice;
+      // Like a real menu: a disabled item cannot be chosen.
+      return items.some((i) => i.id === choice && i.enabled) ? choice : null;
     }
     const win = BrowserWindow.fromWebContents(event.sender);
     return new Promise<string | null>((resolve) => {

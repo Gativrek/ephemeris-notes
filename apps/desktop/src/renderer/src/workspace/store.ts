@@ -21,6 +21,9 @@ export type Overlay =
   | { kind: 'insertLink' }
   | { kind: 'commands' }
   | { kind: 'moveTo'; path: string }
+  /** New Section (`from` null) or Rename Section. */
+  | { kind: 'sectionName'; from: string | null }
+  | { kind: 'deleteSection'; path: string; notes: number }
   | { kind: 'confirmTrash'; path: string }
   | { kind: 'createMissing'; target: string; folder: string }
   | { kind: 'renameLinks'; from: string; to: string; notes: Array<{ path: string; links: number }> }
@@ -43,6 +46,8 @@ interface WorkspaceState {
   /** Saved state of plugin views on the desk (SPECS 12.11.4), per machine. */
   viewStates: Record<string, unknown>;
   setViewState(id: string, state: unknown): void;
+  /** Bumped when a section folder is created, renamed or removed (empty folders are not in the file catalog). */
+  sectionsVersion: number;
   /** Pending jump inside the active note (heading, block or line). */
   jump: { path: string; heading?: string | null; block?: string | null; line?: number; page?: number } | null;
 
@@ -93,6 +98,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
   overlay: null,
   jump: null,
   viewStates: {},
+  sectionsVersion: 0,
 
   async init(vaultPath, vaultId) {
     set({

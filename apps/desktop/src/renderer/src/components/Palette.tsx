@@ -189,3 +189,99 @@ export function Confirm({
     </div>
   );
 }
+
+/**
+ * Asks for a name (New Section, Rename Section): the palette surface with one field.
+ * `validate` answers at once; `onSubmit` resolves with an error to show, or null when done.
+ */
+export function NameDialog({
+  title,
+  label,
+  initial = '',
+  confirm,
+  cancel,
+  validate,
+  onSubmit,
+  onClose,
+  testId,
+}: {
+  title: string;
+  label: string;
+  initial?: string;
+  confirm: string;
+  cancel: string;
+  validate: (name: string) => string | null;
+  onSubmit: (name: string) => Promise<string | null>;
+  onClose: () => void;
+  testId?: string;
+}) {
+  const [name, setName] = useState(initial);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, []);
+  const submit = async () => {
+    const trimmed = name.trim();
+    const problem = validate(trimmed);
+    if (problem) return setError(problem);
+    setBusy(true);
+    const failed = await onSubmit(trimmed).catch((err: unknown) =>
+      err instanceof Error ? err.message : String(err),
+    );
+    setBusy(false);
+    if (failed) setError(failed);
+  };
+  return (
+    <div className="vx-overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <form
+        className="vx-palette vx-name-dialog"
+        role="dialog"
+        aria-label={title}
+        data-testid={testId}
+        style={{ width: 480 }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          void submit();
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') {
+            e.stopPropagation();
+            onClose();
+          }
+        }}
+      >
+        <div className="vx-palette__title vx-caps">{title}</div>
+        <div className="vx-palette__body">
+          <input
+            ref={inputRef}
+            className="vx-input vx-input--ui vx-name-dialog__input"
+            aria-label={label}
+            placeholder={label}
+            value={name}
+            maxLength={120}
+            onChange={(e) => {
+              setName(e.target.value);
+              setError(null);
+            }}
+          />
+          {error && (
+            <p className="vx-dialog__error" role="alert">
+              {error}
+            </p>
+          )}
+        </div>
+        <div className="vx-palette__foot">
+          <button type="button" className="vx-btn vx-btn--small" onClick={onClose}>
+            {cancel}
+          </button>
+          <button type="submit" className="vx-btn vx-btn--small vx-btn--primary" disabled={busy}>
+            {confirm}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}

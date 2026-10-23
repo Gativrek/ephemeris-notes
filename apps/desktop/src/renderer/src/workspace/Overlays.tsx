@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Confirm, Palette } from '../components/Palette';
+import { Confirm, NameDialog, Palette } from '../components/Palette';
 import { Icon } from '../components/Icon';
 import { useCatalog } from '../lib/catalog';
 import { errorMessage, unwrap, vx } from '../lib/vx';
@@ -9,6 +9,9 @@ import { workspaceStrings as s } from '../strings/workspace';
 import {
   baseName,
   createNoteIn,
+  createSection,
+  renameSection,
+  sectionNameProblem,
   currentVault,
   notice,
   openPath,
@@ -176,6 +179,42 @@ export function Overlays() {
       return <CommandPalette />;
     case 'moveTo':
       return <MoveToPicker path={overlay.path} />;
+    case 'sectionName': {
+      const from = overlay.from;
+      return (
+        <NameDialog
+          title={from ? s.section.renameTitle(baseName(from)) : s.section.newTitle}
+          label={s.section.name}
+          initial={from ? baseName(from) : ''}
+          confirm={from ? s.section.rename : s.section.create}
+          cancel={s.confirm.cancel}
+          testId="section-name"
+          validate={(name) => sectionNameProblem(name, from)}
+          onClose={close}
+          onSubmit={async (name) => {
+            const failed = from ? await renameSection(from, name) : await createSection(name);
+            // A rename that touches links hands over to the "Update links" question.
+            if (!failed && useWorkspace.getState().overlay?.kind === 'sectionName') close();
+            return failed;
+          }}
+        />
+      );
+    }
+    case 'deleteSection':
+      return (
+        <Confirm
+          title={s.section.deleteTitle}
+          body={s.section.deleteBody(baseName(overlay.path), overlay.notes)}
+          confirm={s.section.deleteConfirm}
+          cancel={s.confirm.cancel}
+          danger
+          onClose={close}
+          onConfirm={() => {
+            close();
+            void trashPath(overlay.path);
+          }}
+        />
+      );
     case 'confirmTrash':
       return (
         <Confirm

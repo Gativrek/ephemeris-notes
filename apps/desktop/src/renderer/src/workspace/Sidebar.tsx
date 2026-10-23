@@ -6,7 +6,16 @@ import { assetUrl } from '../lib/asset';
 import { unwrap, vx } from '../lib/vx';
 import { domainStrings } from '../strings/domains';
 import { workspaceStrings as s } from '../strings/workspace';
-import { baseName, createNoteIn, newFolder, openPath, parentOf, renamePath, report } from './actions';
+import {
+  askDeleteSection,
+  baseName,
+  createNoteIn,
+  newFolder,
+  openPath,
+  parentOf,
+  renamePath,
+  report,
+} from './actions';
 import { useDocs } from './docs';
 import { useWorkspace } from './store';
 import {
@@ -71,6 +80,24 @@ function VaultHeader({ vault }: { vault: VaultInfo }) {
   );
 }
 
+/** Right-click on a section tile: New, Rename and Delete Section. Unfiled is the Vault
+ * root, so it can be neither renamed nor deleted; the daily folder is named in the Vault's
+ * settings, so it is not renamed here. */
+async function sectionMenu(t: Section): Promise<void> {
+  const choice = await unwrap(
+    vx().window.contextMenu([
+      { id: 'new', label: s.section.menuNew },
+      { id: 'rename', label: s.section.menuRename, enabled: t.kind === 'section', separatorBefore: true },
+      { id: 'reveal', label: s.menu.reveal },
+      { id: 'delete', label: s.section.menuDelete, enabled: t.kind !== 'unfiled', separatorBefore: true },
+    ]),
+  ).catch(() => null);
+  if (choice === 'new') useWorkspace.setState({ overlay: { kind: 'sectionName', from: null } });
+  else if (choice === 'rename') useWorkspace.setState({ overlay: { kind: 'sectionName', from: t.path } });
+  else if (choice === 'reveal') void vx().shell.revealInFolder(t.path);
+  else if (choice === 'delete') askDeleteSection(t.path);
+}
+
 function Tiles({
   sections,
   selected,
@@ -104,6 +131,10 @@ function Tiles({
           title={t.name}
           data-testid="section-tile"
           onClick={() => ws().setSection(t.path)}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            void sectionMenu(t);
+          }}
           onDragOver={(e) => e.dataTransfer.types.includes(DRAG_TYPE) && e.preventDefault()}
           onDrop={(e) => onDrop(e, t.path)}
         >
@@ -310,7 +341,8 @@ export function Sidebar({ vault }: { vault: VaultInfo }) {
   const catalogVersion = useCatalog((st) => st.version);
   const section = useWorkspace((st) => st.section);
   const active = useWorkspace((st) => st.desk.active);
-  const [top, setTop] = useState<string[]>([]);
+  const sectionsVersion = useWorkspace((st) => st.sectionsVersion);
+  const [top, setTop] = useState<{ names: string[]; version: number }>({ names: [], version: -1 });
   const [listing, setListing] = useState<Listing>(new Map());
   const d = domainStrings[vault.domain];
 
@@ -318,20 +350,28 @@ export function Sidebar({ vault }: { vault: VaultInfo }) {
   useEffect(() => {
     let live = true;
     void unwrap(vx().fs.list(vault.path)).then(
-      (entries) => live && setTop(entries.filter((e) => e.kind === 'folder').map((e) => e.name)),
+      (entries) =>
+        live &&
+        setTop({
+          names: entries.filter((e) => e.kind === 'folder').map((e) => e.name),
+          version: sectionsVersion,
+        }),
       () => undefined,
     );
     return () => {
       live = false;
     };
-  }, [vault.path, catalogVersion]);
+  }, [vault.path, catalogVersion, sectionsVersion]);
 
-  const sections = useMemo(() => buildSections(vault, top, files), [vault, top, files]);
+  const sections = useMemo(() => buildSections(vault, top.names, files), [vault, top, files]);
   const current = sections.find((x) => x.path === section) ?? sections[0] ?? null;
 
+  // A selection that is not a section falls back to the first one, but only once the list
+  // reflects the latest section change (a new section is selected before it is listed).
   useEffect(() => {
+    if (top.version !== sectionsVersion) return;
     if (current && current.path !== section) useWorkspace.getState().setSection(current.path);
-  }, [current, section]);
+  }, [current, section, top.version, sectionsVersion]);
 
   // The tree of the selected section.
   useEffect(() => {
@@ -420,6 +460,16 @@ export function Sidebar({ vault }: { vault: VaultInfo }) {
       <div className="vx-side__scroll">
         <div className="vx-side__label">
           <span className="vx-caps">{s.sidebar.sections}</span>
+          <button
+            type="button"
+            className="vx-icon-btn vx-icon-btn--small"
+            aria-label={s.sidebar.newSection}
+            title={s.sidebar.newSection}
+            data-testid="new-section"
+            onClick={() => useWorkspace.setState({ overlay: { kind: 'sectionName', from: null } })}
+          >
+            <Icon name="plus" />
+          </button>
         </div>
         {sections.length === 0 ? (
           <p className="vx-dialog__hint">{s.sidebar.noSections}</p>

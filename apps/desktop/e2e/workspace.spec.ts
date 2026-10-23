@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { cp, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { fixtureLibrary, launch, setPickFolder, tempDir, type Launched } from './helpers';
@@ -402,4 +402,55 @@ test('Settings > Library: git auto-commit commits the library when it is a repos
   expect(git('log', '--format=%s').trim()).toMatch(/^Ephemeris: auto-commit \d{4}-/);
   await page.getByRole('button', { name: 'Commit Now' }).click();
   await expect(page.getByTestId('git-status')).toContainText('Nothing to commit.');
+});
+
+test('sections: New Section, Rename Section and Delete Section', async () => {
+  const { page } = ctx;
+  const exists = async (rel: string) => (await stat(file(rel)).catch(() => null))?.isDirectory() ?? false;
+
+  // New Section refuses taken, hidden and empty names, then creates and selects the folder.
+  await page.getByTestId('new-section').click();
+  const dialog = page.getByTestId('section-name');
+  const name = dialog.getByRole('textbox', { name: 'Section name' });
+  await name.fill('notes');
+  await name.press('Enter');
+  await expect(dialog.getByRole('alert')).toContainText('already has a section with that name');
+  await name.fill('_drafts');
+  await name.press('Enter');
+  await expect(dialog.getByRole('alert')).toContainText('cannot start with . or _');
+  await name.fill('Projects');
+  await name.press('Enter');
+  await expect(dialog).toHaveCount(0);
+  await expect(tile(page, 'Projects')).toHaveAttribute('aria-pressed', 'true');
+  expect(await exists('Academic/GNSS Study/Projects')).toBe(true);
+
+  // Rename Section from the tile's menu.
+  await contextChoice('rename');
+  await tile(page, 'Projects').click({ button: 'right' });
+  await expect(dialog.getByRole('textbox', { name: 'Section name' })).toHaveValue('Projects');
+  await dialog.getByRole('textbox', { name: 'Section name' }).fill('Research');
+  await dialog.getByRole('textbox', { name: 'Section name' }).press('Enter');
+  await expect(tile(page, 'Research')).toBeVisible();
+  await expect(tile(page, 'Projects')).toHaveCount(0);
+  expect(await exists('Academic/GNSS Study/Research')).toBe(true);
+  expect(await exists('Academic/GNSS Study/Projects')).toBe(false);
+
+  // Delete Section asks first, says how many notes go, and uses the trash.
+  await tile(page, 'Research').click();
+  await page.keyboard.press('ControlOrMeta+n');
+  await expect(page.getByTestId('tree').getByRole('treeitem')).toHaveCount(1);
+  await page.keyboard.press('Escape');
+  await contextChoice('delete');
+  await tile(page, 'Research').click({ button: 'right' });
+  const confirm = page.getByRole('alertdialog', { name: 'Delete this section?' });
+  await expect(confirm).toContainText('"Research" and its 1 note go to the system trash');
+  await confirm.getByRole('button', { name: 'Move to Trash' }).click();
+  await expect(tile(page, 'Research')).toHaveCount(0);
+  await expect.poll(() => exists('Academic/GNSS Study/Research')).toBe(false);
+
+  // Unfiled (the Vault root) cannot be renamed or deleted.
+  await contextChoice('delete');
+  await tile(page, 'Unfiled').click({ button: 'right' });
+  await expect(page.getByRole('alertdialog')).toHaveCount(0);
+  expect(await exists('Academic/GNSS Study')).toBe(true);
 });
