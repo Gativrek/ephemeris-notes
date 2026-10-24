@@ -21,3 +21,6 @@ design/README.md
 design/assets/Logos/README.md
 design/components/*/README.md
 design/components/*/preview.html
+
+# The plugins live in their own repository, checked out here for development.
+/ephemeris-plugins/

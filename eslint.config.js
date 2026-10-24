@@ -14,6 +14,7 @@ export default tseslint.config(
       '**/test-results/**',
       '**/playwright-report/**',
       'apps/desktop/test/fixtures/**',
+      'ephemeris-plugins/**',
     ],
   },
   js.configs.recommended,
