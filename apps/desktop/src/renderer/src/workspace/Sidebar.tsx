@@ -1,8 +1,18 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type DragEvent,
+  type KeyboardEvent,
+  type MouseEvent,
+} from 'react';
+import { useApp } from '../store/app';
+import { BANNER_WINDOW, PlacedImage, useHeaderImage } from './VaultLook';
 import type { FileEntry, VaultInfo } from '@shared/bridge';
 import { Icon, type IconName } from '../components/Icon';
 import { useCatalog } from '../lib/catalog';
-import { assetUrl } from '../lib/asset';
 import { unwrap, vx } from '../lib/vx';
 import { domainStrings } from '../strings/domains';
 import { workspaceStrings as s } from '../strings/workspace';
@@ -56,20 +66,36 @@ async function listRecursive(root: string, includeFolders: boolean, maxEntries =
 
 function VaultHeader({ vault }: { vault: VaultInfo }) {
   const d = domainStrings[vault.domain];
-  const cover = vault.cover ? assetUrl(`${vault.path}/.vault/${vault.cover.file}`, vault.coverVersion) : null;
+  const image = useHeaderImage(vault);
+  const onContext = async (e: MouseEvent) => {
+    e.preventDefault();
+    const choice = await unwrap(
+      vx().window.contextMenu([
+        { id: 'banner', label: s.banner.menuChange },
+        { id: 'remove', label: s.banner.menuRemove, enabled: !!vault.banner },
+      ]),
+    ).catch(() => null);
+    if (choice === 'banner') useWorkspace.setState({ overlay: { kind: 'banner' } });
+    if (choice === 'remove')
+      void unwrap(vx().vaults.setBanner(vault.path, null)).then(
+        (info) =>
+          useApp.setState((st) => ({ vaults: st.vaults.map((v) => (v.path === info.path ? info : v)) })),
+        report,
+      );
+  };
   return (
-    <header className="vx-vault-head" style={{ ['--domain' as string]: d.color }} data-testid="vault-header">
+    <header
+      className="vx-vault-head"
+      style={{ ['--domain' as string]: d.color }}
+      data-testid="vault-header"
+      onContextMenu={(e) => void onContext(e)}
+    >
       <span
-        className={`vx-vault-head__cover${cover ? '' : ' vx-cover-contour'}`}
-        style={
-          cover
-            ? {
-                backgroundImage: `url("${cover}")`,
-                backgroundPosition: `${(vault.cover?.focus.x ?? 0.5) * 100}% ${(vault.cover?.focus.y ?? 0.5) * 100}%`,
-              }
-            : undefined
-        }
-      />
+        className={`vx-vault-head__cover${image ? '' : ' vx-cover-contour'}`}
+        data-banner={image?.banner ? 'true' : undefined}
+      >
+        {image && <PlacedImage url={image.url} focus={image.focus} zoom={image.zoom} win={BANNER_WINDOW} />}
+      </span>
       <span className="vx-vault-head__frost" />
       <span className="vx-vault-head__text">
         <span className="vx-vault-head__name vx-gold">{vault.name}</span>
@@ -91,6 +117,7 @@ async function sectionMenu(t: Section): Promise<void> {
       { id: 'new', label: s.section.menuNew },
       { id: 'unfiled', label: s.section.menuNewUnfiled },
       { id: 'rename', label: s.section.menuRename, enabled: t.kind === 'section', separatorBefore: true },
+      { id: 'icon', label: s.section.menuIcon, enabled: t.kind !== 'unfiled' },
       { id: 'reveal', label: s.menu.reveal },
       { id: 'delete', label: s.section.menuDelete, enabled: t.kind !== 'unfiled', separatorBefore: true },
     ]),
@@ -98,6 +125,8 @@ async function sectionMenu(t: Section): Promise<void> {
   if (choice === 'new') useWorkspace.setState({ overlay: { kind: 'sectionName', from: null } });
   else if (choice === 'unfiled') void newUnfiledNote();
   else if (choice === 'rename') useWorkspace.setState({ overlay: { kind: 'sectionName', from: t.path } });
+  else if (choice === 'icon')
+    useWorkspace.setState({ overlay: { kind: 'sectionIcon', name: t.name, section: t.kind } });
   else if (choice === 'reveal') void vx().shell.revealInFolder(t.path);
   else if (choice === 'delete') askDeleteSection(t.path);
 }
@@ -106,10 +135,12 @@ function Tiles({
   sections,
   selected,
   domainColor,
+  icons,
 }: {
   sections: Section[];
   selected: string | null;
   domainColor: string;
+  icons: Record<string, string>;
 }) {
   const more = useWorkspace((st) => st.moreTiles);
   const { tiles, more: showMore } = visibleTiles(sections, more);
@@ -143,7 +174,7 @@ function Tiles({
           onDrop={(e) => onDrop(e, t.path)}
         >
           <span className="vx-tile__top">
-            <Icon name={sectionIcon(t.name, t.kind) as IconName} />
+            <Icon name={sectionIcon(t.name, t.kind, icons[t.name]) as IconName} />
             <span className="vx-tile__count">{t.noteCount}</span>
           </span>
           <span className="vx-tile__name">{t.name}</span>
@@ -423,6 +454,7 @@ export function Sidebar({ vault }: { vault: VaultInfo }) {
               : []),
           ]),
       { id: 'rename', label: s.menu.rename, separatorBefore: true },
+      { id: 'moveTo', label: s.menu.moveTo },
       { id: 'reveal', label: s.menu.reveal },
       { id: 'trash', label: s.menu.delete, separatorBefore: true },
     ];
@@ -450,6 +482,9 @@ export function Sidebar({ vault }: { vault: VaultInfo }) {
         break;
       case 'unfiled':
         void moveToUnfiled(node.path);
+        break;
+      case 'moveTo':
+        useWorkspace.setState({ overlay: { kind: 'moveTo', path: node.path } });
         break;
       case 'reveal':
         void vx().shell.revealInFolder(node.path);
@@ -487,7 +522,12 @@ export function Sidebar({ vault }: { vault: VaultInfo }) {
         {sections.length === 0 ? (
           <p className="vx-dialog__hint">{s.sidebar.noSections}</p>
         ) : (
-          <Tiles sections={sections} selected={current?.path ?? null} domainColor={d.color} />
+          <Tiles
+            sections={sections}
+            selected={current?.path ?? null}
+            domainColor={d.color}
+            icons={vault.sectionIcons}
+          />
         )}
         {current && (
           <>

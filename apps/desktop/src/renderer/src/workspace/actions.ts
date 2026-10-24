@@ -157,6 +157,10 @@ export async function performRename(from: string, to: string, updateLinks: boole
     await saveAll();
     const r = await unwrap(vx().fs.rename(from, to, { updateLinks }));
     renamed(from, r.path);
+    // A section (a top-level folder of this Vault) keeps its chosen icon.
+    const v = currentVault();
+    if (v && parentOf(from) === v.path && parentOf(r.path) === v.path && baseName(from) in v.sectionIcons)
+      await import('./VaultLook').then((m) => m.moveSectionIcon(baseName(from), baseName(r.path)));
     useWorkspace.getState().renamePath(from, r.path);
     // Notes rewritten in main: open ones reload in place.
     for (const p of r.updated) if (getRecord(p)) void externalChange(p);

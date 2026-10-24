@@ -21,6 +21,7 @@ import {
 } from './actions';
 import { currentEditor } from './EditorPane';
 import { MoveToPicker } from './Inbox';
+import { BannerDialog, SectionIconPicker, moveSectionIcon } from './VaultLook';
 import { useWorkspace } from './store';
 import { displayName } from './tree';
 
@@ -200,6 +201,10 @@ export function Overlays() {
         />
       );
     }
+    case 'sectionIcon':
+      return <SectionIconPicker name={overlay.name} kind={overlay.section} />;
+    case 'banner':
+      return <BannerDialog />;
     case 'deleteSection':
       return (
         <Confirm
@@ -211,7 +216,7 @@ export function Overlays() {
           onClose={close}
           onConfirm={() => {
             close();
-            void trashPath(overlay.path);
+            void trashPath(overlay.path).then(() => moveSectionIcon(baseName(overlay.path), null));
           }}
         />
       );

@@ -34,7 +34,7 @@ export function isWatchedHidden(rel: string): boolean {
       rest.length === 0 ||
       rest[0] === 'vault.json' ||
       rest[0] === 'plugin-data' ||
-      /^cover\./.test(rest[0] ?? '')
+      /^(cover|banner)\./.test(rest[0] ?? '')
     );
   }
   return !segs.some((s) => s.startsWith('.'));

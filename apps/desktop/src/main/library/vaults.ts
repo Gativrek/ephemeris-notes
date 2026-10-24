@@ -35,6 +35,19 @@ function num(v: unknown, fallback: number): number {
   return typeof v === 'number' && Number.isFinite(v) ? v : fallback;
 }
 
+/** A cover-shaped image field (`cover`, `banner`): file in `.vault/`, focus and zoom. */
+function imageField(v: unknown): VaultInfo['cover'] {
+  if (!v || typeof v !== 'object') return null;
+  const o = v as Record<string, unknown>;
+  if (typeof o.file !== 'string' || !/^[^/\\]+$/.test(o.file)) return null;
+  const focus = o.focus && typeof o.focus === 'object' ? (o.focus as Record<string, unknown>) : {};
+  return {
+    file: o.file,
+    focus: { x: clamp(num(focus.x, 0.5), 0, 1), y: clamp(num(focus.y, 0.5), 0, 1) },
+    zoom: clamp(num(o.zoom, 1), ZOOM_MIN, ZOOM_MAX),
+  };
+}
+
 /** Turns a parsed vault.json into VaultInfo, tolerating missing or odd fields. */
 export function vaultFromJson(rel: string, raw: RawVault, stats: VaultStats): VaultInfo {
   const [domainFolder, folder] = rel.split('/') as [string, string];
@@ -46,6 +59,15 @@ export function vaultFromJson(rel: string, raw: RawVault, stats: VaultStats): Va
   const str = (v: unknown, d: string) => (typeof v === 'string' && v.length > 0 ? v : d);
   const coverFile =
     cover && typeof cover.file === 'string' && /^[^/\\]+$/.test(cover.file) ? cover.file : null;
+  const banner = imageField(raw.banner);
+  const icons =
+    raw.sectionIcons && typeof raw.sectionIcons === 'object' && !Array.isArray(raw.sectionIcons)
+      ? Object.fromEntries(
+          Object.entries(raw.sectionIcons as Record<string, unknown>).filter(
+            (e): e is [string, string] => typeof e[1] === 'string',
+          ),
+        )
+      : {};
   return {
     path: rel,
     folder,
@@ -70,6 +92,9 @@ export function vaultFromJson(rel: string, raw: RawVault, stats: VaultStats): Va
       ? raw.sectionOrder.filter((s): s is string => typeof s === 'string')
       : null,
     coverVersion: 0,
+    banner,
+    bannerVersion: 0,
+    sectionIcons: icons,
     noteCount: stats.noteCount,
     lastEdited: stats.lastEdited,
     broken: false,
@@ -182,6 +207,14 @@ export class VaultStore {
         info.cover = null; // The file named in vault.json is missing: show a placeholder.
       }
     }
+    if (info.banner) {
+      try {
+        const st = await fs.stat(path.join(this.rootAbs, ...rel.split('/'), VAULT_DIR, info.banner.file));
+        info.bannerVersion = Math.round(st.mtimeMs);
+      } catch {
+        info.banner = null; // Missing file: the header falls back to the cover.
+      }
+    }
     return info;
   }
 
@@ -241,6 +274,7 @@ export class VaultStore {
     rel: string,
     cover: CoverInput,
     previous: string | null,
+    base: 'cover' | 'banner' = 'cover',
   ): Promise<RawVault['cover']> {
     const focus = { x: clamp(cover.focus.x, 0, 1), y: clamp(cover.focus.y, 0, 1) };
     const zoom = clamp(cover.zoom, ZOOM_MIN, ZOOM_MAX);
@@ -250,7 +284,7 @@ export class VaultStore {
     }
     const bytes = new Uint8Array(cover.bytes);
     const ext = coverExtension(bytes);
-    const file = `cover.${ext}`;
+    const file = `${base}.${ext}`;
     // The new image is written first; the old one goes to the trash only afterwards.
     await this.lfs.writeBytes(`${rel}/${VAULT_DIR}/${file}`, bytes, { allowHidden: true });
     if (previous && previous !== file) {
@@ -304,6 +338,46 @@ export class VaultStore {
     const info = await this.get(rel);
     if (!info) fail('IO', 'The Vault could not be read back.');
     return info;
+  }
+
+  /** Writes vault.json through `edit`; unknown keys survive (SPECS 4.3). */
+  private async editRaw(
+    rel: string,
+    edit: (raw: RawVault, current: VaultInfo) => Promise<void>,
+  ): Promise<VaultInfo> {
+    const current = await this.get(rel);
+    if (!current) fail('NOT_FOUND', 'This Vault no longer exists.');
+    if (current.broken) fail('INVALID_ARGUMENT', 'vault.json is not valid JSON. Fix it by hand first.');
+    const { raw } = await this.readRaw(rel);
+    const next: RawVault = { ...(raw ?? {}) };
+    await edit(next, current);
+    await this.writeRaw(rel, next);
+    const info = await this.get(rel);
+    if (!info) fail('IO', 'The Vault could not be read back.');
+    return info;
+  }
+
+  /** The Vault header image (SPECS 4.3 `banner`); null removes it (the file goes to the trash). */
+  setBanner(rel: string, banner: CoverInput | null): Promise<VaultInfo> {
+    return this.editRaw(rel, async (next, current) => {
+      if (banner === null) {
+        if (current.banner)
+          await this.lfs
+            .trash(`${rel}/${VAULT_DIR}/${current.banner.file}`, { allowHidden: true })
+            .catch(() => undefined);
+        delete next.banner;
+      } else {
+        next.banner = await this.writeCover(rel, banner, current.banner?.file ?? null, 'banner');
+      }
+    });
+  }
+
+  /** Section icons by section folder name (SPECS 4.4). */
+  setSectionIcons(rel: string, icons: Record<string, string>): Promise<VaultInfo> {
+    return this.editRaw(rel, async (next) => {
+      if (Object.keys(icons).length) next.sectionIcons = icons;
+      else delete next.sectionIcons;
+    });
   }
 
   /** What moving a Vault to another Domain affects (shown before confirming). */

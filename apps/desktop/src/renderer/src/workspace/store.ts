@@ -24,6 +24,8 @@ export type Overlay =
   /** New Section (`from` null) or Rename Section. */
   | { kind: 'sectionName'; from: string | null }
   | { kind: 'deleteSection'; path: string; notes: number }
+  | { kind: 'sectionIcon'; name: string; section: 'section' | 'unfiled' | 'daily' }
+  | { kind: 'banner' }
   | { kind: 'confirmTrash'; path: string }
   | { kind: 'createMissing'; target: string; folder: string }
   | { kind: 'renameLinks'; from: string; to: string; notes: Array<{ path: string; links: number }> }

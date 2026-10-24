@@ -82,6 +82,11 @@ export interface VaultInfo {
   cover: VaultCover | null;
   /** Changes whenever the cover file changes; append to the asset URL to bust caches. */
   coverVersion: number;
+  /** The wide image behind the Vault header in the workspace (falls back to the cover). */
+  banner: VaultCover | null;
+  bannerVersion: number;
+  /** Icon names chosen for sections, by section folder name. */
+  sectionIcons: Record<string, string>;
   settings: { attachments: string; templates: string; daily: string };
   sectionOrder: string[] | null;
   noteCount: number;
@@ -153,6 +158,10 @@ export interface VxBridge {
     remove(path: string, typedName: string): Promise<Result<null>>;
     nonVaultFolders(): Promise<Result<Array<{ path: string; domain: Domain }>>>;
     makeVault(path: string): Promise<Result<VaultInfo>>;
+    /** The Vault header image: new bytes, a new focus or zoom, or null to remove it. */
+    setBanner(path: string, banner: CoverInput | null): Promise<Result<VaultInfo>>;
+    /** Replaces the section icon map (section folder name to icon name). */
+    setSectionIcons(path: string, icons: Record<string, string>): Promise<Result<VaultInfo>>;
     onChanged(cb: () => void): Unsubscribe;
   };
   /** Installed plugins (SPECS 12.2) and their data storage (12.7). */
@@ -403,7 +412,19 @@ export const BRIDGE_METHODS = {
     'remove',
     'listFiles',
   ],
-  vaults: ['list', 'get', 'create', 'update', 'moveImpact', 'move', 'remove', 'nonVaultFolders', 'makeVault'],
+  vaults: [
+    'list',
+    'get',
+    'create',
+    'update',
+    'moveImpact',
+    'move',
+    'remove',
+    'nonVaultFolders',
+    'makeVault',
+    'setBanner',
+    'setSectionIcons',
+  ],
   ui: ['get', 'set'],
   fs: ['read', 'readBinary', 'write', 'create', 'rename', 'trash', 'mkdir', 'list', 'stat'],
   index: [

@@ -40,6 +40,7 @@ export function Palette({
   footer,
   initialQuery = '',
   testId,
+  keepOrder = false,
 }: {
   title?: string;
   placeholder: string;
@@ -50,6 +51,8 @@ export function Palette({
   footer?: ReactNode;
   initialQuery?: string;
   testId?: string;
+  /** Keep the given order among equally good matches (alphabetical otherwise). */
+  keepOrder?: boolean;
 }) {
   const [query, setQuery] = useState(initialQuery);
   const [index, setIndex] = useState(0);
@@ -57,11 +60,13 @@ export function Palette({
   const listRef = useRef<HTMLDivElement>(null);
   const shown = useMemo(() => {
     const scored = items
-      .map((it) => ({ it, score: fuzzyScore(query, `${it.label} ${it.detail ?? ''}`) }))
-      .filter((x): x is { it: PaletteItem; score: number } => x.score !== null);
-    scored.sort((a, b) => a.score - b.score || a.it.label.localeCompare(b.it.label));
+      .map((it, i) => ({ it, i, score: fuzzyScore(query, `${it.label} ${it.detail ?? ''}`) }))
+      .filter((x): x is { it: PaletteItem; i: number; score: number } => x.score !== null);
+    scored.sort(
+      (a, b) => a.score - b.score || (keepOrder ? a.i - b.i : a.it.label.localeCompare(b.it.label)),
+    );
     return scored.slice(0, 200).map((x) => x.it);
-  }, [items, query]);
+  }, [items, query, keepOrder]);
 
   useEffect(() => {
     inputRef.current?.focus();

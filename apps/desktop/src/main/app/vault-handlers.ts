@@ -80,6 +80,23 @@ export function registerVaultHandlers(deps: {
     const { name, cover } = vaultInput({ ...obj(input, 'input'), domain: 'academic' });
     return changed(await store().update(vaultPath(p), cover === undefined ? { name } : { name, cover }));
   });
+  handle('vaults', 'setBanner', async (_e, p, banner) => {
+    const input = coverInput(banner);
+    if (input === undefined) fail('INVALID_ARGUMENT', 'banner must be an image or null.');
+    return changed(await store().setBanner(vaultPath(p), input));
+  });
+  handle('vaults', 'setSectionIcons', async (_e, p, icons) => {
+    const o = obj(icons, 'icons');
+    const entries = Object.entries(o);
+    if (entries.length > 500) fail('INVALID_ARGUMENT', 'Too many sections.');
+    const clean: Record<string, string> = {};
+    for (const [k, v] of entries) {
+      if (!k || k.length > 255 || /[\\/]/.test(k)) fail('INVALID_ARGUMENT', 'Invalid section name.');
+      clean[k] = str(v, 'icon', 64);
+      if (!/^[a-z0-9-]+$/.test(clean[k]!)) fail('INVALID_ARGUMENT', 'Invalid icon name.');
+    }
+    return changed(await store().setSectionIcons(vaultPath(p), clean));
+  });
   handle('vaults', 'moveImpact', (_e, p) => store().moveImpact(vaultPath(p)));
   handle('vaults', 'move', async (_e, p, to) =>
     changed(await store().move(vaultPath(p), oneOf<Domain>(to, 'to', DOMAINS))),

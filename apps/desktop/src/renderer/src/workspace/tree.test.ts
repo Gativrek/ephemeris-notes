@@ -21,6 +21,9 @@ const vault: VaultInfo = {
   order: 1,
   cover: null,
   coverVersion: 0,
+  banner: null,
+  bannerVersion: 0,
+  sectionIcons: {},
   settings: { attachments: '_attachments', templates: '_templates', daily: 'Daily' },
   sectionOrder: null,
   noteCount: 0,
@@ -71,6 +74,9 @@ describe('buildSections', () => {
     expect(sectionIcon('GNSS', 'section')).toBe('orbit');
     expect(sectionIcon('Whatever', 'section')).toBe('folder');
     expect(sectionIcon('Daily', 'daily')).toBe('calendar');
+    // A chosen icon wins; an unknown name falls back to the automatic one.
+    expect(sectionIcon('Whatever', 'section', 'gyro')).toBe('gyro');
+    expect(sectionIcon('Papers', 'section', 'not-an-icon')).toBe('papers');
   });
 });
 

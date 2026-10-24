@@ -66,7 +66,32 @@ export function visibleTiles(sections: Section[], expanded: boolean): { tiles: S
 }
 
 /** Keyword defaults for section icons (Icon README); anything else gets the folder. */
-export function sectionIcon(name: string, kind: SectionKind): string {
+/** Icons a section can wear (Settings: right-click a tile, Change Icon…). All are design-system glyphs. */
+export const SECTION_ICONS = [
+  'folder',
+  'note',
+  'papers',
+  'reading',
+  'orbit',
+  'estimation',
+  'gyro',
+  'graph',
+  'calendar',
+  'academic',
+  'work',
+  'personal',
+  'inbox',
+  'pin',
+  'search',
+  'settings',
+  'pencil',
+  'copy',
+  'upload',
+  'help',
+] as const;
+
+export function sectionIcon(name: string, kind: SectionKind, chosen?: string): string {
+  if (chosen && (SECTION_ICONS as readonly string[]).includes(chosen)) return chosen;
   if (kind === 'daily') return 'calendar';
   if (kind === 'unfiled') return 'note';
   const n = name.toLowerCase();

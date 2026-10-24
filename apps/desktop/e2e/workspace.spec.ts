@@ -502,3 +502,74 @@ test('Unfiled: New Unfiled Note from a tile or the palette, and Move to Unfiled'
   );
   expect(menus[menus.length - 1]!.some((i) => i.id === 'unfiled')).toBe(false);
 });
+
+test('Move to…, section icons and the Vault banner', async () => {
+  const { page } = ctx;
+  const vault = 'Academic/GNSS Study';
+  const vaultJson = async () => JSON.parse(await readFile(file(`${vault}/.vault/vault.json`), 'utf8'));
+  const isFile = async (rel: string) => (await stat(file(rel)).catch(() => null))?.isFile() ?? false;
+
+  // Move to…: a note goes into another section of the Vault.
+  await tile(page, 'Notes').click();
+  await page.keyboard.press('ControlOrMeta+N');
+  await page.getByLabel('New name').fill('Wanderer');
+  await page.getByLabel('New name').press('Enter');
+  await expect.poll(() => isFile(`${vault}/Notes/Wanderer.md`)).toBe(true);
+  await contextChoice('moveTo');
+  await row(page, 'Wanderer').first().click({ button: 'right' });
+  await expect(page.getByTestId('move-to')).toBeVisible();
+  await page.keyboard.type('GNSS Papers');
+  await expect(page.getByTestId('move-to').locator('.vx-row').first()).toContainText(
+    'GNSS Constellation Study / Papers',
+  );
+  await page.keyboard.press('Enter');
+  await expect.poll(() => isFile(`${vault}/Papers/Wanderer.md`)).toBe(true);
+  expect(await isFile(`${vault}/Notes/Wanderer.md`)).toBe(false);
+
+  // Change Icon…: stored in vault.json, and kept when the section is renamed.
+  await page.getByTestId('new-section').click();
+  await page.getByTestId('section-name').getByRole('textbox').fill('Drafts');
+  await page.getByTestId('section-name').getByRole('textbox').press('Enter');
+  await expect(tile(page, 'Drafts')).toBeVisible();
+  await contextChoice('icon');
+  await tile(page, 'Drafts').click({ button: 'right' });
+  await expect(page.getByTestId('section-icon')).toBeVisible();
+  await page.keyboard.type('Gyroscope');
+  await page.keyboard.press('Enter');
+  await expect.poll(async () => (await vaultJson()).sectionIcons).toEqual({ Drafts: 'gyro' });
+  await contextChoice('rename');
+  await tile(page, 'Drafts').click({ button: 'right' });
+  await page.getByTestId('section-name').getByRole('textbox').fill('Sketches');
+  await page.getByTestId('section-name').getByRole('textbox').press('Enter');
+  await expect(tile(page, 'Sketches')).toBeVisible();
+  await expect.poll(async () => (await vaultJson()).sectionIcons).toEqual({ Sketches: 'gyro' });
+  // Back to Automatic clears the entry.
+  await contextChoice('icon');
+  await tile(page, 'Sketches').click({ button: 'right' });
+  await page.keyboard.type('Automatic');
+  await page.keyboard.press('Enter');
+  await expect.poll(async () => (await vaultJson()).sectionIcons).toBeUndefined();
+
+  // The banner: chosen from the header's menu, stored as .vault/banner.png.
+  const header = page.getByTestId('vault-header');
+  await expect(header.locator('.vx-vault-head__cover')).not.toHaveAttribute('data-banner', 'true');
+  await contextChoice('banner');
+  await header.click({ button: 'right' });
+  const dialog = page.getByTestId('banner-dialog');
+  await expect(dialog).toBeVisible();
+  await dialog.getByTestId('banner-file').setInputFiles(file(`${vault}/_attachments/diagram.png`));
+  await expect(dialog.getByTestId('banner-preview').locator('img')).toBeVisible();
+  await dialog.getByRole('slider', { name: 'Zoom' }).fill('150');
+  await dialog.getByRole('button', { name: 'Save Banner' }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect.poll(async () => (await vaultJson()).banner?.file).toBe('banner.png');
+  expect((await vaultJson()).banner.zoom).toBe(1.5);
+  expect(await isFile(`${vault}/.vault/banner.png`)).toBe(true);
+  await expect(header.locator('.vx-vault-head__cover')).toHaveAttribute('data-banner', 'true');
+  await expect(header.locator('.vx-vault-head__cover img')).toBeVisible();
+  // Remove Banner: back to the cover.
+  await contextChoice('remove');
+  await header.click({ button: 'right' });
+  await expect.poll(async () => (await vaultJson()).banner).toBeUndefined();
+  await expect(header.locator('.vx-vault-head__cover')).not.toHaveAttribute('data-banner', 'true');
+});
