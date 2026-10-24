@@ -3,7 +3,7 @@
   "productName": "Ephemeris",
   "version": "1.0.0",
   "description": "A desktop note app for a library of Markdown notes.",
-  "author": "Gabriel",
+  "author": "Gativrek",
   "private": true,
   "type": "module",
   "license": "MIT",
