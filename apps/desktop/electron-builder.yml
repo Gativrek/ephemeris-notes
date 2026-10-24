@@ -29,6 +29,12 @@ nsis:
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: Ephemeris
+  # The look of the app's chooser (build/installer.nsh; art from scripts/build-installer-art.mjs).
+  installerSidebar: build/installerSidebar.bmp
+  uninstallerSidebar: build/installerSidebar.bmp
+  installerHeader: build/installerHeader.bmp
+  include: build/installer.nsh
+  uninstallDisplayName: Ephemeris
   # Uninstalling never touches the library: notes live in the folder the user chose.
   deleteAppDataOnUninstall: false
 portable:

@@ -14,7 +14,8 @@
     "typecheck": "tsc -p tsconfig.node.json && tsc -p tsconfig.preload.json && tsc -p tsconfig.web.json && tsc -p tsconfig.e2e.json",
     "test:e2e": "electron-vite build && playwright test",
     "dist": "electron-vite build && electron-builder --win --config electron-builder.yml",
-    "icons": "electron scripts/build-icons.mjs"
+    "icons": "electron scripts/build-icons.mjs",
+    "installer-art": "electron scripts/build-installer-art.mjs"
   },
   "devDependencies": {
     "@codemirror/autocomplete": "^6.20.4",
