@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { useApp } from '../store/app';
 import { BANNER_WINDOW, PlacedImage, useHeaderImage } from './VaultLook';
+import { stepVault, vaultNeighbours } from './vaultStep';
 import type { FileEntry, VaultInfo } from '@shared/bridge';
 import { Icon, type IconName } from '../components/Icon';
 import { useCatalog } from '../lib/catalog';
@@ -64,9 +65,25 @@ async function listRecursive(root: string, includeFolders: boolean, maxEntries =
   return listing;
 }
 
+function HeaderCover({ vault, className = '' }: { vault: VaultInfo; className?: string }) {
+  const image = useHeaderImage(vault);
+  return (
+    <span
+      className={`vx-vault-head__cover${image ? '' : ' vx-cover-contour'}${className}`}
+      data-banner={image?.banner ? 'true' : undefined}
+    >
+      {image && <PlacedImage url={image.url} focus={image.focus} zoom={image.zoom} win={BANNER_WINDOW} />}
+    </span>
+  );
+}
+
 function VaultHeader({ vault }: { vault: VaultInfo }) {
   const d = domainStrings[vault.domain];
-  const image = useHeaderImage(vault);
+  const vaults = useApp((st) => st.vaults);
+  const motion = useApp((st) => st.vaultMotion);
+  const near = useMemo(() => vaultNeighbours(vault), [vault, vaults]); // eslint-disable-line react-hooks/exhaustive-deps
+  // While leaving, the next Vault's banner slides in beside this one.
+  const incoming = motion?.phase === 'leave' ? vaults.find((v) => v.path === motion.to) : undefined;
   const onContext = async (e: MouseEvent) => {
     e.preventDefault();
     const choice = await unwrap(
@@ -90,12 +107,8 @@ function VaultHeader({ vault }: { vault: VaultInfo }) {
       data-testid="vault-header"
       onContextMenu={(e) => void onContext(e)}
     >
-      <span
-        className={`vx-vault-head__cover${image ? '' : ' vx-cover-contour'}`}
-        data-banner={image?.banner ? 'true' : undefined}
-      >
-        {image && <PlacedImage url={image.url} focus={image.focus} zoom={image.zoom} win={BANNER_WINDOW} />}
-      </span>
+      <HeaderCover vault={vault} />
+      {incoming && <HeaderCover vault={incoming} className=" vx-vault-head__cover--incoming" />}
       <span className="vx-vault-head__frost" />
       <span className="vx-vault-head__text">
         <span className="vx-vault-head__name vx-gold">{vault.name}</span>
@@ -104,6 +117,30 @@ function VaultHeader({ vault }: { vault: VaultInfo }) {
           {d.name} · {s.sidebar.notes(vault.noteCount)}
         </span>
       </span>
+      {near && (
+        <>
+          <button
+            type="button"
+            className="vx-vault-head__step vx-vault-head__step--prev"
+            aria-label={s.vaultStep.prev(near.prev.name)}
+            title={s.vaultStep.prev(near.prev.name)}
+            data-testid="vault-prev"
+            onClick={() => void stepVault(-1)}
+          >
+            <Icon name="chevron-left" />
+          </button>
+          <button
+            type="button"
+            className="vx-vault-head__step vx-vault-head__step--next"
+            aria-label={s.vaultStep.next(near.next.name)}
+            title={s.vaultStep.next(near.next.name)}
+            data-testid="vault-next"
+            onClick={() => void stepVault(1)}
+          >
+            <Icon name="chevron-right" />
+          </button>
+        </>
+      )}
     </header>
   );
 }

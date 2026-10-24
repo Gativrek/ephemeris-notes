@@ -315,6 +315,38 @@ body { margin: 0; font-family: var(--font-ui); color: var(--text); background: v
 .vx-vault-head__name { font: 400 24px/1.3 var(--font-display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .vx-vault-head__meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
 .vx-vault-head__meta .vx-diamond { background: var(--domain); }
+/* Previous and next Vault of the Domain (SPECS 9.4): round arrows over the banner's upper
+   corners, shown while the pointer is over the header or a key focuses them. */
+.vx-vault-head__step { appearance: none; margin: 0; padding: 0; position: absolute; top: 12px; z-index: 2; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-pill); border: 1px solid var(--line); background: color-mix(in srgb, var(--surface-side) 78%, transparent); color: var(--ink); cursor: pointer; opacity: 0; transition: opacity .15s ease, background .15s ease; }
+.vx-vault-head__step--prev { left: 8px; }
+.vx-vault-head__step--next { right: 8px; }
+.vx-vault-head__step .vx-icon { width: 16px; height: 16px; }
+.vx-vault-head:hover .vx-vault-head__step, .vx-vault-head:focus-within .vx-vault-head__step { opacity: 1; }
+.vx-vault-head__step:hover { background: var(--surface-side); }
+/* The step itself. Leaving: the banner turns like a carousel (the next one slides in beside
+   it), the name and files drift towards it and fade, the editor fades. Entering: the new
+   name and files arrive from the other side. 280 ms out, 240 ms in (vaultStep.ts). */
+.vx-vault-head__cover--incoming { z-index: 0; }
+.is-vault-leave--next .vx-vault-head__cover:not(.vx-vault-head__cover--incoming) { animation: vx-slide-to-left .28s ease-in-out forwards; }
+.is-vault-leave--next .vx-vault-head__cover--incoming { animation: vx-slide-from-right .28s ease-in-out both; }
+.is-vault-leave--prev .vx-vault-head__cover:not(.vx-vault-head__cover--incoming) { animation: vx-slide-to-right .28s ease-in-out forwards; }
+.is-vault-leave--prev .vx-vault-head__cover--incoming { animation: vx-slide-from-left .28s ease-in-out both; }
+.is-vault-leave--next .vx-vault-head__text, .is-vault-leave--next .vx-side__scroll { animation: vx-drift-to-left .18s ease-in forwards; }
+.is-vault-leave--prev .vx-vault-head__text, .is-vault-leave--prev .vx-side__scroll { animation: vx-drift-to-right .18s ease-in forwards; }
+.is-vault-leave .vx-main, .is-vault-leave .vx-outline-wrap { animation: vx-fade-out .18s ease-in forwards; }
+.is-vault-enter--next .vx-vault-head__text, .is-vault-enter--next .vx-side__scroll { animation: vx-drift-from-right .24s ease-out both; }
+.is-vault-enter--prev .vx-vault-head__text, .is-vault-enter--prev .vx-side__scroll { animation: vx-drift-from-left .24s ease-out both; }
+.is-vault-enter .vx-main, .is-vault-enter .vx-outline-wrap { animation: vx-fade-in .24s ease-out both; }
+@keyframes vx-slide-to-left { to { transform: translateX(-100%); } }
+@keyframes vx-slide-to-right { to { transform: translateX(100%); } }
+@keyframes vx-slide-from-right { from { transform: translateX(100%); } to { transform: none; } }
+@keyframes vx-slide-from-left { from { transform: translateX(-100%); } to { transform: none; } }
+@keyframes vx-drift-to-left { to { transform: translateX(-24px); opacity: 0; } }
+@keyframes vx-drift-to-right { to { transform: translateX(24px); opacity: 0; } }
+@keyframes vx-drift-from-right { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes vx-drift-from-left { from { transform: translateX(-24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes vx-fade-out { to { opacity: 0; } }
+@keyframes vx-fade-in { from { opacity: 0; } to { opacity: 1; } }
 .vx-side__label { display: flex; align-items: center; justify-content: space-between; height: 28px; }
 /* New Section: a small icon button at the end of the Sections label (M7 follow-up). */
 .vx-icon-btn--small { width: 24px; height: 24px; }

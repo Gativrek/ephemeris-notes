@@ -9,6 +9,12 @@ import { DOMAIN_ORDER } from '../strings/domains';
 
 export type Screen = 'chooser' | 'workspace';
 export type VaultDialogState = { mode: 'new'; domain: Domain } | { mode: 'edit'; path: string } | null;
+/** A step to the previous or next Vault in flight: the old Vault leaves, the new one enters. */
+export interface VaultMotion {
+  phase: 'leave' | 'enter';
+  dir: 1 | -1;
+  to: string;
+}
 
 interface AppState {
   library: LibraryInfo | null | undefined;
@@ -20,6 +26,7 @@ interface AppState {
   /** Selected card index per Domain; the New Vault card is index vaults.length. */
   selection: Record<Domain, number>;
   dialog: VaultDialogState;
+  vaultMotion: VaultMotion | null;
 
   setLibrary(library: LibraryInfo | null): Promise<void>;
   refreshVaults(): Promise<void>;
@@ -42,6 +49,7 @@ export const useApp = create<AppState>((set, get) => ({
   domain: 'academic',
   selection: { academic: 0, work: 0, personal: 0 },
   dialog: null,
+  vaultMotion: null,
 
   async setLibrary(library) {
     set({ library, vaults: [], openVault: null, screen: 'chooser', dialog: null });

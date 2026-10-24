@@ -30,6 +30,7 @@ import { Overlays } from '../../workspace/Overlays';
 import { Sidebar } from '../../workspace/Sidebar';
 import { InboxPanel } from '../../workspace/Inbox';
 import { useWorkspace } from '../../workspace/store';
+import { stepVault } from '../../workspace/vaultStep';
 
 const NO_BACKLINKS: Backlink[] = [];
 
@@ -75,6 +76,7 @@ function useNotice(): [string | null, (m: string) => void] {
 
 export function Workspace({ vaultPath }: { vaultPath: string }) {
   const vault = useApp((st) => st.vaults.find((v) => v.path === vaultPath)) as VaultInfo | undefined;
+  const motion = useApp((st) => st.vaultMotion);
   const sidebar = useWorkspace((st) => st.sidebar);
   const inbox = useWorkspace((st) => st.inbox);
   const outlineOpen = useWorkspace((st) => st.outline);
@@ -135,6 +137,8 @@ export function Workspace({ vaultPath }: { vaultPath: string }) {
       ['settings', c.settings, () => setSettingsAt({ section: 'general', page: null })],
       ['help', c.help, () => setSettingsAt({ section: 'help', page: null })],
       ['switch-vault', c.switchVault, () => useApp.getState().showChooser()],
+      ['prev-vault', c.prevVault, () => void stepVault(-1)],
+      ['next-vault', c.nextVault, () => void stepVault(1)],
       ['rebuild-index', c.rebuildIndex, () => void vx().index.rebuild()],
     ];
     const entries: CommandEntry[] = core.map(([id, title, run]) => ({
@@ -255,8 +259,12 @@ export function Workspace({ vaultPath }: { vaultPath: string }) {
   useEffect(() => () => void saveAll(), []);
 
   if (!vault) return null;
+  // Stepping between Vaults slides the sidebar and fades the rest (vaultStep.ts).
+  const motionClass = motion
+    ? ` is-vault-${motion.phase} is-vault-${motion.phase}--${motion.dir > 0 ? 'next' : 'prev'}`
+    : '';
   return (
-    <div className="vx-shell" data-testid="workspace">
+    <div className={`vx-shell${motionClass}`} data-testid="workspace">
       <TitleBar vault={vault} searchRef={searchRef} scope={scope} onScope={setScope} />
       <Rail
         onSearch={() => searchRef.current?.focus()}

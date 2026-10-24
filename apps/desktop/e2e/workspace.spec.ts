@@ -624,3 +624,44 @@ test('a long note never squeezes the Desk', async () => {
     await page.evaluate(() => window.innerHeight),
   );
 });
+
+test('arrows over the Vault banner step through the Domain, sliding, saving first', async () => {
+  const { page } = ctx;
+  const head = page.getByTestId('vault-header');
+  const next = page.getByTestId('vault-next');
+  await expect(head).toContainText('GNSS Constellation Study');
+  // Hidden until the pointer is over the banner.
+  await expect(next).toHaveCSS('opacity', '0');
+  await head.hover();
+  await expect(next).toHaveCSS('opacity', '1');
+  await expect(next).toHaveAttribute('title', 'Next Vault: Knowledge');
+  await expect(page.getByTestId('vault-prev')).toHaveAttribute('title', 'Previous Vault: Knowledge');
+
+  // An unsaved edit is saved before the step.
+  await openNote(page, 'Notes', 'Lecture 2');
+  await editor(page).click();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.type(' stepped away');
+  await head.hover();
+  await next.click();
+  // Leaving: the next banner slides in beside this one.
+  await expect(page.getByTestId('workspace')).toHaveClass(/is-vault-leave--next/);
+  await expect(head.locator('.vx-vault-head__cover--incoming')).toHaveCount(1);
+  // Wrapped round to the first Academic Vault, which enters and settles.
+  await expect(head).toContainText('Knowledge');
+  await expect(page.getByTestId('workspace')).not.toHaveClass(/is-vault-/);
+  expect(await readFile(file('Academic/GNSS Study/Notes/Lectures/Lecture 2.md'), 'utf8')).toContain(
+    'stepped away',
+  );
+
+  // The palette steps back; the chooser follows the open Vault.
+  await page.keyboard.press('ControlOrMeta+p');
+  await page.keyboard.type('previous vault in domain');
+  await page.keyboard.press('Enter');
+  await expect(head).toContainText('GNSS Constellation Study');
+  await expect(page.getByTestId('workspace')).not.toHaveClass(/is-vault-/);
+  await page.keyboard.press('ControlOrMeta+o');
+  await expect(page.locator('.vx-card-slot.is-selected .vx-card__name')).toHaveText(
+    'GNSS Constellation Study',
+  );
+});

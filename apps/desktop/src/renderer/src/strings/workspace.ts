@@ -211,6 +211,8 @@ export const workspaceStrings = {
       settings: 'Open Settings',
       help: 'Open Help',
       switchVault: 'Switch Vault',
+      prevVault: 'Previous Vault in Domain',
+      nextVault: 'Next Vault in Domain',
       rebuildIndex: 'Rebuild Index',
     },
     failed: (title: string, msg: string) => `${title} failed: ${msg}`,
@@ -250,6 +252,10 @@ export const workspaceStrings = {
       upload: 'Upload',
       help: 'Help',
     } as Record<string, string>,
+  },
+  vaultStep: {
+    prev: (name: string) => `Previous Vault: ${name}`,
+    next: (name: string) => `Next Vault: ${name}`,
   },
   banner: {
     title: 'Vault Banner',

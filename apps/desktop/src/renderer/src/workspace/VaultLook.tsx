@@ -81,7 +81,9 @@ export const BANNER_WINDOW = { width: 304, height: 112 };
 const ACCEPT = '.png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp';
 
 /** The image behind the Vault header: the banner, or the card cover as before. */
-export function useHeaderImage(vault: VaultInfo): {
+export const useHeaderImage = (vault: VaultInfo) => headerImage(vault);
+
+export function headerImage(vault: VaultInfo): {
   url: string;
   focus: { x: number; y: number };
   zoom: number;
