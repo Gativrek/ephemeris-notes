@@ -100,6 +100,8 @@ test('the outline lists backlinks from the index', async () => {
   await openVault(page, 0);
   await page.getByTestId('tree').getByRole('treeitem', { name: 'Kalman Filter' }).click();
   const outline = page.getByTestId('outline');
+  // Below 1440px wide (small CI screens) the outline starts collapsed (SPECS 9.1).
+  if (!(await outline.isVisible())) await page.keyboard.press('ControlOrMeta+Shift+O');
   await expect(outline.getByText('Linked from')).toBeVisible();
   for (const t of ['Intro', 'Navigation', 'RTK vs PPP', 'Old Obsidian note']) {
     await expect(outline.getByRole('link', { name: `← ${t}`, exact: true })).toBeVisible();

@@ -266,6 +266,7 @@ async function main(): Promise<void> {
 
   let flushed = false;
   app.on('before-quit', (event) => {
+    quitting = true;
     if (flushed) return;
     event.preventDefault();
     flushed = true;
@@ -275,8 +276,15 @@ async function main(): Promise<void> {
   });
 }
 
+/**
+ * A quit holds each window's close until its notes are saved, and Electron cancels a quit
+ * whose window close was held. On macOS the app outlives its windows, so a quit (Cmd+Q, or
+ * the test harness) would end with no windows and the app still running: finish it here.
+ */
+let quitting = false;
+
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
+  if (process.platform !== 'darwin' || quitting) app.quit();
 });
 
 void main();

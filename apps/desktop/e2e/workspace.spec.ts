@@ -266,10 +266,12 @@ test('the command palette runs core commands; Insert Link uses the shortest link
   expect(await readFile(file('Academic/GNSS Study/Notes/Lectures/Lecture 10.md'), 'utf8')).toContain(
     'see [[Kalman Filter]]',
   );
+  // The outline starts open or collapsed with the window's width (SPECS 9.1): it flips.
+  const outlineOpen = await page.locator('.vx-outline-wrap').count();
   await page.keyboard.press('ControlOrMeta+p');
   await page.keyboard.type('toggle outline');
   await page.keyboard.press('Enter');
-  await expect(page.locator('.vx-outline-wrap')).toHaveCount(0);
+  await expect(page.locator('.vx-outline-wrap')).toHaveCount(1 - outlineOpen);
 });
 
 test('Settings > Editor applies font size and spell check; Help lists the core pages', async () => {

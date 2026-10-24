@@ -12,6 +12,8 @@ jobs:
       matrix:
         os: [windows-latest, macos-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
+    # A hung app must not hold a runner for GitHub's default six hours.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -28,7 +30,8 @@ jobs:
       - run: pnpm test
       - name: E2E (Linux, virtual display)
         if: runner.os == 'Linux'
-        run: xvfb-run --auto-servernum pnpm test:e2e
+        # xvfb's default screen is 640 × 480; give the app a desktop-sized one.
+        run: xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" pnpm test:e2e
       - name: E2E
         if: runner.os != 'Linux'
         run: pnpm test:e2e
