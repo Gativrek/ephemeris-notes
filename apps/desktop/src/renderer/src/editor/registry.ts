@@ -8,6 +8,8 @@ import type { BlockRenderer } from '@ephemeris-notes/plugin-api';
 export interface RegisteredRenderer {
   /** The plugin id (shown in error states). */
   owner: string;
+  /** The plugin's display name (fence completion detail). */
+  ownerName?: string;
   renderer: BlockRenderer;
 }
 
@@ -32,6 +34,11 @@ class BlockRegistry {
 
   get(language: string): RegisteredRenderer | undefined {
     return this.renderers.get(language.toLowerCase());
+  }
+
+  /** Every registered language with its renderer, sorted by language. */
+  entries(): Array<[string, RegisteredRenderer]> {
+    return [...this.renderers].sort(([a], [b]) => a.localeCompare(b));
   }
 
   get changeVersion(): number {

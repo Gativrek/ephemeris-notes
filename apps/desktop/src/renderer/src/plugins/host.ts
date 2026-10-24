@@ -165,7 +165,7 @@ async function makeContext(manifest: PluginManifest, disposables: Disposable[]):
     apiVersion: API_VERSION,
     blocks: {
       register(language, renderer) {
-        const off = blockRegistry.register(language, { owner: id, renderer });
+        const off = blockRegistry.register(language, { owner: id, ownerName: manifest.name, renderer });
         return track(off);
       },
     },

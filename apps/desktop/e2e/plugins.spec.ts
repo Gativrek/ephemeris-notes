@@ -217,6 +217,37 @@ test('blocks: a first drag from an unfocused editor selects inside the block', a
   expect(await page.evaluate(() => document.getSelection()?.toString())).toBe('cba');
 });
 
+test('blocks: typing a fence suggests block languages and writes the whole block', async () => {
+  const { page } = ctx;
+  await installAndEnable(page);
+  await page.keyboard.press('Escape');
+  await openPluginNote(page);
+  await page.locator('.vx-editor .cm-line', { hasText: 'End of note.' }).click();
+  await page.keyboard.press('End');
+
+  // A bare fence suggests nothing, so Enter still makes a new line.
+  await page.keyboard.type('\n```');
+  await page.waitForTimeout(300);
+  await expect(page.locator('.cm-tooltip-autocomplete')).toHaveCount(0);
+
+  await page.keyboard.type('sample-r');
+  const popup = page.locator('.cm-tooltip-autocomplete');
+  await expect(popup.locator('li[aria-selected="true"]')).toContainText('sample-reverse');
+  await expect(popup.locator('li[aria-selected="true"]')).toContainText('Sample Plugin');
+  // CodeMirror ignores Enter for 75 ms after the list changes (interactionDelay).
+  await page.waitForTimeout(150);
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('typed');
+  await expect(page.getByTestId('save-state')).toHaveText('Saved', { timeout: 5000 });
+  await expect
+    .poll(async () => readFile(file('Academic/GNSS Study/Notes/Plugin Test.md'), 'utf8'))
+    .toMatch(/\n```sample-reverse\ntyped\n```$/);
+
+  // Leaving the block renders it.
+  await page.locator('.vx-editor .cm-line', { hasText: 'Plugin test' }).click();
+  await expect(page.locator('.sample-plugin-output', { hasText: 'depyt' })).toHaveCount(1);
+});
+
 test('commands and overlays: palette, overlay title and dirty state, notify, a failing command', async () => {
   const { page } = ctx;
   await installAndEnable(page);

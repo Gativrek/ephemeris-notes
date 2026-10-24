@@ -36,6 +36,8 @@ Fence code with three backticks and a language name:
 print("hello")
 ```
 
+Type three backticks and the first letters of a language to get suggestions: plugin blocks first, then code languages. Pick one and the whole block is written, closing fence included, with the cursor inside. `Ctrl+Space` right after the backticks lists them all.
+
 A fence whose language belongs to a plugin renders as that plugin's block. Double-click a plugin block to edit its source.
 
 Add `title="…"` after the language to name a block. The outline shows the title instead of the language, and plugins show it as a caption:

@@ -10,6 +10,7 @@ import { analyzeNote, splitTarget } from '@ephemeris-notes/markdown';
 import { editorContext, revealSource, type EditorContext, type OpenLinkRequest } from './context';
 import { activeLines } from './livePreview';
 import { equationCompletions } from './equations';
+import { fenceCompletions } from './fences';
 
 function requestFrom(el: HTMLElement, ctx: EditorContext, newItem: boolean): OpenLinkRequest | null {
   const target = el.dataset.target;
@@ -196,7 +197,7 @@ async function wikiCompletions(cx: CompletionContext): Promise<CompletionResult 
 }
 
 export const vaultAutocomplete = autocompletion({
-  override: [wikiCompletions, equationCompletions],
+  override: [wikiCompletions, equationCompletions, fenceCompletions],
   icons: false,
   activateOnTyping: true,
   maxRenderedOptions: 60,
