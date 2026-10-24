@@ -4,7 +4,7 @@ A desktop note app for a library of plain Markdown notes: LaTeX math, wikilinks 
 
 Notes stay plain Markdown files in a folder you choose. The same folder opens in Obsidian at any time with nothing lost.
 
-**Status:** in development (0.1.0). Windows builds are tested; macOS and Linux run in CI.
+**Status:** 1.0. The Windows installer is on the [Releases](https://github.com/Gativrek/ephemeris-notes/releases) page; the tests run on Windows, macOS and Linux.
 
 ## Features
 
@@ -62,7 +62,7 @@ pnpm tokens       # regenerate CSS variables from design/tokens.json
 
 After renaming or moving the repository folder, run `pnpm install` once: on Windows pnpm links `node_modules` with absolute paths, and the install re-links them (no download). `pnpm --filter @ephemeris-notes/desktop icons` re-renders the app icon from `design/assets/Logos`.
 
-**Windows app:** `pnpm dist` builds `apps/desktop/release/Ephemeris-Setup-0.1.0.exe` (a per-user installer: no administrator prompt, install folder of your choice, Start menu and desktop shortcuts) and `Ephemeris-0.1.0-portable.exe` (runs without installing). They are not code-signed, so Windows SmartScreen asks once (More info, then Run anyway). `VX_PACKAGED=1 pnpm test:e2e` smoke-tests the packaged app.
+**Windows app:** `pnpm dist` builds `apps/desktop/release/Ephemeris-Setup-<version>.exe` (a per-user installer: no administrator prompt, install folder of your choice, Start menu and desktop shortcuts) and `Ephemeris-<version>-portable.exe` (runs without installing). They are not code-signed, so Windows SmartScreen asks once (More info, then Run anyway). `VX_PACKAGED=1 pnpm test:e2e` smoke-tests the packaged app.
 
 **Performance:** an opt-in test measures the app on a generated 5,000-note library. Set `VX_PERF=1` and run `pnpm test:e2e`; it takes a few minutes and writes `apps/desktop/test-results/perf.json`.
 
