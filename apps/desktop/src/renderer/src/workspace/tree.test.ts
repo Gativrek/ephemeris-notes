@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { FileEntry, VaultInfo } from '@shared/bridge';
-import { buildOutline } from './outlineModel';
+import { blockLabel, buildOutline } from './outlineModel';
 import {
   buildSections,
   buildTree,
@@ -191,5 +191,32 @@ describe('buildOutline', () => {
     ]);
     expect(m.headings[0]!.items[0]).toMatchObject({ kind: 'link', target: 'A', resolved: 'A.md' });
     expect(m.headings[2]!.items[0]).toMatchObject({ resolved: null });
+  });
+
+  it('labels code and plugin blocks by their title argument, else their language', () => {
+    const text = [
+      '# Combos',
+      '```combo title="Corner carry"',
+      'x',
+      '```',
+      '```combo numpad title=Midscreen',
+      'x',
+      '```',
+      '```combo title="  "',
+      'x',
+      '```',
+      '```python',
+      'x',
+      '```',
+      '',
+    ].join('\n');
+    const m = buildOutline(text, 'n.md', () => null, [], { isCodeLanguage: (l) => l === 'python' });
+    const items = m.headings[0]!.items;
+    expect(items.map((i) => [i.kind, 'lang' in i ? blockLabel(i) : null])).toEqual([
+      ['block', 'Corner carry'],
+      ['block', 'Midscreen'],
+      ['block', 'combo'],
+      ['code', 'python'],
+    ]);
   });
 });

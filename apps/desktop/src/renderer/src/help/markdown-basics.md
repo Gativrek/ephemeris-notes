@@ -38,6 +38,14 @@ print("hello")
 
 A fence whose language belongs to a plugin renders as that plugin's block. Double-click a plugin block to edit its source.
 
+Add `title="…"` after the language to name a block. The outline shows the title instead of the language, and plugins show it as a caption:
+
+````
+```python title="Greeting"
+print("hello")
+```
+````
+
 ## Properties
 
 YAML between `---` lines at the very top of a note holds its properties (tags, aliases, dates). It renders as a property list.

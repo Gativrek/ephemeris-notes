@@ -9,7 +9,7 @@ import { workspaceStrings as s } from '../strings/workspace';
 import { openPath } from './actions';
 import { useEditorStats } from './Chrome';
 import { editorStats } from './EditorPane';
-import type { OutlineItem, OutlineModel } from './outlineModel';
+import { blockLabel, type OutlineItem, type OutlineModel } from './outlineModel';
 import { useWorkspace } from './store';
 
 export function scrollToLine(line: number): void {
@@ -55,7 +55,7 @@ export function itemLabel(it: OutlineItem): string {
   if (it.kind === 'plugin') return it.label;
   if (it.kind === 'link' || it.kind === 'embed') return it.target;
   if (it.kind === 'equation') return s.outline.equation(it.number, it.label ?? null);
-  return it.lang || 'code';
+  return blockLabel(it);
 }
 
 export function itemGlyph(it: OutlineItem): string {

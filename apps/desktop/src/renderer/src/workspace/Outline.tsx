@@ -4,7 +4,13 @@
  * come from the index (M3).
  */
 import { useEffect, useMemo, useState } from 'react';
-import { addContributions, buildOutline, type OutlineItem, type OutlineModel } from './outlineModel';
+import {
+  addContributions,
+  blockLabel,
+  buildOutline,
+  type OutlineItem,
+  type OutlineModel,
+} from './outlineModel';
 import { domainOf } from '@ephemeris-notes/markdown';
 import type { Domain } from '@ephemeris-notes/plugin-api';
 import { usePlugins } from '../plugins/store';
@@ -230,7 +236,7 @@ function AnnotatedOutline({ model, currentLine }: { model: OutlineModel; current
                       <span>
                         {it.kind === 'equation'
                           ? s.outline.equation(it.number, it.label ?? null)
-                          : it.lang || 'code'}
+                          : blockLabel(it)}
                       </span>
                     </a>
                   );

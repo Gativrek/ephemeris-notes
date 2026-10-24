@@ -7,8 +7,9 @@ import { analyzeNote } from '@ephemeris-notes/markdown';
 export type OutlineItem =
   | { kind: 'link'; target: string; resolved: string | null; line: number }
   | { kind: 'equation'; number: string | null; label?: string; line: number }
-  | { kind: 'code'; lang: string; line: number }
-  | { kind: 'block'; lang: string; line: number }
+  /** `title` is the block's `title="…"` info-string argument (SPECS 9.6, 12.5). */
+  | { kind: 'code'; lang: string; title?: string; line: number }
+  | { kind: 'block'; lang: string; title?: string; line: number }
   | { kind: 'embed'; target: string; line: number }
   /** A plugin's entry (SPECS 12.11.3). */
   | { kind: 'plugin'; plugin: string; label: string; glyph?: string; line: number; onClick?: () => void };
@@ -51,8 +52,16 @@ export function buildOutline(
       line: e.line,
       pos: e.from,
     });
-  for (const b of s.blocks)
-    items.push({ kind: isCode(b.lang) ? 'code' : 'block', lang: b.lang, line: b.lineStart, pos: b.from });
+  for (const b of s.blocks) {
+    const title = b.info.args.named.title?.trim();
+    items.push({
+      kind: isCode(b.lang) ? 'code' : 'block',
+      lang: b.lang,
+      ...(title ? { title } : {}),
+      line: b.lineStart,
+      pos: b.from,
+    });
+  }
   items.sort((a, b) => a.pos - b.pos);
 
   const headings: OutlineModel['headings'] = [];
@@ -71,6 +80,11 @@ export function buildOutline(
   });
   const lines = text.length ? text.split('\n').length : 1;
   return { headings, backlinks, lines, properties: s.frontmatter?.data ?? null };
+}
+
+/** A code or plugin block's label: its title, else its language. */
+export function blockLabel(it: { lang: string; title?: string }): string {
+  return it.title ?? (it.lang || 'code');
 }
 
 /** Places plugin entries under the heading that contains each one's line. */
