@@ -77,6 +77,34 @@ describe('buildSections', () => {
     // A chosen icon wins; an unknown name falls back to the automatic one.
     expect(sectionIcon('Whatever', 'section', 'gyro')).toBe('gyro');
     expect(sectionIcon('Papers', 'section', 'not-an-icon')).toBe('papers');
+    // An icon the picker no longer offers stays on a section that wears it.
+    expect(sectionIcon('Whatever', 'section', 'upload')).toBe('upload');
+  });
+
+  it('knows everyday section names, not only one field', () => {
+    const cases: Array<[string, string]> = [
+      ['Recipes', 'cooking'],
+      ['Travel Plans', 'travel'],
+      ['Workouts', 'health'],
+      ['Budget 2026', 'money'],
+      ['Book Notes', 'reading'],
+      ['Journal', 'pencil'],
+      ['Side Projects Code', 'code'],
+      ['Biology', 'science'],
+      ['Calculus', 'math'],
+      ['Song Ideas', 'idea'],
+      ['Guitar', 'music'],
+      ['Art History', 'art'],
+      ['Photography', 'photo'],
+      ['Games', 'games'],
+      ['Family', 'people'],
+      ['Garden', 'nature'],
+      ['Kalman Filtering', 'estimation'],
+      // Whole words only: "Smart Home" is not art, "Start Here" not a game.
+      ['Smart Home', 'folder'],
+      ['Start Here', 'folder'],
+    ];
+    for (const [name, icon] of cases) expect([name, sectionIcon(name, 'section')]).toEqual([name, icon]);
   });
 });
 

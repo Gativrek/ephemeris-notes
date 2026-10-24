@@ -65,42 +65,79 @@ export function visibleTiles(sections: Section[], expanded: boolean): { tiles: S
   return { tiles: sections.slice(0, MAX_TILES - 1), more: true };
 }
 
-/** Keyword defaults for section icons (Icon README); anything else gets the folder. */
-/** Icons a section can wear (Settings: right-click a tile, Change Icon…). All are design-system glyphs. */
+/** Icons a section can wear (right-click a tile, Change Icon…), topics first. All are design-system glyphs. */
 export const SECTION_ICONS = [
   'folder',
   'note',
   'papers',
   'reading',
+  'pencil',
+  'idea',
+  'science',
+  'math',
+  'data',
+  'code',
+  'graph',
+  'travel',
+  'health',
+  'cooking',
+  'music',
+  'art',
+  'photo',
+  'games',
+  'money',
+  'people',
+  'nature',
   'orbit',
   'estimation',
   'gyro',
-  'graph',
-  'calendar',
   'academic',
   'work',
   'personal',
+  'calendar',
   'inbox',
   'pin',
-  'search',
-  'settings',
-  'pencil',
-  'copy',
-  'upload',
-  'help',
 ] as const;
 
+/** Interface glyphs the picker once offered: a section that wears one keeps it. */
+const RETIRED_SECTION_ICONS = ['search', 'settings', 'copy', 'upload', 'help'];
+
+/** Keyword defaults by section name (Icon README), checked in order; anything else gets the folder. */
+const AUTO_ICONS: Array<[RegExp, string]> = [
+  [/paper|pdf|reading|literature/, 'papers'],
+  [/\bbook/, 'reading'],
+  [/journal|diary|writing|essay|poem/, 'pencil'],
+  [/\bidea|brainstorm/, 'idea'],
+  [/scien|\blab\b|experiment|chemi|biolog|physic/, 'science'],
+  [/\bmath|calculus|algebra|geometr/, 'math'],
+  [/\bdata\b|dataset|analytic|metric/, 'data'],
+  [/\bcode|program|software|develop|\bdev\b/, 'code'],
+  [/travel|\btrip|vacation|holiday/, 'travel'],
+  [/health|fitness|workout|exercise|medic/, 'health'],
+  [/recipe|cook|\bfood|meal|kitchen|baking/, 'cooking'],
+  [/music|\bsong|guitar|piano/, 'music'],
+  [/\barts?\b|design|drawing|sketch|paint/, 'art'],
+  [/photo|camera/, 'photo'],
+  [/\bgam(e|ing)/, 'games'],
+  [/financ|money|budget|invest/, 'money'],
+  [/people|contact|meeting|family|friend/, 'people'],
+  [/garden|plant|nature|hiking/, 'nature'],
+  [/gnss|gps|orbit|satellite/, 'orbit'],
+  [/estimat|kalman|filter|statistic|probab/, 'estimation'],
+  [/inertial|imu|gyro/, 'gyro'],
+  [/inbox/, 'inbox'],
+];
+
 export function sectionIcon(name: string, kind: SectionKind, chosen?: string): string {
-  if (chosen && (SECTION_ICONS as readonly string[]).includes(chosen)) return chosen;
+  if (
+    chosen &&
+    ((SECTION_ICONS as readonly string[]).includes(chosen) || RETIRED_SECTION_ICONS.includes(chosen))
+  )
+    return chosen;
   if (kind === 'daily') return 'calendar';
   if (kind === 'unfiled') return 'note';
   const n = name.toLowerCase();
-  if (/paper|pdf|reading|literature/.test(n)) return 'papers';
-  if (/gnss|gps|orbit|satellite/.test(n)) return 'orbit';
-  if (/estimat|kalman|filter|statistic|probab/.test(n)) return 'estimation';
-  if (/inertial|imu|gyro/.test(n)) return 'gyro';
-  if (/inbox/.test(n)) return 'inbox';
-  return 'folder';
+  return AUTO_ICONS.find(([re]) => re.test(n))?.[1] ?? 'folder';
 }
 
 export type RowKind = 'folder' | 'note' | 'pdf' | 'daily' | 'attachment';

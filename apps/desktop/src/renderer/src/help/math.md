@@ -8,7 +8,7 @@ Math is typeset with KaTeX.
 - `$$ … $$` on its own lines is a display equation.
 
 $$
-\hat{x}_{k|k} = \hat{x}_{k|k-1} + K_k \left( z_k - H \hat{x}_{k|k-1} \right)
+P(A \mid B) = \frac{P(B \mid A)\, P(A)}{P(B)}
 $$
 
 An opening `$` must not be followed by a space, and a closing `$` must not follow a space or come before a digit, so prices like $5 and $10 stay text. Write `\$` for a literal dollar sign.

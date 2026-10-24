@@ -23,10 +23,10 @@ Start a line with one to six `#` and a space. Headings build the outline panel (
 
 Three dashes on their own line draw a rule. Tables use pipes:
 
-| Signal | Unit |
+| Ingredient | Amount |
 |---|---|
-| Pseudorange | m |
-| Doppler | Hz |
+| Flour | 500 g |
+| Water | 350 ml |
 
 ## Code
 
