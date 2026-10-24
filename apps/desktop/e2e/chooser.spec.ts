@@ -151,20 +151,92 @@ test('Enter opens the workspace; Ctrl+O returns to the chooser; Escape goes back
   await expect(page.getByTestId('workspace')).toBeVisible();
 });
 
-test('pages past five Vaults with arrow keys and page dots', async () => {
+test('the card strip scrolls past five Vaults: keys, drag and wheel; a drag opens nothing', async () => {
   const { page } = ctx;
   await page.evaluate(async () => {
     const vx = (window as unknown as { vx: { vaults: { create(i: unknown): Promise<unknown> } } }).vx;
-    for (const name of ['Alpha', 'Beta', 'Gamma', 'Delta'])
+    for (const name of ['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon'])
       await vx.vaults.create({ name, domain: 'academic' });
   });
-  await expect(header()).toHaveText('Academic·6Vaults');
-  await expect(page.getByTestId('vault-card')).toHaveCount(5);
-  await expect(page.getByRole('button', { name: /^Page \d of 2$/ })).toHaveCount(2);
-  for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowRight');
-  await expect(page.getByRole('button', { name: 'Page 2 of 2' })).toHaveAttribute('aria-current', 'true');
-  await expect(page.getByTestId('vault-card')).toHaveCount(1);
+  await expect(header()).toHaveText('Academic·7Vaults');
+  // Every card is on the strip; it overflows, so the indicator shows.
+  await expect(page.getByTestId('vault-card')).toHaveCount(7);
   await expect(page.getByTestId('new-vault-card')).toHaveCount(1);
-  await page.getByRole('button', { name: 'Previous page' }).click();
-  await expect(page.getByTestId('vault-card')).toHaveCount(5);
+  await expect(page.getByTestId('strip-indicator')).toBeVisible();
+  const strip = page.getByTestId('card-strip');
+  const scroll = () => strip.evaluate((el) => el.scrollLeft);
+  expect(await scroll()).toBe(0);
+
+  // The keyboard keeps the selection in view.
+  for (let i = 0; i < 7; i++) await page.keyboard.press('ArrowRight');
+  await expect.poll(scroll).toBeGreaterThan(0);
+  const box = await strip.boundingBox();
+  await expect
+    .poll(async () => {
+      const last = await page.getByTestId('new-vault-card').boundingBox();
+      return last!.x + last!.width <= box!.x + box!.width + 1;
+    })
+    .toBe(true);
+  for (let i = 0; i < 7; i++) await page.keyboard.press('ArrowLeft');
+  await expect.poll(scroll).toBe(0);
+
+  // Drag to scroll: the strip moves and settles on a card; nothing opens.
+  const y = box!.y + box!.height / 2;
+  await page.mouse.move(box!.x + box!.width - 200, y);
+  await page.mouse.down();
+  for (let x = box!.width - 200; x > 300; x -= 60) await page.mouse.move(box!.x + x, y);
+  await page.mouse.up();
+  await expect.poll(scroll).toBeGreaterThan(200);
+  await page.waitForTimeout(600);
+  expect((await scroll()) % 344).toBeLessThan(2);
+  await expect(page.getByTestId('chooser')).toBeVisible();
+
+  // The wheel scrolls it back.
+  await page.mouse.move(box!.x + box!.width / 2, y);
+  for (let i = 0; i < 8; i++) await page.mouse.wheel(0, -300);
+  await expect.poll(scroll).toBe(0);
+});
+
+test('Arrange (R): arrow keys move a Vault, Enter saves the order to vault.json, Esc cancels', async () => {
+  const { page } = ctx;
+  const names = () => page.getByTestId('vault-card').locator('.vx-card__name').allInnerTexts();
+  await expect.poll(names).toEqual(['Knowledge', 'GNSS Constellation Study']);
+
+  // Esc cancels.
+  await page.keyboard.press('r');
+  await expect(header()).toContainText('Arranging');
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('Escape');
+  await expect(header()).toHaveText('Academic·2Vaults');
+  await expect.poll(names).toEqual(['Knowledge', 'GNSS Constellation Study']);
+
+  // Enter keeps the new order, shown at once and written to each vault.json.
+  await page.keyboard.press('r');
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('Enter');
+  await expect(header()).toHaveText('Academic·2Vaults');
+  await expect.poll(names).toEqual(['GNSS Constellation Study', 'Knowledge']);
+  await expect.poll(async () => (await json('Academic/Knowledge/.vault/vault.json')).order).toBe(2);
+  expect((await json('Academic/GNSS Study/.vault/vault.json')).order).toBe(1);
+  // The moved Vault stays selected.
+  await expect(page.locator('.vx-card-slot.is-selected .vx-card__name')).toHaveText('Knowledge');
+});
+
+test('Arrange: drag a card to a new place with the mouse', async () => {
+  const { page } = ctx;
+  const names = () => page.getByTestId('vault-card').locator('.vx-card__name').allInnerTexts();
+  await page.keyboard.press('R');
+  const cards = page.getByTestId('vault-card');
+  const a = (await cards.nth(0).boundingBox())!;
+  const b = (await cards.nth(1).boundingBox())!;
+  await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
+  await page.mouse.down();
+  for (let i = 1; i <= 10; i++)
+    await page.mouse.move(a.x + a.width / 2 + ((b.x - a.x) * i) / 10, a.y + a.height / 2);
+  await page.mouse.up();
+  await page.getByRole('button', { name: 'Done' }).click();
+  await expect.poll(names).toEqual(['GNSS Constellation Study', 'Knowledge']);
+  await expect.poll(async () => (await json('Academic/Knowledge/.vault/vault.json')).order).toBe(2);
+  // Not arranging any more: a click selects and opens as before.
+  await expect(header()).toHaveText('Academic·2Vaults');
 });

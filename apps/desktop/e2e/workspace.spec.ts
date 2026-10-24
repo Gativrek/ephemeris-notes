@@ -573,3 +573,38 @@ test('Move to…, section icons and the Vault banner', async () => {
   await expect.poll(async () => (await vaultJson()).banner).toBeUndefined();
   await expect(header.locator('.vx-vault-head__cover')).not.toHaveAttribute('data-banner', 'true');
 });
+
+test('a full Desk scrolls sideways without a scrollbar squeezing its cards', async () => {
+  const { page } = ctx;
+  await tile(page, 'Encoding').click();
+  for (const name of ['BOM', 'CRLF', 'Empty', 'LF', 'Mixed EOL', 'No trailing newline', 'Odd whitespace'])
+    await page.getByTestId('tree').getByRole('treeitem', { name, exact: true }).click();
+  await expect(page.getByTestId('desk-card')).toHaveCount(7);
+  const desk = page.getByTestId('desk');
+  await expect(desk).toHaveClass(/is-overflowing/);
+  // No scrollbar: the inner height is the whole Desk less its 1px border.
+  const gap = await desk.evaluate((el) => (el as HTMLElement).offsetHeight - el.clientHeight);
+  expect(gap).toBeLessThanOrEqual(1);
+  // Every card keeps its full height inside the Desk.
+  const box = (await desk.boundingBox())!;
+  for (const c of await page.getByTestId('desk-card').all()) {
+    const b = (await c.boundingBox())!;
+    expect(b.height).toBe(48);
+    expect(b.y + b.height).toBeLessThanOrEqual(box.y + box.height);
+  }
+  // The newest (active) card was scrolled into view.
+  const scroll = () => desk.evaluate((el) => el.scrollLeft);
+  await expect.poll(scroll).toBeGreaterThan(0);
+  // The wheel scrolls it back; a drag scrolls it and activates nothing.
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  for (let i = 0; i < 10; i++) await page.mouse.wheel(0, -300);
+  await expect.poll(scroll).toBe(0);
+  const active = await page.locator('.vx-desk-card[aria-selected="true"]').getAttribute('data-path');
+  const y = box.y + box.height / 2;
+  await page.mouse.move(box.x + 400, y);
+  await page.mouse.down();
+  for (let x = 400; x > 100; x -= 50) await page.mouse.move(box.x + x, y);
+  await page.mouse.up();
+  await expect.poll(scroll).toBeGreaterThan(100);
+  await expect(page.locator('.vx-desk-card[aria-selected="true"]')).toHaveAttribute('data-path', active!);
+});

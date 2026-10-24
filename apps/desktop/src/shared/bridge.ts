@@ -160,6 +160,8 @@ export interface VxBridge {
     makeVault(path: string): Promise<Result<VaultInfo>>;
     /** The Vault header image: new bytes, a new focus or zoom, or null to remove it. */
     setBanner(path: string, banner: CoverInput | null): Promise<Result<VaultInfo>>;
+    /** The chooser order of a Domain's Vaults (SPECS 4.3 `order`): every Vault of the Domain, in order. */
+    reorder(domain: Domain, paths: string[]): Promise<Result<VaultInfo[]>>;
     /** Replaces the section icon map (section folder name to icon name). */
     setSectionIcons(path: string, icons: Record<string, string>): Promise<Result<VaultInfo>>;
     onChanged(cb: () => void): Unsubscribe;
@@ -424,6 +426,7 @@ export const BRIDGE_METHODS = {
     'makeVault',
     'setBanner',
     'setSectionIcons',
+    'reorder',
   ],
   ui: ['get', 'set'],
   fs: ['read', 'readBinary', 'write', 'create', 'rename', 'trash', 'mkdir', 'list', 'stat'],

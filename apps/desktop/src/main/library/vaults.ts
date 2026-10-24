@@ -372,6 +372,29 @@ export class VaultStore {
     });
   }
 
+  /**
+   * Sets `order` 1, 2, 3… in the given sequence (SPECS 4.3). `paths` must be exactly the
+   * Domain's Vaults; only vault.json files whose order changes are written.
+   */
+  async reorder(domain: Domain, paths: string[]): Promise<VaultInfo[]> {
+    const current = (await this.list()).filter((v) => v.domain === domain && !v.broken);
+    const known = new Set(current.map((v) => v.path));
+    if (
+      paths.length !== known.size ||
+      new Set(paths).size !== paths.length ||
+      paths.some((p) => !known.has(p))
+    )
+      fail('INVALID_ARGUMENT', 'The order must list every Vault of the Domain once.');
+    for (let i = 0; i < paths.length; i++) {
+      const v = current.find((x) => x.path === paths[i])!;
+      if (v.order === i + 1) continue;
+      await this.editRaw(v.path, async (next) => {
+        next.order = i + 1;
+      });
+    }
+    return this.list();
+  }
+
   /** Section icons by section folder name (SPECS 4.4). */
   setSectionIcons(rel: string, icons: Record<string, string>): Promise<VaultInfo> {
     return this.editRaw(rel, async (next) => {

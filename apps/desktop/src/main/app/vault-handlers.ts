@@ -85,6 +85,16 @@ export function registerVaultHandlers(deps: {
     if (input === undefined) fail('INVALID_ARGUMENT', 'banner must be an image or null.');
     return changed(await store().setBanner(vaultPath(p), input));
   });
+  handle('vaults', 'reorder', async (_e, d, paths) => {
+    const domain = oneOf<Domain>(d, 'domain', DOMAINS);
+    if (!Array.isArray(paths) || paths.length > 1000) fail('INVALID_ARGUMENT', 'paths must be a list.');
+    return changed(
+      await store().reorder(
+        domain,
+        paths.map((p, i) => str(p, `paths[${i}]`, 1024)),
+      ),
+    );
+  });
   handle('vaults', 'setSectionIcons', async (_e, p, icons) => {
     const o = obj(icons, 'icons');
     const entries = Object.entries(o);

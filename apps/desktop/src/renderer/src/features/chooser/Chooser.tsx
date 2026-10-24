@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
 import type { Domain, VaultInfo } from '@shared/bridge';
 import appIcon from '@design/assets/Logos/ephemeris-icon.svg';
 import { Icon } from '../../components/Icon';
@@ -11,10 +19,14 @@ import { unwrap, vx } from '../../lib/vx';
 import { useApp, vaultsIn } from '../../store/app';
 import { chooserStrings as s } from '../../strings/chooser';
 import { DOMAIN_ORDER, domainStrings } from '../../strings/domains';
+import { useCardStrip } from './strip';
 import { NewVaultCard, VaultCard, type CardModel } from './VaultCard';
 
-export const PER_PAGE = 5;
-/** Natural size of the framed panel at 1920 × 1080 (cards, header, pager). */
+/** Cards in view at 1920 × 1080; more scroll (SPECS 7). */
+export const VISIBLE_CARDS = 5;
+/** One card plus the gap after it: the strip scrolls and snaps in these steps. */
+const STRIDE = 300 + 44;
+/** Natural size of the framed panel at 1920 × 1080 (cards, header, scroll indicator). */
 const PANEL = { width: 5 * 300 + 4 * 44 + 2 * 44, height: 92 + 8 + 570 + 24 + 72 + 40 };
 const BAND_HEIGHT = 54;
 
@@ -66,14 +78,60 @@ export function Chooser() {
       controls,
     );
   }, []);
-  const itemCount = inDomain.length + 1;
-  const pages = Math.max(1, Math.ceil(itemCount / PER_PAGE));
-  const page = Math.floor(selected / PER_PAGE);
-  const onPage = Array.from(
-    { length: Math.min(PER_PAGE, itemCount - page * PER_PAGE) },
-    (_, i) => page * PER_PAGE + i,
-  );
   const d = domainStrings[domain];
+
+  // ---- Arrange (R): cards move, the order is saved to vault.json (SPECS 4.3 order) ----
+  // While arranging, cards stay in their DOM order (`base`) and slide to their place in
+  // `order` with a transform, so moves animate; the dragged card follows the pointer.
+  const [arrange, setArrange] = useState<{
+    base: string[];
+    order: string[];
+    drag: { path: string; offset: number } | null;
+  } | null>(null);
+  const arrangeRef = useRef(arrange);
+  arrangeRef.current = arrange;
+  const finishArrange = useCallback(
+    (keep: boolean) => {
+      const a = arrangeRef.current;
+      if (!a) return;
+      setArrange(null);
+      if (!keep || a.order.every((p, i) => p === a.base[i])) {
+        if (!keep) app().select(a.base.indexOf(a.order[app().selection[app().domain]] ?? ''));
+        return;
+      }
+      // Shown at once; written to each Vault's vault.json behind it.
+      const rank = new Map(a.order.map((p, i) => [p, i + 1]));
+      useApp.setState((st) => ({
+        vaults: [...st.vaults]
+          .map((v) => (rank.has(v.path) ? { ...v, order: rank.get(v.path)! } : v))
+          .sort(
+            (x, y) => x.order - y.order || x.name.localeCompare(y.name, undefined, { sensitivity: 'base' }),
+          ),
+      }));
+      void unwrap(vx().vaults.reorder(app().domain, a.order)).catch(() => undefined);
+    },
+    [app],
+  );
+  const startArrange = useCallback(() => {
+    const paths = vaultsIn(app().vaults, app().domain).map((v) => v.path);
+    if (paths.length < 2) return;
+    setArrange({ base: paths, order: paths, drag: null });
+  }, [app]);
+  /** Moves the Vault at visual position `from` to `to`. */
+  const moveCard = useCallback((from: number, to: number) => {
+    setArrange((a) => {
+      if (!a || to < 0 || to >= a.order.length || from === to) return a;
+      const order = [...a.order];
+      const [p] = order.splice(from, 1);
+      order.splice(to, 0, p!);
+      return { ...a, order };
+    });
+  }, []);
+  // Leaving the chooser or the Domain ends arranging, keeping the new order.
+  useEffect(() => () => finishArrange(true), [domain, finishArrange]);
+
+  // ---- the card strip: drag, flick, wheel; keyboard selection stays in view ------
+  const viewportRef = useRef<HTMLDivElement>(null);
 
   // ---- the centred stat: total notes in the active Domain (GOALS Q4) -------------
   const [stat, setStat] = useState<Record<Domain, number> | null>(null);
@@ -107,6 +165,67 @@ export function Chooser() {
     return () => ro.disconnect();
   }, []);
 
+  const strip = useCardStrip(viewportRef, { stride: STRIDE, scale: fit.scale, disabled: !!arrange });
+  useEffect(() => {
+    strip.scrollCardIntoView(selected);
+    // Only when the selection or Domain changes.
+  }, [selected, domain]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Pointer drag of a card while arranging; the strip scrolls when the card nears an edge.
+  const onCardPointerDown = (e: ReactPointerEvent<HTMLDivElement>, path: string) => {
+    const a = arrangeRef.current;
+    const vp = viewportRef.current;
+    if (!a || !vp || e.button !== 0) return;
+    e.preventDefault();
+    const target = e.currentTarget;
+    target.setPointerCapture(e.pointerId);
+    const startX = e.clientX;
+    const startScroll = vp.scrollLeft;
+    const startPos = a.order.indexOf(path);
+    app().select(startPos);
+    let lastX = startX;
+    let raf = 0;
+    const update = () => {
+      const cur = arrangeRef.current;
+      if (!cur) return;
+      const desired = startPos * STRIDE + (lastX - startX) / fit.scale + (vp.scrollLeft - startScroll);
+      const pos = Math.max(0, Math.min(cur.order.length - 1, Math.round(desired / STRIDE)));
+      const now = cur.order.indexOf(path);
+      const order = [...cur.order];
+      if (pos !== now) {
+        order.splice(now, 1);
+        order.splice(pos, 0, path);
+        app().select(pos);
+      }
+      setArrange({ ...cur, order, drag: { path, offset: desired - pos * STRIDE } });
+    };
+    const edgeScroll = () => {
+      const r = vp.getBoundingClientRect();
+      const edge = 80 * fit.scale;
+      const speed = lastX < r.left + edge ? -14 : lastX > r.right - edge ? 14 : 0;
+      if (speed) {
+        vp.scrollLeft += speed;
+        update();
+      }
+      raf = requestAnimationFrame(edgeScroll);
+    };
+    raf = requestAnimationFrame(edgeScroll);
+    const move = (ev: PointerEvent) => {
+      lastX = ev.clientX;
+      update();
+    };
+    const up = () => {
+      cancelAnimationFrame(raf);
+      target.removeEventListener('pointermove', move);
+      target.removeEventListener('pointerup', up);
+      target.removeEventListener('pointercancel', up);
+      setArrange((cur) => (cur ? { ...cur, drag: null } : cur));
+    };
+    target.addEventListener('pointermove', move);
+    target.addEventListener('pointerup', up);
+    target.addEventListener('pointercancel', up);
+  };
+
   // ---- roving focus: the selected card holds focus -------------------------------
   const cardsRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -134,7 +253,45 @@ export function Chooser() {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (isTyping(document.activeElement)) return;
       const sel = app().selection[app().domain];
+      if (arrangeRef.current) {
+        const n = arrangeRef.current.order.length;
+        switch (e.key) {
+          case 'ArrowLeft':
+            if (sel > 0 && sel < n) {
+              moveCard(sel, sel - 1);
+              app().select(sel - 1);
+            }
+            break;
+          case 'ArrowRight':
+            if (sel < n - 1) {
+              moveCard(sel, sel + 1);
+              app().select(sel + 1);
+            }
+            break;
+          case 'Enter':
+          case 'r':
+          case 'R':
+            finishArrange(true);
+            break;
+          case 'Escape':
+            finishArrange(false);
+            break;
+          case '[':
+          case ']':
+            finishArrange(true);
+            app().cycleDomain(e.key === '[' ? -1 : 1);
+            break;
+          default:
+            return;
+        }
+        e.preventDefault();
+        return;
+      }
       switch (e.key) {
+        case 'r':
+        case 'R':
+          startArrange();
+          break;
         case 'ArrowLeft':
           app().select(sel - 1);
           break;
@@ -168,7 +325,7 @@ export function Chooser() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [activate, app]);
+  }, [activate, app, finishArrange, moveCard, startArrange]);
 
   const header = s.header(d.name, inDomain.length);
 
@@ -218,83 +375,100 @@ export function Chooser() {
           >
             <div className="vx-panel-head">
               <span className="vx-panel-head__rule" aria-hidden="true" />
-              <h2 className="vx-panel-head__title" data-testid="panel-header">
-                <span>{header.domain}</span>
-                <span className="vx-panel-head__dot" aria-hidden="true">
-                  ·
-                </span>
-                {header.count === 0 ? (
-                  <span>{s.noVaults}</span>
-                ) : (
-                  <>
-                    <span className="vx-panel-head__count vx-gold">{header.count}</span>
-                    <span>{header.noun}</span>
-                  </>
-                )}
-              </h2>
+              {arrange ? (
+                <h2 className="vx-panel-head__title" data-testid="panel-header">
+                  <span>{s.arranging}</span>
+                  <span className="vx-panel-head__dot" aria-hidden="true">
+                    ·
+                  </span>
+                  <span className="vx-panel-head__hint">{s.arrangeHint}</span>
+                  <button
+                    type="button"
+                    className="vx-btn vx-btn--small vx-panel-head__done"
+                    onClick={() => finishArrange(true)}
+                  >
+                    {s.done}
+                  </button>
+                </h2>
+              ) : (
+                <h2 className="vx-panel-head__title" data-testid="panel-header">
+                  <span>{header.domain}</span>
+                  <span className="vx-panel-head__dot" aria-hidden="true">
+                    ·
+                  </span>
+                  {header.count === 0 ? (
+                    <span>{s.noVaults}</span>
+                  ) : (
+                    <>
+                      <span className="vx-panel-head__count vx-gold">{header.count}</span>
+                      <span>{header.noun}</span>
+                    </>
+                  )}
+                </h2>
+              )}
               <span className="vx-panel-head__rule vx-panel-head__rule--r" aria-hidden="true" />
             </div>
-            <div className="vx-cards" ref={cardsRef} role="listbox" aria-label={`${d.name} Vaults`}>
-              {onPage.map((i) => {
-                const v = inDomain[i];
-                return v ? (
-                  <VaultCard
-                    key={v.path}
-                    card={cardModel(v)}
-                    selected={i === selected}
-                    onSelect={() => app().select(i)}
-                    onActivate={() => activate(i)}
-                    onEdit={() => app().openDialog({ mode: 'edit', path: v.path })}
-                    editLabel={s.editVault(v.name)}
-                  />
-                ) : (
-                  <NewVaultCard
-                    key="new"
-                    selected={i === selected}
-                    onSelect={() => app().select(i)}
-                    onActivate={() => activate(i)}
-                    title={s.newVault}
-                    hint={s.newVaultHint}
-                  />
-                );
-              })}
-            </div>
-            <div className="vx-pager" aria-hidden={pages === 1}>
-              {pages > 1 && (
-                <>
-                  <button
-                    type="button"
-                    className="vx-pager__btn"
-                    aria-label={s.previousPage}
-                    title={s.previousPage}
-                    disabled={page === 0}
-                    onClick={() => app().select((page - 1) * PER_PAGE)}
-                  >
-                    <Icon name="chevron-left" />
-                  </button>
-                  <span className="vx-pager__dots">
-                    {Array.from({ length: pages }, (_, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        className="vx-pager__dot"
-                        aria-label={s.page(i + 1, pages)}
-                        aria-current={i === page ? 'true' : undefined}
-                        onClick={() => app().select(i * PER_PAGE)}
+            <div
+              ref={viewportRef}
+              className={`vx-cards-viewport${strip.state.overflow ? ' is-overflowing' : ''}${strip.state.atStart ? ' at-start' : ''}${strip.state.atEnd ? ' at-end' : ''}`}
+              data-testid="card-strip"
+            >
+              <div
+                className={`vx-cards${arrange ? ' is-arranging' : ''}`}
+                ref={cardsRef}
+                role="listbox"
+                aria-label={`${d.name} Vaults`}
+              >
+                {(arrange ? arrange.base : inDomain.map((v) => v.path)).map((p, domIndex) => {
+                  const v = inDomain.find((x) => x.path === p);
+                  if (!v) return null;
+                  const pos = arrange ? arrange.order.indexOf(p) : domIndex;
+                  const dragged = arrange?.drag?.path === p;
+                  const x = arrange ? (pos - domIndex) * STRIDE + (dragged ? arrange.drag!.offset : 0) : 0;
+                  return (
+                    <div
+                      key={v.path}
+                      className={`vx-card-cell${dragged ? ' is-dragged' : ''}`}
+                      style={x ? { transform: `translateX(${x}px)` } : undefined}
+                      onPointerDown={arrange ? (e) => onCardPointerDown(e, v.path) : undefined}
+                    >
+                      <VaultCard
+                        card={cardModel(v)}
+                        selected={pos === selected}
+                        onSelect={() => app().select(pos)}
+                        onActivate={() => (arrange ? app().select(pos) : activate(pos))}
+                        {...(arrange
+                          ? {}
+                          : { onEdit: () => app().openDialog({ mode: 'edit', path: v.path }) })}
+                        editLabel={s.editVault(v.name)}
                       />
-                    ))}
-                  </span>
-                  <button
-                    type="button"
-                    className="vx-pager__btn"
-                    aria-label={s.nextPage}
-                    title={s.nextPage}
-                    disabled={page === pages - 1}
-                    onClick={() => app().select((page + 1) * PER_PAGE)}
-                  >
-                    <Icon name="chevron-right" />
-                  </button>
-                </>
+                    </div>
+                  );
+                })}
+                {!arrange && (
+                  <div className="vx-card-cell">
+                    <NewVaultCard
+                      selected={inDomain.length === selected}
+                      onSelect={() => app().select(inDomain.length)}
+                      onActivate={() => activate(inDomain.length)}
+                      title={s.newVault}
+                      hint={s.newVaultHint}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="vx-pager" aria-hidden="true">
+              {strip.state.overflow && (
+                <span className="vx-strip-track" data-testid="strip-indicator">
+                  <span
+                    className="vx-strip-thumb"
+                    style={{
+                      left: `${strip.state.thumb.left * 100}%`,
+                      width: `${strip.state.thumb.width * 100}%`,
+                    }}
+                  />
+                </span>
               )}
             </div>
           </OrnamentFrame>
@@ -311,11 +485,22 @@ export function Chooser() {
       </div>
 
       <footer className="vx-chooser__hints" aria-label="Keyboard">
-        <Hint keys={[{ label: '←' }, { label: '→' }]}>{s.hints.select}</Hint>
-        <Hint keys={[{ label: 'Enter', word: true }]}>{s.hints.open}</Hint>
-        <Hint keys={[{ label: '[' }, { label: ']' }]}>{s.hints.domain}</Hint>
-        <Hint keys={[{ label: 'E' }]}>{s.hints.edit}</Hint>
-        {openVault && <Hint keys={[{ label: 'Esc', word: true }]}>{s.hints.back}</Hint>}
+        {arrange ? (
+          <>
+            <Hint keys={[{ label: '←' }, { label: '→' }]}>{s.hints.move}</Hint>
+            <Hint keys={[{ label: 'Enter', word: true }]}>{s.hints.done}</Hint>
+            <Hint keys={[{ label: 'Esc', word: true }]}>{s.hints.cancel}</Hint>
+          </>
+        ) : (
+          <>
+            <Hint keys={[{ label: '←' }, { label: '→' }]}>{s.hints.select}</Hint>
+            <Hint keys={[{ label: 'Enter', word: true }]}>{s.hints.open}</Hint>
+            <Hint keys={[{ label: '[' }, { label: ']' }]}>{s.hints.domain}</Hint>
+            <Hint keys={[{ label: 'E' }]}>{s.hints.edit}</Hint>
+            {inDomain.length > 1 && <Hint keys={[{ label: 'R' }]}>{s.hints.arrange}</Hint>}
+            {openVault && <Hint keys={[{ label: 'Esc', word: true }]}>{s.hints.back}</Hint>}
+          </>
+        )}
       </footer>
     </div>
   );

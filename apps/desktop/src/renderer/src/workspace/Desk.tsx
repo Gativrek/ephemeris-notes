@@ -1,5 +1,6 @@
-import type { MouseEvent } from 'react';
+import { useEffect, useRef, type MouseEvent } from 'react';
 import { ICON_NAMES, Icon, type IconName } from '../components/Icon';
+import { useCardStrip } from '../features/chooser/strip';
 import { isViewId, parseViewId, requestViewClose, useViewCard } from '../plugins/views';
 import { unwrap, vx } from '../lib/vx';
 import { workspaceStrings as s } from '../strings/workspace';
@@ -175,8 +176,38 @@ function NoteCard({ path, pinned, active }: { path: string; pinned: boolean; act
 
 export function Desk() {
   const desk = useWorkspace((st) => st.desk);
+  // Scrolls like the chooser strip: drag, flick or wheel; no scrollbar eating its height.
+  const ref = useRef<HTMLDivElement>(null);
+  const { state: strip } = useCardStrip(ref, { stride: 220, scale: 1, disabled: false, snap: false });
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !desk.active) return;
+    const card = [...el.querySelectorAll<HTMLElement>('.vx-desk-card')].find(
+      (c) => c.dataset.path === desk.active,
+    );
+    if (!card) return;
+    // Bring the active card in clear of the edge fade (48px), moving as little as possible.
+    const r = card.getBoundingClientRect();
+    const v = el.getBoundingClientRect();
+    const pad = 56;
+    if (r.left < v.left + pad) el.scrollBy({ left: r.left - v.left - pad, behavior: 'smooth' });
+    else if (r.right > v.right - pad) el.scrollBy({ left: r.right - v.right + pad, behavior: 'smooth' });
+  }, [desk.active, desk.open.length, desk.pinned.length]);
   return (
-    <div className="vx-desk" role="tablist" aria-label={s.desk.label} data-testid="desk">
+    <div
+      ref={ref}
+      className={[
+        'vx-desk',
+        strip.overflow && 'is-overflowing',
+        strip.atStart && 'at-start',
+        strip.atEnd && 'at-end',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      role="tablist"
+      aria-label={s.desk.label}
+      data-testid="desk"
+    >
       {desk.open.map((p) => (
         <Card key={p} path={p} pinned={false} active={desk.active === p} />
       ))}

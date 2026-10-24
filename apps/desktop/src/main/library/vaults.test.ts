@@ -165,3 +165,22 @@ describe('coverExtension', () => {
     expect(() => coverExtension(Buffer.from('GIF89a'))).toThrow();
   });
 });
+
+describe('reorder (SPECS 4.3 order)', () => {
+  it('writes the new order, keeps unknown keys, and refuses incomplete lists', async () => {
+    const before = await readJson('Academic/Knowledge/.vault/vault.json');
+    const listed = await store.reorder('academic', ['Academic/GNSS Study', 'Academic/Knowledge']);
+    expect(listed.filter((v) => v.domain === 'academic').map((v) => v.name)).toEqual([
+      'GNSS Constellation Study',
+      'Knowledge',
+    ]);
+    const after = await readJson('Academic/Knowledge/.vault/vault.json');
+    expect(after.order).toBe(2);
+    // Everything else in vault.json is untouched.
+    expect({ ...after, order: before.order }).toEqual(before);
+    await expect(store.reorder('academic', ['Academic/GNSS Study'])).rejects.toThrow(/every Vault/);
+    await expect(store.reorder('academic', ['Academic/GNSS Study', 'Academic/GNSS Study'])).rejects.toThrow(
+      /every Vault/,
+    );
+  });
+});
