@@ -111,6 +111,37 @@ export class PluginBlockWidget extends WidgetType {
     box.className = 'vx-plugin-block';
     box.dataset.language = this.language;
     void this.mount(box, view);
+    // When an unfocused editor gains focus, CodeMirror writes its own cursor into the DOM
+    // selection a moment later, which collapses a drag that started inside this block: the
+    // first drag would select nothing, and copy would then copy a source line. For that
+    // first drag, the selection is re-applied from the press to the pointer on each move.
+    box.addEventListener('mousedown', (e) => {
+      if (e.button !== 0 || view.hasFocus) return;
+      if ((e.target as HTMLElement).closest('button, input, textarea, select, a')) return;
+      const start = document.caretPositionFromPoint(e.clientX, e.clientY);
+      if (!start || !box.contains(start.offsetNode)) return;
+      let end: CaretPosition | null = null;
+      const apply = () => {
+        if (end)
+          document
+            .getSelection()
+            ?.setBaseAndExtent(start.offsetNode, start.offset, end.offsetNode, end.offset);
+      };
+      const follow = (ev: MouseEvent) => {
+        const at = document.caretPositionFromPoint(ev.clientX, ev.clientY);
+        if (!at || !box.contains(at.offsetNode)) return;
+        end = at;
+        apply();
+      };
+      const done = (ev: MouseEvent) => {
+        follow(ev);
+        window.removeEventListener('mousemove', follow, true);
+        // A drag quicker than CodeMirror's focus update is collapsed after the release.
+        setTimeout(apply, 30);
+      };
+      window.addEventListener('mousemove', follow, true);
+      window.addEventListener('mouseup', done, { capture: true, once: true });
+    });
     box.addEventListener('dblclick', (e) => {
       if ((e.target as HTMLElement).closest('button, input, textarea, select, a')) return;
       const at = blockAt(view, view.posAtDOM(box));

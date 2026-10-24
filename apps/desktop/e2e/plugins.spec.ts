@@ -190,6 +190,33 @@ test('blocks: render, args, vault files, error state, write-back with undo, stor
   await expect(page.locator('.vx-editor .cm-content')).toContainText('abc');
 });
 
+test('blocks: a first drag from an unfocused editor selects inside the block', async () => {
+  const { page } = ctx;
+  await installAndEnable(page);
+  await page.keyboard.press('Escape');
+  await openPluginNote(page);
+  const out = page.locator('.sample-plugin-output').first();
+  await expect(out).toHaveText('cba');
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+
+  // A person's drag: a short pause after the press, then moves a frame apart.
+  const box = (await out.boundingBox())!;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(box.x + 1, y);
+  await page.mouse.down();
+  await page.waitForTimeout(60);
+  for (let i = 1; i <= 4; i++) {
+    await page.mouse.move(box.x + (box.width * i) / 4, y);
+    await page.waitForTimeout(16);
+  }
+  await page.mouse.up();
+  await page.waitForTimeout(100);
+
+  // The block stays rendered and holds the selection; the source did not open.
+  await expect(out).toHaveText('cba');
+  expect(await page.evaluate(() => document.getSelection()?.toString())).toBe('cba');
+});
+
 test('commands and overlays: palette, overlay title and dirty state, notify, a failing command', async () => {
   const { page } = ctx;
   await installAndEnable(page);
