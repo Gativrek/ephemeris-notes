@@ -467,7 +467,7 @@ export function EditorPane() {
   return (
     <div
       className="vx-main-body"
-      style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0 }}
+      style={{ display: 'flex', flexDirection: 'column', flex: '1 1 0', minHeight: 0 }}
     >
       {meta && <Banner meta={meta} />}
       {loadError && (

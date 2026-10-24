@@ -608,3 +608,19 @@ test('a full Desk scrolls sideways without a scrollbar squeezing its cards', asy
   await expect.poll(scroll).toBeGreaterThan(100);
   await expect(page.locator('.vx-desk-card[aria-selected="true"]')).toHaveAttribute('data-path', active!);
 });
+
+test('a long note never squeezes the Desk', async () => {
+  const { page } = ctx;
+  const long = Array.from({ length: 400 }, (_, i) => `Paragraph ${i + 1} of a long note.\n`).join('\n');
+  await writeFile(file('Academic/GNSS Study/Encoding/LF.md'), long);
+  await tile(page, 'Encoding').click();
+  await page.getByTestId('tree').getByRole('treeitem', { name: 'LF', exact: true }).click();
+  await expect(editor(page)).toContainText('Paragraph 1 of');
+  const desk = page.getByTestId('desk');
+  expect((await desk.boundingBox())!.height).toBe(64);
+  expect((await page.getByTestId('desk-card').boundingBox())!.height).toBe(48);
+  // The editor scrolls inside the window; the page itself does not grow.
+  expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(
+    await page.evaluate(() => window.innerHeight),
+  );
+});
