@@ -15,3 +15,9 @@ GOALS.md
 KICKOFF.md
 SPECS.md
 PROGRESS.md
+
+# Private design docs: component notes, previews and the brand book (the build needs none of them).
+design/README.md
+design/assets/Logos/README.md
+design/components/*/README.md
+design/components/*/preview.html
