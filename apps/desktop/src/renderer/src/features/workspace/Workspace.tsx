@@ -21,10 +21,13 @@ import { workspaceStrings as s } from '../../strings/workspace';
 import { newNote, newUnfiledNote, openDailyNote, setNotifier } from '../../workspace/actions';
 import { setDateLocale } from '../../workspace/tree';
 import { HOTKEYS_KEY, eventKey, isMacPlatform, recording } from '../../lib/hotkeys';
+import { commandFor, currentOverrides, scopeOf, type Overrides } from '../../lib/keymap';
 import { Rail, StatusBar, TitleBar, type SearchScopeKind } from '../../workspace/Chrome';
+import { insertCodeBlock } from '../../editor/fences';
+import { applyEditorShortcuts } from '../../editor/setup';
 import { closeItem, Desk } from '../../workspace/Desk';
 import { externalChange, externalDelete, getRecord, saveAll, useDocs } from '../../workspace/docs';
-import { EditorPane } from '../../workspace/EditorPane';
+import { currentEditor, EditorPane } from '../../workspace/EditorPane';
 import { Outline, useOutline } from '../../workspace/Outline';
 import { Overlays } from '../../workspace/Overlays';
 import { Sidebar } from '../../workspace/Sidebar';
@@ -122,6 +125,14 @@ export function Workspace({ vaultPath }: { vaultPath: string }) {
       ['new-unfiled-note', c.newUnfiled, () => void newUnfiledNote()],
       ['open-note', c.openNote, () => useWorkspace.setState({ overlay: { kind: 'quickOpen' } })],
       ['insert-link', c.insertLink, () => useWorkspace.setState({ overlay: { kind: 'insertLink' } })],
+      [
+        'insert-code-block',
+        c.insertCodeBlock,
+        () => {
+          const view = currentEditor();
+          if (view) insertCodeBlock(view);
+        },
+      ],
       ['toggle-source', c.toggleSource, () => ws().setPanels({ source: !ws().source })],
       ['toggle-sidebar', c.toggleSidebar, () => ws().setPanels({ sidebar: !ws().sidebar })],
       ['toggle-outline', c.toggleOutline, () => ws().setPanels({ outline: !ws().outline })],
@@ -154,6 +165,15 @@ export function Workspace({ vaultPath }: { vaultPath: string }) {
   }, []);
   useEffect(() => wireCatalog(), []);
   useEffect(() => wireSettings(), []);
+  // Settings > Keyboard: open editors take new keys at once.
+  useEffect(
+    () =>
+      useSettings.subscribe((st, prev) => {
+        const next = st.values[HOTKEYS_KEY];
+        if (next !== prev.values[HOTKEYS_KEY]) applyEditorShortcuts((next as Overrides) ?? {});
+      }),
+    [],
+  );
 
   useEffect(() => {
     if (vault) void useWorkspace.getState().init(vault.path, vault.id);
@@ -194,62 +214,39 @@ export function Workspace({ vaultPath }: { vaultPath: string }) {
     };
   }, []);
 
-  // Core shortcuts (SPECS 11.4). They never shadow CodeMirror's own keys.
+  // Shortcuts for app commands (SPECS 11.3, 11.4): the keys in Settings > Keyboard, or
+  // the defaults. Editor commands are left to the note editor's keymap, and Switch
+  // Vault to App, since it also works in the chooser.
   useEffect(() => {
     const mac = isMacPlatform();
+    // Two shortcuts toggle, where their palette commands only open.
+    const toggles: Record<string, () => void> = {
+      'core:palette': () =>
+        useWorkspace.setState((st) => ({
+          overlay: st.overlay?.kind === 'commands' ? null : { kind: 'commands' },
+        })),
+      'core:settings': () => setSettingsAt((o) => (o ? null : { section: 'general', page: null })),
+    };
     const onKey = (e: KeyboardEvent) => {
       if (recording.active) return;
-      // User hotkeys (Settings > Keyboard) first; they never collide with the keys below.
-      const bindings = useSettings.getState().get<Record<string, string>>(HOTKEYS_KEY) ?? {};
       const pressed = eventKey(e, mac);
-      const hit = pressed ? Object.keys(bindings).find((id) => bindings[id] === pressed) : undefined;
-      const cmd = hit ? usePlugins.getState().commands.find((c) => c.id === hit) : undefined;
-      if (cmd) {
-        e.preventDefault();
-        e.stopPropagation();
-        void (async () => {
-          try {
-            if (cmd.owner !== 'core') noteCommandRun(cmd.owner);
-            await cmd.run();
-          } catch (err) {
-            console.error(`[${cmd.owner}] command ${cmd.id} failed`, err);
-            setNotice(s.commands.failed(cmd.title, err instanceof Error ? err.message : String(err)));
-          }
-        })();
-        return;
-      }
-      const mod = e.ctrlKey || e.metaKey;
-      if (!mod) return;
-      const key = e.key.toLowerCase();
-      const ws = useWorkspace.getState();
-      if (key === 'k' && !e.shiftKey && !e.altKey) {
-        e.preventDefault();
-        searchRef.current?.focus();
-      } else if (key === 'n' && !e.shiftKey && !e.altKey) {
-        e.preventDefault();
-        void newNote();
-      } else if (key === 'e' && !e.shiftKey && !e.altKey) {
-        e.preventDefault();
-        ws.setPanels({ source: !ws.source });
-      } else if (key === 'w' && !e.shiftKey && !e.altKey) {
-        e.preventDefault();
-        if (ws.desk.active && ws.desk.open.includes(ws.desk.active)) closeItem(ws.desk.active);
-      } else if (e.key === '\\' && !e.shiftKey && !e.altKey) {
-        e.preventDefault();
-        ws.setPanels({ sidebar: !ws.sidebar });
-      } else if (key === 'o' && e.shiftKey && !e.altKey) {
-        e.preventDefault();
-        ws.setPanels({ outline: !ws.outline });
-      } else if (key === 'd' && e.shiftKey && !e.altKey) {
-        e.preventDefault();
-        void openDailyNote();
-      } else if (key === 'p' && !e.shiftKey && !e.altKey) {
-        e.preventDefault();
-        useWorkspace.setState({ overlay: ws.overlay?.kind === 'commands' ? null : { kind: 'commands' } });
-      } else if (e.key === ',' && !e.shiftKey && !e.altKey) {
-        e.preventDefault();
-        setSettingsAt((o) => (o ? null : { section: 'general', page: null }));
-      }
+      const id = pressed ? commandFor(pressed, currentOverrides()) : undefined;
+      if (!id || scopeOf(id) === 'editor' || id === 'core:switch-vault') return;
+      const toggle = toggles[id];
+      const cmd = toggle ? null : usePlugins.getState().commands.find((c) => c.id === id);
+      if (!toggle && !cmd) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (toggle) return toggle();
+      void (async () => {
+        try {
+          if (cmd!.owner !== 'core') noteCommandRun(cmd!.owner);
+          await cmd!.run();
+        } catch (err) {
+          console.error(`[${cmd!.owner}] command ${cmd!.id} failed`, err);
+          setNotice(s.commands.failed(cmd!.title, err instanceof Error ? err.message : String(err)));
+        }
+      })();
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);

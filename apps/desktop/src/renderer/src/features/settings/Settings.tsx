@@ -14,15 +14,9 @@ import { settingsStrings as s } from '../../strings/settings';
 import { openPath } from '../../workspace/actions';
 import { useIndexStatus } from '../../workspace/SearchBox';
 import { HelpSection } from './HelpSection';
+import { KeyboardSection } from './KeyboardSection';
 import { MathSection } from './MathSection';
-import {
-  AboutSection,
-  AppearanceSection,
-  EditorSection,
-  GeneralSection,
-  KeyboardSection,
-  PluginsSection,
-} from './sections';
+import { AboutSection, AppearanceSection, EditorSection, GeneralSection, PluginsSection } from './sections';
 
 export type SettingsSection = keyof typeof s.sections;
 

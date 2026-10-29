@@ -361,15 +361,22 @@ test('outline styles: margin track, document map and tabbed inspector render the
   await expect(outline.getByRole('tabpanel')).toBeVisible();
 });
 
-test('Settings > Keyboard: a hotkey runs its command; taken keys are refused', async () => {
+test('Settings > Keyboard: a hotkey runs its command; fixed keys are refused, taken ones offered', async () => {
   const { page } = ctx;
   await page.keyboard.press('ControlOrMeta+,');
   await page.getByTestId('settings').getByRole('link', { name: 'Keyboard', exact: true }).click();
   const row = page.getByTestId('hotkey-core:open-note');
   await row.getByRole('button', { name: 'Set Shortcut' }).click();
+  // A key another command has is offered as a swap; keeping it leaves both as they were.
   await page.keyboard.press('ControlOrMeta+k');
-  await expect(page.getByRole('alert')).toContainText('is already used by Search');
-  await page.keyboard.press('ControlOrMeta+f');
+  await expect(page.getByRole('alert')).toContainText('is used by Search. Use it for Open Note… instead?');
+  await page.getByRole('button', { name: 'Keep It There' }).click();
+  await expect(page.getByTestId('hotkey-core:search')).toContainText('+K');
+  await row.getByRole('button', { name: 'Set Shortcut' }).click();
+  // The editor's fixed keys and plain typing keys are refused.
+  await page.keyboard.press('ControlOrMeta+Enter');
+  await expect(page.getByRole('alert')).toContainText('is already used by the editor');
+  await page.keyboard.press('ControlOrMeta+c');
   await expect(page.getByRole('alert')).toContainText('is already used by the editor');
   await page.keyboard.press('l');
   await expect(page.getByRole('alert')).toContainText('Shortcuts need Ctrl, Cmd or Alt');
@@ -379,6 +386,64 @@ test('Settings > Keyboard: a hotkey runs its command; taken keys are refused', a
   await expect(page.getByTestId('settings')).toHaveCount(0);
   await page.keyboard.press('ControlOrMeta+Shift+J');
   await expect(page.getByTestId('quick-open')).toBeVisible();
+});
+
+test('Settings > Keyboard: built-in shortcuts change, swap and reset, and the editor follows', async () => {
+  const { page } = ctx;
+  await openNote(page, 'Notes', 'Intro');
+  const settings = async () => {
+    await page.keyboard.press('ControlOrMeta+,');
+    await page.getByTestId('settings').getByRole('link', { name: 'Keyboard', exact: true }).click();
+  };
+  const hotkey = (id: string) => page.getByTestId(`hotkey-${id}`);
+
+  // Search moves to Ctrl+J; Ctrl+K then does nothing.
+  await settings();
+  await hotkey('core:search').getByRole('button', { name: 'Change' }).click();
+  await page.keyboard.press('ControlOrMeta+j');
+  await expect(hotkey('core:search')).toContainText('+J');
+  await expect(hotkey('core:search')).toContainText('Changed');
+  await page.keyboard.press('Escape');
+  await editor(page).click();
+  await page.keyboard.press('ControlOrMeta+k');
+  await expect(page.getByTestId('search-input')).not.toBeFocused();
+  await page.keyboard.press('ControlOrMeta+j');
+  await expect(page.getByTestId('search-input')).toBeFocused();
+
+  // Insert Code Block takes Ctrl+J from Search, and works in the open editor at once.
+  await settings();
+  await hotkey('core:insert-code-block').getByRole('button', { name: 'Change' }).click();
+  await page.keyboard.press('ControlOrMeta+j');
+  await page.getByRole('button', { name: 'Use Here' }).click();
+  await expect(hotkey('core:insert-code-block')).toContainText('+J');
+  await expect(hotkey('core:search').locator('.vx-chip')).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await editor(page).click();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('ControlOrMeta+j');
+  await expect(page.locator('.cm-tooltip-autocomplete')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(editor(page)).toContainText('```');
+  // Its old key is free again.
+  await page.keyboard.press('ControlOrMeta+Shift+c');
+  await expect(page.locator('.cm-tooltip-autocomplete')).toHaveCount(0);
+
+  // Bold can be removed; Reset brings the defaults back, and the help page follows.
+  await settings();
+  await hotkey('editor:bold').getByRole('button', { name: 'Remove' }).click();
+  await expect(hotkey('editor:bold').locator('.vx-chip')).toHaveCount(0);
+  await page.getByTestId('settings').getByRole('link', { name: 'Help', exact: true }).click();
+  await page.getByTestId('settings-help').getByRole('link', { name: 'Keyboard shortcuts' }).click();
+  await expect(page.getByTestId('help-article')).toContainText('Bold');
+  await expect(page.getByTestId('help-article')).toContainText('Ctrl+J');
+  await page.getByTestId('settings').getByRole('link', { name: 'Keyboard', exact: true }).click();
+  for (const id of ['editor:bold', 'core:insert-code-block', 'core:search'])
+    await hotkey(id).getByRole('button', { name: 'Reset' }).click();
+  await expect(hotkey('core:search')).toContainText('+K');
+  await expect(hotkey('core:insert-code-block')).toContainText('+Shift+C');
+  await expect(hotkey('editor:bold')).toContainText('+B');
+  await expect(page.getByTestId('settings-keyboard').getByText('Changed')).toHaveCount(0);
 });
 
 test('Settings > Library: git auto-commit commits the library when it is a repository', async () => {

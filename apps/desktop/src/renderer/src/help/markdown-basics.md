@@ -38,6 +38,8 @@ print("hello")
 
 Type three backticks and the first letters of a language to get suggestions: plugin blocks first, then code languages. Pick one and the whole block is written, closing fence included, with the cursor inside. `Ctrl+Space` right after the backticks lists them all.
 
+Backticks are awkward on some keyboards (on ABNT2 the backtick is a dead key). **Insert Code Block** (`Ctrl+Shift+C` unless you changed it, or from the command palette) writes the opening backticks and lists the languages, so a block takes the shortcut, a few letters and Enter. With lines selected, it wraps them in a block and only asks for the language.
+
 A fence whose language belongs to a plugin renders as that plugin's block. Double-click a plugin block to edit its source.
 
 Add `title="…"` after the language to name a block. The outline shows the title instead of the language, and plugins show it as a caption:

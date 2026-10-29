@@ -7,7 +7,11 @@ import { useEffect, useMemo, useRef } from 'react';
 import type { EditorContext } from '../../editor/context';
 import { createReadOnlyView } from '../../editor/setup';
 import { CORE_HELP } from '../../help';
+import { fillShortcuts } from '../../help/shortcuts';
 import { assetUrl } from '../../lib/asset';
+import { HOTKEYS_KEY, isMacPlatform } from '../../lib/hotkeys';
+import type { Overrides } from '../../lib/keymap';
+import { useSettings } from '../../lib/settings';
 import { vx } from '../../lib/vx';
 import { usePlugins } from '../../plugins/store';
 import { settingsStrings as s } from '../../strings/settings';
@@ -57,9 +61,25 @@ function Article({ page }: { page: Page }) {
 
 export function HelpSection({ page, onPage }: { page: string | null; onPage: (key: string) => void }) {
   const help = usePlugins((st) => st.help);
+  const commands = usePlugins((st) => st.commands);
+  // The shortcuts page shows the keys as set now.
+  const overrides = useSettings((st) => st.values[HOTKEYS_KEY]) as Overrides | undefined;
   const pages = useMemo<Page[]>(
     () => [
-      ...CORE_HELP.map((p) => ({ key: `core:${p.id}`, title: p.title, markdown: p.markdown, group: null })),
+      ...CORE_HELP.map((p) => ({
+        key: `core:${p.id}`,
+        title: p.title,
+        markdown:
+          p.id === 'shortcuts'
+            ? fillShortcuts(
+                p.markdown,
+                overrides ?? {},
+                (id) => s.keyboard.titles[id] ?? commands.find((c) => c.id === id)?.title ?? id,
+                isMacPlatform(),
+              )
+            : p.markdown,
+        group: null,
+      })),
       ...help.map((h) => ({
         key: `${h.owner}:${h.page.id}`,
         title: h.page.title,
@@ -67,7 +87,7 @@ export function HelpSection({ page, onPage }: { page: string | null; onPage: (ke
         group: h.ownerName,
       })),
     ],
-    [help],
+    [help, overrides, commands],
   );
   const current = pages.find((p) => p.key === page) ?? pages[0]!;
   const groups = [...new Set(pages.map((p) => p.group).filter((g): g is string => !!g))];

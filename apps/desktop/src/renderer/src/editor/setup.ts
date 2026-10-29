@@ -3,21 +3,48 @@
  * extensions, live preview, math, links, embeds, code highlighting and the keymap.
  */
 import { closeBrackets, closeBracketsKeymap, completionKeymap } from '@codemirror/autocomplete';
-import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
+import {
+  cursorMatchingBracket,
+  defaultKeymap,
+  history,
+  historyKeymap,
+  indentLess,
+  indentMore,
+  redo,
+  selectParentSyntax,
+  undo,
+} from '@codemirror/commands';
 import { markdown, markdownKeymap } from '@codemirror/lang-markdown';
 import { syntaxHighlighting } from '@codemirror/language';
-import { highlightSelectionMatches, search, searchKeymap } from '@codemirror/search';
+import {
+  highlightSelectionMatches,
+  openSearchPanel,
+  search,
+  searchKeymap,
+  selectNextOccurrence,
+} from '@codemirror/search';
 import { Compartment, EditorSelection, EditorState, Prec, type Extension } from '@codemirror/state';
-import { EditorView, drawSelection, dropCursor, keymap, type KeyBinding } from '@codemirror/view';
+import {
+  EditorView,
+  ViewPlugin,
+  drawSelection,
+  dropCursor,
+  keymap,
+  type Command,
+  type KeyBinding,
+} from '@codemirror/view';
 import { vaultsMarkdown } from '@ephemeris-notes/markdown';
 import { blockDecorations } from './blocks';
 import { editorContext, revealSource, type EditorContext } from './context';
 import { setReadOnlyFactory } from './embeds';
+import { closedFence, insertCodeBlock } from './fences';
 import { linkClicks, linkPreview, vaultAutocomplete, type ExternalOpener } from './interactions';
 import { codeHighlight, findLanguage, markdownHighlight, sourceHeadingHighlight } from './languages';
 import { livePreview } from './livePreview';
 import { pluginInline, pluginInlineHover } from './pluginInline';
 import { equationField } from './equations';
+import { normalizeKey } from '../lib/hotkeys';
+import { currentOverrides, keysOf, SHORTCUTS, type Overrides } from '../lib/keymap';
 
 export const contextCompartment = new Compartment();
 export const previewCompartment = new Compartment();
@@ -92,13 +119,70 @@ export function toggleTask(view: EditorView): boolean {
   return true;
 }
 
-/** Editing keys that must win over CodeMirror's defaults (SPECS 11.4 notes). */
-const editingKeymap: KeyBinding[] = [
-  { key: 'Mod-b', run: toggleWrap('**'), preventDefault: true },
-  // Overrides CodeMirror's Mod-i (selectParentSyntax), per SPECS 11.4.
-  { key: 'Mod-i', run: toggleWrap('*'), preventDefault: true },
-  { key: 'Mod-Shift-x', run: toggleTask, preventDefault: true },
-];
+/** The editor commands of Settings > Keyboard (lib/keymap.ts), by id. */
+const EDITOR_COMMANDS: Record<string, Command> = {
+  'editor:bold': toggleWrap('**'),
+  'editor:italic': toggleWrap('*'),
+  // Backticks are a dead key on some layouts (ABNT2): a block without typing them.
+  'core:insert-code-block': insertCodeBlock,
+  'editor:task': toggleTask,
+  'editor:undo': undo,
+  'editor:redo': redo,
+  'editor:find': openSearchPanel,
+  'editor:select-next': selectNextOccurrence,
+  'editor:matching-bracket': cursorMatchingBracket,
+  'editor:indent': indentMore,
+  'editor:outdent': indentLess,
+};
+const MANAGED = new Set<Command>([...Object.values(EDITOR_COMMANDS), selectParentSyntax]);
+const MAC = typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform);
+
+/** CodeMirror's notation for a normalized key. */
+const cmKey = (k: string) => (k.endsWith('- ') || k === ' ' ? `${k.slice(0, -1)}Space` : k);
+
+/**
+ * CodeMirror's own keys that stay fixed: everything except the commands above and any
+ * binding on a key those commands use by default or now (Mod-i was selectParentSyntax).
+ */
+function fixedBindings(overrides: Overrides): KeyBinding[] {
+  const used = new Set(
+    SHORTCUTS.filter((s) => s.scope === 'editor').flatMap((s) => [...s.defaults, ...keysOf(s.id, overrides)]),
+  );
+  const keep = (b: KeyBinding) => {
+    if (b.run && MANAGED.has(b.run)) return false;
+    const k = (MAC ? b.mac : b.win) ?? b.key;
+    return !k || !used.has(normalizeKey(k, MAC));
+  };
+  return [
+    ...closeBracketsKeymap,
+    ...completionKeymap,
+    ...searchKeymap,
+    ...historyKeymap,
+    ...defaultKeymap,
+  ].filter(keep);
+}
+
+/** The editor commands on their current keys, ahead of CodeMirror's own. */
+export function editorKeymap(overrides: Overrides): Extension {
+  const commands: KeyBinding[] = [];
+  for (const [id, run] of Object.entries(EDITOR_COMMANDS))
+    for (const k of keysOf(id, overrides)) commands.push({ key: cmKey(k), run, preventDefault: true });
+  return [Prec.high(keymap.of(commands)), keymap.of(fixedBindings(overrides))];
+}
+
+export const keymapCompartment = new Compartment();
+
+/** Every editor showing now, so a change in Settings > Keyboard reaches them all. */
+const liveViews = new Set<EditorView>();
+const trackView = ViewPlugin.define((view) => {
+  liveViews.add(view);
+  return { destroy: () => liveViews.delete(view) };
+});
+
+/** Rebinds the editor commands in every open editor (Settings > Keyboard changed). */
+export function applyEditorShortcuts(overrides: Overrides): void {
+  for (const v of liveViews) v.dispatch({ effects: keymapCompartment.reconfigure(editorKeymap(overrides)) });
+}
 
 export interface EditorOptions {
   ctx: EditorContext;
@@ -111,18 +195,9 @@ export interface EditorOptions {
   extra?: Extension[];
 }
 
-/** Every key binding the note editor installs (Settings > Keyboard refuses these). */
-export function editorKeyBindings(): readonly KeyBinding[] {
-  return [
-    ...editingKeymap,
-    ...closeBracketsKeymap,
-    ...completionKeymap,
-    ...searchKeymap,
-    ...historyKeymap,
-    ...defaultKeymap,
-    indentWithTab,
-    ...markdownKeymap,
-  ];
+/** The editor's fixed keys (Settings > Keyboard refuses these): not its rebindable commands. */
+export function editorKeyBindings(overrides: Overrides = {}): readonly KeyBinding[] {
+  return [...fixedBindings(overrides), ...markdownKeymap];
 }
 
 export function previewExtensions(source: boolean): Extension {
@@ -139,6 +214,7 @@ export function editorExtensions(opts: EditorOptions): Extension[] {
   return [
     contextCompartment.of(editorContext.of(opts.ctx)),
     equationField,
+    closedFence,
     markdown({ extensions: vaultsMarkdown, codeLanguages: (info) => findLanguage(info), addKeymap: true }),
     syntaxHighlighting(codeHighlight),
     syntaxHighlighting(markdownHighlight),
@@ -149,15 +225,8 @@ export function editorExtensions(opts: EditorOptions): Extension[] {
     EditorView.lineWrapping,
     search({ top: true }),
     highlightSelectionMatches(),
-    Prec.high(keymap.of(editingKeymap)),
-    keymap.of([
-      ...closeBracketsKeymap,
-      ...completionKeymap,
-      ...searchKeymap,
-      ...historyKeymap,
-      ...defaultKeymap,
-      indentWithTab,
-    ]),
+    keymapCompartment.of(editorKeymap(currentOverrides())),
+    trackView,
     vaultAutocomplete,
     linkPreview,
     linkClicks(opts.openExternal),

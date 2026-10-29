@@ -1,29 +1,13 @@
 # Keyboard shortcuts
 
-On macOS, use `Cmd` where this page says `Ctrl`.
+These are the keys as they are set now. Change any of them in **Settings > Keyboard**: built-in shortcuts can be given another key, removed or reset, and plugin commands can be given one.
 
-| Action | Shortcut |
-|---|---|
-| Switch Vault (chooser) | `Ctrl+O` |
-| Search | `Ctrl+K` |
-| Command palette | `Ctrl+P` |
-| New note in the current section | `Ctrl+N` |
-| Toggle source mode | `Ctrl+E` |
-| Close desk item | `Ctrl+W` |
-| Toggle sidebar | `Ctrl+\` |
-| Toggle outline | `Ctrl+Shift+O` |
-| Today's daily note | `Ctrl+Shift+D` |
-| Settings | `Ctrl+,` |
+{{shortcuts:app}}
 
 ## In the editor
 
-| Action | Shortcut |
-|---|---|
-| Bold / italic | `Ctrl+B` / `Ctrl+I` |
-| Undo / redo | `Ctrl+Z` / `Ctrl+Y` or `Ctrl+Shift+Z` |
-| Find in note | `Ctrl+F` |
-| Select next occurrence | `Ctrl+D` |
-| Go to matching bracket | `Ctrl+Shift+\` |
-| Indent / outdent | `Tab` / `Shift+Tab` |
+These work while you type in a note.
 
-There is no shortcut for inserting a link: type `[[`, or use **Insert Link** in the command palette. Plugin commands have no shortcuts; run them from the palette.
+{{shortcuts:editor}}
+
+A few keys stay fixed: `Ctrl+Space` lists suggestions (languages after a fence, notes after `[[`), and `Ctrl+C`, `Ctrl+X`, `Ctrl+V` and `Ctrl+A` are the clipboard and select all. To insert a link, type `[[` or use **Insert Link** in the command palette.

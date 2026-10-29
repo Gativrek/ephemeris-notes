@@ -203,6 +203,7 @@ export const workspaceStrings = {
       newFromTemplate: 'New Note from Template',
       openNote: 'Open Note…',
       insertLink: 'Insert Link',
+      insertCodeBlock: 'Insert Code Block',
       toggleSource: 'Toggle Source Mode',
       toggleSidebar: 'Toggle Sidebar',
       toggleOutline: 'Toggle Outline',

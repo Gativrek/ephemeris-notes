@@ -250,6 +250,43 @@ test('blocks: typing a fence suggests block languages and writes the whole block
   await expect(page.locator('.sample-plugin-output', { hasText: 'depyt' })).toHaveCount(1);
 });
 
+test('blocks: Insert Code Block writes a fence without backticks, by key and from the palette', async () => {
+  const { page } = ctx;
+  await installAndEnable(page);
+  await page.keyboard.press('Escape');
+  await openPluginNote(page);
+  await page.locator('.vx-editor .cm-line', { hasText: 'End of note.' }).click();
+  await page.keyboard.press('End');
+  await page.keyboard.press('Enter');
+
+  // The key writes ``` and lists the languages at once.
+  await page.keyboard.press('ControlOrMeta+Shift+c');
+  const popup = page.locator('.cm-tooltip-autocomplete');
+  await expect(popup).toBeVisible();
+  await page.keyboard.type('sample-r');
+  await expect(popup.locator('li[aria-selected="true"]')).toContainText('sample-reverse');
+  await page.waitForTimeout(150);
+  await page.keyboard.press('Enter');
+  await expect.poll(() => page.evaluate(() => getSelection()?.toString())).toBe('starter text');
+  await page.keyboard.type('abc');
+
+  // From the palette, with a line selected: the line is wrapped, then only the language is added.
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('x = 1');
+  await page.keyboard.press('Shift+Home');
+  await runCommand(page, 'Insert Code Block');
+  await expect(popup).toBeVisible();
+  await page.keyboard.type('pyth');
+  await page.waitForTimeout(150);
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('save-state')).toHaveText('Saved', { timeout: 5000 });
+  await expect
+    .poll(async () => readFile(file('Academic/GNSS Study/Notes/Plugin Test.md'), 'utf8'))
+    .toMatch(/\n```sample-reverse\nabc\n```\n\n```python\nx = 1\n```$/);
+});
+
 test('commands and overlays: palette, overlay title and dirty state, notify, a failing command', async () => {
   const { page } = ctx;
   await installAndEnable(page);

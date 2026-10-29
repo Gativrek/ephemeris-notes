@@ -1,25 +1,10 @@
 /**
- * User hotkeys for commands (SPECS 11.3, Settings > Keyboard). Keys use CodeMirror's
- * notation normalized to `Mod-Alt-Shift-<key>` (Mod is Ctrl, or Cmd on macOS). A
- * binding is refused when it shadows a core shortcut, a key the editor installs, or
- * another command's hotkey.
+ * Key names and checks for shortcuts (SPECS 11.3, Settings > Keyboard). Keys use CodeMirror's
+ * notation normalized to `Mod-Alt-Shift-<key>` (Mod is Ctrl, or Cmd on macOS). Which
+ * command has which key is in keymap.ts.
  */
 
 export const HOTKEYS_KEY = 'keyboard.bindings';
-
-/** The core shortcuts of SPECS 11.4, by command id. */
-export const CORE_SHORTCUTS: Record<string, string> = {
-  'core:switch-vault': 'Mod-o',
-  'core:search': 'Mod-k',
-  'core:palette': 'Mod-p',
-  'core:new-note': 'Mod-n',
-  'core:toggle-source': 'Mod-e',
-  'core:close-item': 'Mod-w',
-  'core:toggle-sidebar': 'Mod-\\',
-  'core:toggle-outline': 'Mod-Shift-o',
-  'core:daily': 'Mod-Shift-d',
-  'core:settings': 'Mod-,',
-};
 
 const MODS = ['Mod', 'Alt', 'Shift'] as const;
 
