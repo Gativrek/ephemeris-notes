@@ -57,6 +57,7 @@ class SamplePlugin implements Plugin {
 
     ctx.blocks.register('sample-reverse', {
       render: (target, info, host) => this.renderReverse(target, info, host),
+      starter: 'starter text',
     });
     ctx.blocks.register('sample-throw', {
       render() {

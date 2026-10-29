@@ -237,6 +237,8 @@ test('blocks: typing a fence suggests block languages and writes the whole block
   // CodeMirror ignores Enter for 75 ms after the list changes (interactionDelay).
   await page.waitForTimeout(150);
   await page.keyboard.press('Enter');
+  // The plugin's starter body is written and selected, so typing replaces it.
+  await expect.poll(() => page.evaluate(() => getSelection()?.toString())).toBe('starter text');
   await page.keyboard.type('typed');
   await expect(page.getByTestId('save-state')).toHaveText('Saved', { timeout: 5000 });
   await expect

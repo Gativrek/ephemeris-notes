@@ -1,8 +1,8 @@
 /**
  * Fence completion (SPECS 10.5): after an opening ``` (or ~~~) and the first letters of
  * a language, suggest block languages (plugins first) and code languages. Picking one
- * writes the language, an empty line and the matching closing fence, with the cursor on
- * the empty line.
+ * writes the language, an empty line (or the plugin's starter body, selected) and the
+ * matching closing fence, with the cursor on the empty line.
  */
 import {
   pickedCompletion,
@@ -40,11 +40,18 @@ export function fenceCompletions(cx: CompletionContext): CompletionResult | null
 
   const from = line.from + indent.length + fence.length;
   const apply =
-    (lang: string) =>
+    (lang: string, starter = '') =>
     (view: EditorView, completion: Completion, start: number, end: number): void => {
+      // A plugin's starter body is indented like the fence and selected, so typing replaces it.
+      const body = starter
+        .replace(/\n+$/, '')
+        .split('\n')
+        .map((l) => (l ? indent + l : l))
+        .join('\n');
+      const bodyFrom = start + lang.length + 1;
       view.dispatch({
-        changes: { from: start, to: end, insert: `${lang}\n\n${indent}${fence}` },
-        selection: { anchor: start + lang.length + 1 },
+        changes: { from: start, to: end, insert: `${lang}\n${body}\n${indent}${fence}` },
+        selection: { anchor: bodyFrom + (body ? indent.length : 0), head: bodyFrom + body.length },
         annotations: pickedCompletion.of(completion),
         userEvent: 'input.complete',
       });
@@ -58,7 +65,7 @@ export function fenceCompletions(cx: CompletionContext): CompletionResult | null
       detail: entry.ownerName ?? entry.owner,
       type: 'class',
       boost: 1,
-      apply: apply(lang),
+      apply: apply(lang, entry.renderer.starter),
     });
   }
   for (const d of codeLanguages) {

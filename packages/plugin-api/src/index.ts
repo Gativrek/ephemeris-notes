@@ -7,7 +7,7 @@
  * are major. A change here without a matching change to packages/sample-plugin fails CI.
  */
 
-export const API_VERSION = '1.1.0';
+export const API_VERSION = '1.2.0';
 
 export interface Disposable {
   dispose(): void;
@@ -81,6 +81,11 @@ export interface NoteRef {
 
 export interface BlockRenderer {
   render(el: HTMLElement, block: BlockInfo, host: BlockHost): BlockView | void | Promise<BlockView | void>;
+  /**
+   * 1.2.0: the body fence completion writes into a new block of this language, selected
+   * so typing replaces it (SPECS 10.5). Without it the new block is empty.
+   */
+  starter?: string;
 }
 
 export interface BlockView {
