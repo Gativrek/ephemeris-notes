@@ -68,7 +68,7 @@ After renaming or moving the repository folder, run `pnpm install` once: on Wind
 
 ## Plugins
 
-The core ships no feature plugins; they live in their own repositories, built against the typed API in `packages/plugin-api` (`@ephemeris-notes/plugin-api`). Plugins are trusted code: install only plugins you trust.
+The core ships no feature plugins; they live in their own repositories, such as [ephemeris-plugins](https://github.com/Gativrek/ephemeris-plugins) (Control Plots, Diagrams, Data Plot, Citations, Flashcards and Text to Image), built against the typed API in `packages/plugin-api` (`@ephemeris-notes/plugin-api`). Plugins are trusted code: install only plugins you trust.
 
 The sample plugin (`packages/sample-plugin`) shows every part of the API. Build it with `node packages/sample-plugin/build.mjs` into `dist/`, then install that folder from Settings > Plugins > Install from Folder….
 
