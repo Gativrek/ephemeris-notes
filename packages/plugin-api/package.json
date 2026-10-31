@@ -1,6 +1,6 @@
 {
   "name": "@ephemeris-notes/plugin-api",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Public types for Ephemeris plugins (plugin API v1).",
   "license": "MIT",
   "type": "module",

@@ -7,7 +7,7 @@
  * are major. A change here without a matching change to packages/sample-plugin fails CI.
  */
 
-export const API_VERSION = '1.2.0';
+export const API_VERSION = '1.3.0';
 
 export interface Disposable {
   dispose(): void;
@@ -51,6 +51,9 @@ export interface PluginContext {
   readonly outline: OutlineRegistry;
   readonly views: ViewRegistry;
   readonly notes: NoteEditor;
+  // ---- 1.3.0 (SPECS 12.12) ----
+  readonly editor: EditorAccess;
+  readonly footers: FooterRegistry;
 }
 
 // ---- Blocks -------------------------------------------------------------
@@ -357,4 +360,33 @@ export interface NoteEditor {
     | { ok: true; hash: string }
     | { ok: false; reason: 'conflict' | 'readOnly' | 'notFound' | 'notAllowed' | 'invalid' }
   >;
+}
+
+// ---- 1.3.0: cursor insertion and note footers (SPECS 12.12) ------------------
+export interface EditorAccess {
+  /** The note in the active desk item's editor, or null (a PDF, a view, nothing open). */
+  activeNote(): NoteRef | null;
+  /**
+   * Replaces the selection in that editor with `text` and puts the cursor after it, as one
+   * undoable transaction, then focuses the editor. User-initiated only, as notes.edit.
+   * Resolves false when refused, read-only, or no note is open.
+   */
+  insertText(text: string): Promise<boolean>;
+}
+
+export interface FooterRegistry {
+  register(spec: FooterSpec): Disposable;
+}
+export interface FooterSpec {
+  /** Unique within the plugin. */
+  id: string;
+  /** Called for each note the editor shows. Draw into `el`, or leave it empty to show nothing. */
+  render(el: HTMLElement, note: NoteRef, host: FooterHost): FooterView | void;
+}
+export interface FooterHost {
+  /** Aborted when the editor shows another note, or the footer is unregistered. */
+  readonly signal: AbortSignal;
+}
+export interface FooterView {
+  dispose?(): void;
 }

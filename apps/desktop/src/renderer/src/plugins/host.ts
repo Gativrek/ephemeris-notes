@@ -25,7 +25,15 @@ import { useCatalog } from '../lib/catalog';
 import { currentTheme, onThemeChange } from '../lib/theme';
 import { errorMessage, unwrap, vx } from '../lib/vx';
 import { newKey, usePlugins, type PluginState } from './store';
-import { indexService, inlineService, notesService, outlineService, viewsService } from './v2';
+import {
+  editorService,
+  footerService,
+  indexService,
+  inlineService,
+  notesService,
+  outlineService,
+  viewsService,
+} from './v2';
 
 interface Loaded {
   plugin: Plugin;
@@ -261,6 +269,8 @@ async function makeContext(manifest: PluginManifest, disposables: Disposable[]):
     outline: outlineService(id, track),
     views: viewsService(id, track),
     notes: notesService(id, logger(id)),
+    editor: editorService(id, logger(id)),
+    footers: footerService(id, track),
   };
 }
 

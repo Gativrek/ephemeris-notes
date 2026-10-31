@@ -500,3 +500,42 @@ test('v2: view state survives a restart; notes.edit without a user action is ref
     await rm(userData, { recursive: true, force: true });
   }
 });
+
+test('API 1.3.0: note footers, and insertText from a command (refused without a user action)', async () => {
+  const { page } = ctx;
+  const notePath = 'Academic/GNSS Study/Notes/Footer Test.md';
+  await writeFile(file(notePath), '---\nsample-footer: true\n---\n# Footer test\n\nBody.\n');
+  await installAndEnable(page);
+  await page.keyboard.press('Escape');
+  await page.getByTestId('section-tile').filter({ hasText: 'Notes' }).click();
+  await page.getByTestId('tree').getByRole('treeitem', { name: 'Footer Test' }).first().click();
+
+  // The footer follows the note's last line; a note that does not opt in has none.
+  const footer = page.locator('.vx-plugin-footer[data-plugin="sample-plugin"] .sample-plugin-footer');
+  await expect(footer).toHaveText('Footer of Footer Test.md');
+  await page.getByTestId('tree').getByRole('treeitem', { name: 'Plugin Test' }).first().click();
+  await expect(page.locator('.sample-plugin-footer')).toHaveCount(0);
+  await page.getByTestId('tree').getByRole('treeitem', { name: 'Footer Test' }).first().click();
+  await expect(footer).toHaveCount(1);
+  // Not in source mode.
+  await page.keyboard.press('ControlOrMeta+e');
+  await expect(page.locator('.sample-plugin-footer')).toHaveCount(0);
+  await page.keyboard.press('ControlOrMeta+e');
+  await expect(footer).toHaveCount(1);
+
+  // A command inserts at the cursor, as one undoable step.
+  await page.locator('.vx-editor .cm-line', { hasText: 'Body.' }).click();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.type('Here: ');
+  await runCommand(page, 'Sample: Insert Text');
+  await expect(page.locator('.vx-editor .cm-line', { hasText: 'Here: inserted in Footer Test.md' })).toHaveCount(1);
+  await expect
+    .poll(async () => readFile(file(notePath), 'utf8'))
+    .toContain('Here: inserted in Footer Test.md');
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect(page.locator('.vx-editor .cm-line', { hasText: 'inserted in' })).toHaveCount(0);
+
+  // At load, with no user action, it was refused.
+  const probe = JSON.parse(await readFile(file('.ephemeris/plugin-data/sample-plugin/v13.json'), 'utf8'));
+  expect(probe).toEqual({ loadInsert: false });
+});

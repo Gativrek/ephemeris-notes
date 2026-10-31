@@ -228,6 +228,29 @@ class SamplePlugin implements Plugin {
     void ctx.notes
       .edit('Inbox/sample-plugin-probe.md', [], { expectedHash: '', reason: 'load-time probe' })
       .then((r) => ctx.storage.library.writeJson('v2.json', { loadEdit: r.ok ? 'ok' : r.reason }));
+
+    // ---- 1.3.0 (SPECS 12.12) ----
+    ctx.footers.register({
+      id: 'name',
+      render: (target, note) => {
+        // Only notes that opt in, so other notes stay as they were.
+        if (note.frontmatter['sample-footer'] !== true) return;
+        target.append(el('p', 'footer', `Footer of ${note.path.split('/').pop()}`));
+      },
+    });
+    ctx.commands.register({
+      id: 'insert',
+      title: 'Sample: Insert Text',
+      run: async () => {
+        const note = ctx.editor.activeNote();
+        const ok = await ctx.editor.insertText(`inserted in ${note?.path.split('/').pop() ?? 'nothing'}`);
+        if (!ok) ctx.ui.notify('insert refused');
+      },
+    });
+    // Without a user action, insertText is refused: try once at load and remember why.
+    void ctx.editor
+      .insertText('load-time probe')
+      .then((ok) => ctx.storage.library.writeJson('v13.json', { loadInsert: ok }));
   }
 
   onunload(): void {

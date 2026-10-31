@@ -42,6 +42,7 @@ import { linkClicks, linkPreview, vaultAutocomplete, type ExternalOpener } from 
 import { codeHighlight, findLanguage, markdownHighlight, sourceHeadingHighlight } from './languages';
 import { livePreview } from './livePreview';
 import { pluginInline, pluginInlineHover } from './pluginInline';
+import { pluginFooters } from './pluginFooter';
 import { equationField } from './equations';
 import { normalizeKey } from '../lib/hotkeys';
 import { currentOverrides, keysOf, SHORTCUTS, type Overrides } from '../lib/keymap';
@@ -203,7 +204,7 @@ export function editorKeyBindings(overrides: Overrides = {}): readonly KeyBindin
 export function previewExtensions(source: boolean): Extension {
   return source
     ? [syntaxHighlighting(sourceHeadingHighlight)]
-    : [livePreview, blockDecorations, pluginInline, pluginInlineHover];
+    : [livePreview, blockDecorations, pluginInline, pluginInlineHover, pluginFooters];
 }
 
 export function editableExtensions(readOnly: boolean): Extension {

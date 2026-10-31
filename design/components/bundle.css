@@ -562,6 +562,8 @@ body { margin: 0; font-family: var(--font-ui); color: var(--text); background: v
 .vx-plugin-block { position: relative; margin: 6px 0; min-height: 24px; }
 .vx-plugin-block__body { min-width: 0; }
 .vx-plugin-block__caption { margin: 6px 0 0; font: 400 13px/1.4 var(--font-ui); color: var(--muted); text-align: center; }
+.vx-plugin-footer { margin: 32px 0 0; }
+.vx-plugin-footer:empty { display: none; }
 .vx-plugin-block.is-loading { min-height: 64px; border: 1px dashed var(--line-note); border-radius: var(--radius-md); }
 .vx-plugin-block.is-loading::after { content: ''; position: absolute; left: 50%; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; border: 2px solid var(--line); border-top-color: var(--cyan-fill); border-radius: var(--radius-pill); animation: vx-spin .9s linear infinite; }
 .vx-plugin-block.is-error { border: 1px solid var(--danger); border-radius: var(--radius-md); background: var(--code-surface); }

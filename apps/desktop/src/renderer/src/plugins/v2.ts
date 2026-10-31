@@ -5,7 +5,9 @@
  */
 import type {
   Disposable,
+  EditorAccess,
   ExtractorSpec,
+  FooterRegistry,
   IndexQuery,
   IndexRecord,
   InlineRegistry,
@@ -14,6 +16,8 @@ import type {
   PluginIndex,
   ViewRegistry,
 } from '@ephemeris-notes/plugin-api';
+import { noteRefOf } from '../editor/pluginBlock';
+import { footerRegistry } from '../editor/pluginFooter';
 import { inlineRegistry } from '../editor/pluginInline';
 import { unwrap, vx } from '../lib/vx';
 import { currentEditor, editorStats } from '../workspace/EditorPane';
@@ -223,6 +227,49 @@ export function notesService(id: string, log: Log): NoteEditor {
       if (!r.ok) return { ok: false, reason: r.error.code === 'CONFLICT' ? 'conflict' : 'invalid' };
       log.info(`edited ${path}: ${opts.reason}`);
       return { ok: true, hash: r.value.hash };
+    },
+  };
+}
+
+// ---- 1.3.0: cursor insertion and note footers (SPECS 12.12) ---------------------------
+
+export function footerService(id: string, track: Track): FooterRegistry {
+  return {
+    register(spec) {
+      if (!spec || typeof spec.render !== 'function')
+        throw new Error('footers.register needs a `render` function.');
+      return track(footerRegistry.register({ owner: id, spec }));
+    },
+  };
+}
+
+export function editorService(id: string, log: Log): EditorAccess {
+  wireActivity();
+  return {
+    activeNote() {
+      const view = currentEditor();
+      return view ? noteRefOf(view.state) : null;
+    },
+    async insertText(text) {
+      if (typeof text !== 'string') return false;
+      // User-initiated only, as notes.edit (SPECS 12.11.5).
+      if (!navigator.userActivation?.isActive || !recentlyActedIn(id)) {
+        log.warn(
+          'editor.insertText refused: it needs a user action (a command, or a click or key press in the plugin).',
+        );
+        return false;
+      }
+      const view = currentEditor();
+      if (!view || view.state.readOnly) return false;
+      const sel = view.state.selection.main;
+      view.dispatch({
+        changes: { from: sel.from, to: sel.to, insert: text },
+        selection: { anchor: sel.from + text.length },
+        userEvent: `plugin.${id}`,
+        scrollIntoView: true,
+      });
+      view.focus();
+      return true;
     },
   };
 }
