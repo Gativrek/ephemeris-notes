@@ -528,7 +528,9 @@ test('API 1.3.0: note footers, and insertText from a command (refused without a 
   await page.keyboard.press('ControlOrMeta+End');
   await page.keyboard.type('Here: ');
   await runCommand(page, 'Sample: Insert Text');
-  await expect(page.locator('.vx-editor .cm-line', { hasText: 'Here: inserted in Footer Test.md' })).toHaveCount(1);
+  await expect(
+    page.locator('.vx-editor .cm-line', { hasText: 'Here: inserted in Footer Test.md' }),
+  ).toHaveCount(1);
   await expect
     .poll(async () => readFile(file(notePath), 'utf8'))
     .toContain('Here: inserted in Footer Test.md');

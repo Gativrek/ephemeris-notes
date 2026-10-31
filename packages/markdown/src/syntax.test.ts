@@ -195,7 +195,9 @@ describe('Pandoc citations in brackets', () => {
   });
 
   it('leave links, wikilinks, cross-references and e-mail text alone', () => {
-    expect(nodes('[see @a](https://x.org) [@a][ref] [[Note]] [@eq:energy] [mail me@x.org]', ['Citation'])).toEqual([]);
+    expect(
+      nodes('[see @a](https://x.org) [@a][ref] [[Note]] [@eq:energy] [mail me@x.org]', ['Citation']),
+    ).toEqual([]);
     expect(nodes('[see @a](https://x.org)', ['Link'])).toEqual([['Link', '[see @a](https://x.org)']]);
     expect(nodes('[@eq:energy]', ['CrossRef'])).toEqual([['CrossRef', '@eq:energy']]);
   });
