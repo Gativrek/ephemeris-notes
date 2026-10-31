@@ -297,6 +297,40 @@ const CrossRefs: MarkdownConfig = {
   ],
 };
 
+/**
+ * Pandoc citations in brackets (`[@groves2013, p. 45]`, `[see @a; -@b]`), SPECS 12.11.1 and
+ * 13.5. Without this, a bare `[…]` is a shortcut reference link and plugins never see it.
+ * The node is plain text to the core; the Citations plugin decorates it. A bracket that is
+ * followed by `(` or `[` stays a link, and one that only holds cross-references (`@eq:`)
+ * stays as before.
+ */
+const CITE_KEY = /(?:^|[\s;])-?@([A-Za-z0-9_][\w:.#$%&+?<>~/-]*)/g;
+const Citations: MarkdownConfig = {
+  defineNodes: [{ name: 'Citation' }],
+  parseInline: [
+    {
+      name: 'Citation',
+      before: 'Link',
+      parse(cx, next, pos) {
+        if (next !== BRACKET_OPEN || cx.char(pos + 1) === BRACKET_OPEN) return -1;
+        let end = pos + 1;
+        while (end < cx.end) {
+          const c = cx.char(end);
+          if (c === BRACKET_OPEN || c === NEWLINE) return -1;
+          if (c === BRACKET_CLOSE) break;
+          end++;
+        }
+        if (end >= cx.end) return -1;
+        const after = end + 1 < cx.end ? cx.char(end + 1) : -1;
+        if (after === ch('(') || after === BRACKET_OPEN) return -1;
+        const keys = [...cx.slice(pos + 1, end).matchAll(CITE_KEY)].map((m) => m[1]!);
+        if (!keys.length || keys.every((k) => /^(eq|fig|tbl):/i.test(k))) return -1;
+        return cx.addElement(cx.elt('Citation', pos, end + 1));
+      },
+    },
+  ],
+};
+
 const Tags: MarkdownConfig = {
   defineNodes: [{ name: 'Tag', style: t.labelName }],
   parseInline: [
@@ -339,7 +373,7 @@ const BlockIds: MarkdownConfig = {
 };
 
 /** Every extension, in the order the editor and the index use them. */
-export const vaultsMarkdown = [GFM, Frontmatter, MathSyntax, WikiLinks, CrossRefs, Tags, BlockIds];
+export const vaultsMarkdown = [GFM, Frontmatter, MathSyntax, WikiLinks, CrossRefs, Citations, Tags, BlockIds];
 
 /** The configured parser for plain (non-editor) use, e.g. in the index. */
 export const markdownParser = baseParser.configure(vaultsMarkdown);

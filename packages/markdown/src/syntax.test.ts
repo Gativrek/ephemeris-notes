@@ -185,3 +185,18 @@ describe('GFM and CommonMark', () => {
     expect(nodes('<div>x</div>\n', ['HTMLBlock'])).toHaveLength(1);
   });
 });
+
+describe('Pandoc citations in brackets', () => {
+  it('are citations, not shortcut links', () => {
+    expect(nodes('See [@groves2013, p. 45] and [see @a; -@b].', ['Citation', 'Link'])).toEqual([
+      ['Citation', '[@groves2013, p. 45]'],
+      ['Citation', '[see @a; -@b]'],
+    ]);
+  });
+
+  it('leave links, wikilinks, cross-references and e-mail text alone', () => {
+    expect(nodes('[see @a](https://x.org) [@a][ref] [[Note]] [@eq:energy] [mail me@x.org]', ['Citation'])).toEqual([]);
+    expect(nodes('[see @a](https://x.org)', ['Link'])).toEqual([['Link', '[see @a](https://x.org)']]);
+    expect(nodes('[@eq:energy]', ['CrossRef'])).toEqual([['CrossRef', '@eq:energy']]);
+  });
+});
