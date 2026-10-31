@@ -177,13 +177,22 @@ export function PluginViewPane({ id, onClose }: { id: string; onClose: () => voi
       saveState: (state) => saveViewState(id, state, owner),
       close: onClose,
       renderMarkdown(target, markdown, from) {
+        // Note typography without the editor's page padding, so it sits inside the view's layout.
+        const wrap = document.createElement('div');
+        wrap.className = 'vx-editor vx-view-markdown';
+        target.append(wrap);
         const view = createReadOnlyView(
-          target,
+          wrap,
           String(markdown),
           readOnlyContext(from),
           (url) => void vx().shell.openExternal(url),
         );
-        const d = { dispose: () => view.destroy() };
+        const d = {
+          dispose: () => {
+            view.destroy();
+            wrap.remove();
+          },
+        };
         disposables.push(d);
         return d;
       },
