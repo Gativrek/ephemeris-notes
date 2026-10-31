@@ -1,6 +1,7 @@
 /**
  * The Keyboard shortcuts help page shows the keys as set now: its `{{shortcuts:app}}`
- * and `{{shortcuts:editor}}` placeholders become tables from lib/keymap.ts.
+ * and `{{shortcuts:editor}}` placeholders become tables from lib/keymap.ts, and a fixed
+ * key written `{{key:Mod-c}}` reads as this platform's (Ctrl+C, or Cmd+C on macOS).
  */
 import { displayKey } from '../lib/hotkeys';
 import { keysOf, SHORTCUTS, type Overrides } from '../lib/keymap';
@@ -22,5 +23,8 @@ export function fillShortcuts(
   const extra = Object.keys(overrides).filter((id) => !builtIn.has(id) && keysOf(id, overrides).length);
   const app = [...SHORTCUTS.filter((s) => s.scope === 'app').map((s) => s.id), ...extra];
   const editor = SHORTCUTS.filter((s) => s.scope === 'editor').map((s) => s.id);
-  return markdown.replace('{{shortcuts:app}}', table(app)).replace('{{shortcuts:editor}}', table(editor));
+  return markdown
+    .replace('{{shortcuts:app}}', table(app))
+    .replace('{{shortcuts:editor}}', table(editor))
+    .replace(/\{\{key:([^}]+)\}\}/g, (_m, key: string) => displayKey(key, mac));
 }

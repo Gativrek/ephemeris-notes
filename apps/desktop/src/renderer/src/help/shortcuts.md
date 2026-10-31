@@ -10,4 +10,4 @@ These work while you type in a note.
 
 {{shortcuts:editor}}
 
-A few keys stay fixed: `Ctrl+Space` lists suggestions (languages after a fence, notes after `[[`), and `Ctrl+C`, `Ctrl+X`, `Ctrl+V` and `Ctrl+A` are the clipboard and select all. To insert a link, type `[[` or use **Insert Link** in the command palette.
+A few keys stay fixed: `Ctrl+Space` lists suggestions (languages after a fence, notes after `[[`), and `{{key:Mod-c}}`, `{{key:Mod-x}}`, `{{key:Mod-v}}` and `{{key:Mod-a}}` are the clipboard and select all. To insert a link, type `[[` or use **Insert Link** in the command palette.

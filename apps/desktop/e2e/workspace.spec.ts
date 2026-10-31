@@ -436,7 +436,9 @@ test('Settings > Keyboard: built-in shortcuts change, swap and reset, and the ed
   await page.getByTestId('settings').getByRole('link', { name: 'Help', exact: true }).click();
   await page.getByTestId('settings-help').getByRole('link', { name: 'Keyboard shortcuts' }).click();
   await expect(page.getByTestId('help-article')).toContainText('Bold');
-  await expect(page.getByTestId('help-article')).toContainText('Ctrl+J');
+  const mod = process.platform === 'darwin' ? 'Cmd' : 'Ctrl';
+  await expect(page.getByTestId('help-article')).toContainText(`${mod}+J`);
+  await expect(page.getByTestId('help-article')).toContainText(`${mod}+C`);
   await page.getByTestId('settings').getByRole('link', { name: 'Keyboard', exact: true }).click();
   for (const id of ['editor:bold', 'core:insert-code-block', 'core:search'])
     await hotkey(id).getByRole('button', { name: 'Reset' }).click();

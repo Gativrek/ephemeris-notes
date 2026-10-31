@@ -77,6 +77,30 @@ async function openPluginNote(page: Page): Promise<void> {
   await expect(page.locator('.vx-editor .cm-content')).toBeVisible();
 }
 
+/**
+ * Accepts the selected suggestion with Enter. CodeMirror ignores Enter for 75 ms after the
+ * list changes (interactionDelay), and on a slow machine the list can still be updating
+ * after the right item shows, so this waits until the list stops changing.
+ */
+async function acceptSuggestion(page: Page, ...texts: string[]): Promise<void> {
+  const popup = page.locator('.cm-tooltip-autocomplete');
+  for (const text of texts) await expect(popup.locator('li[aria-selected="true"]')).toContainText(text);
+  let last = '';
+  await expect
+    .poll(
+      async () => {
+        const now = await popup.innerHTML();
+        const same = now === last;
+        last = now;
+        return same;
+      },
+      { intervals: [200] },
+    )
+    .toBe(true);
+  await page.waitForTimeout(150);
+  await page.keyboard.press('Enter');
+}
+
 async function runCommand(page: Page, title: string): Promise<void> {
   await page.keyboard.press('ControlOrMeta+p');
   const palette = page.getByTestId('command-palette');
@@ -231,12 +255,7 @@ test('blocks: typing a fence suggests block languages and writes the whole block
   await expect(page.locator('.cm-tooltip-autocomplete')).toHaveCount(0);
 
   await page.keyboard.type('sample-r');
-  const popup = page.locator('.cm-tooltip-autocomplete');
-  await expect(popup.locator('li[aria-selected="true"]')).toContainText('sample-reverse');
-  await expect(popup.locator('li[aria-selected="true"]')).toContainText('Sample Plugin');
-  // CodeMirror ignores Enter for 75 ms after the list changes (interactionDelay).
-  await page.waitForTimeout(150);
-  await page.keyboard.press('Enter');
+  await acceptSuggestion(page, 'sample-reverse', 'Sample Plugin');
   // The plugin's starter body is written and selected, so typing replaces it.
   await expect.poll(() => page.evaluate(() => getSelection()?.toString())).toBe('starter text');
   await page.keyboard.type('typed');
@@ -264,9 +283,7 @@ test('blocks: Insert Code Block writes a fence without backticks, by key and fro
   const popup = page.locator('.cm-tooltip-autocomplete');
   await expect(popup).toBeVisible();
   await page.keyboard.type('sample-r');
-  await expect(popup.locator('li[aria-selected="true"]')).toContainText('sample-reverse');
-  await page.waitForTimeout(150);
-  await page.keyboard.press('Enter');
+  await acceptSuggestion(page, 'sample-reverse', 'Sample Plugin');
   await expect.poll(() => page.evaluate(() => getSelection()?.toString())).toBe('starter text');
   await page.keyboard.type('abc');
 
@@ -279,8 +296,7 @@ test('blocks: Insert Code Block writes a fence without backticks, by key and fro
   await runCommand(page, 'Insert Code Block');
   await expect(popup).toBeVisible();
   await page.keyboard.type('pyth');
-  await page.waitForTimeout(150);
-  await page.keyboard.press('Enter');
+  await acceptSuggestion(page, 'python');
   await expect(page.getByTestId('save-state')).toHaveText('Saved', { timeout: 5000 });
   await expect
     .poll(async () => readFile(file('Academic/GNSS Study/Notes/Plugin Test.md'), 'utf8'))

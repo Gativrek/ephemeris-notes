@@ -52,5 +52,9 @@ describe('the shortcuts help page', () => {
     expect(md).toContain('| editor:bold | None |');
     expect(md).toContain('| editor:redo | `Ctrl+Y` or `Ctrl+Shift+Z` |');
     expect(fillShortcuts('{{shortcuts:app}}', {}, (id) => id, true)).toContain('| core:search | `Cmd+K` |');
+    expect(fillShortcuts('`{{key:Mod-c}}` and `{{key:Mod-a}}`', {}, (id) => id, false)).toBe(
+      '`Ctrl+C` and `Ctrl+A`',
+    );
+    expect(fillShortcuts('`{{key:Mod-c}}`', {}, (id) => id, true)).toBe('`Cmd+C`');
   });
 });
