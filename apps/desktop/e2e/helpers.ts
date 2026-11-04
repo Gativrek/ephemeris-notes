@@ -2,7 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { _electron as electron, type ElectronApplication, type Page } from '@playwright/test';
+import { _electron as electron, expect, type ElectronApplication, type Page } from '@playwright/test';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const appRoot = path.resolve(here, '..');
@@ -43,6 +43,16 @@ export async function launch(
       if (!opts.userData) await rm(userData, { recursive: true, force: true });
     },
   };
+}
+
+/**
+ * Opens the outline panel if it is collapsed (below 1440px wide it starts so, SPECS 9.1).
+ * Reads the panel's frame: its content is built after the note paints.
+ */
+export async function showOutline(page: Page): Promise<void> {
+  const wrap = page.locator('.vx-outline-wrap');
+  if ((await wrap.count()) === 0) await page.keyboard.press('ControlOrMeta+Shift+O');
+  await expect(wrap).toHaveCount(1);
 }
 
 /** Makes the next folder dialogs return `folder` without showing anything. */

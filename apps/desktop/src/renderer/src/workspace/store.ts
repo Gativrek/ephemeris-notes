@@ -70,8 +70,14 @@ interface WorkspaceState {
 
 const emptyDesk = (): Desk => ({ open: [], pinned: [], active: null, recent: [] });
 
+/**
+ * The Vault whose saved desk and workspace are loaded. Until then the store holds an empty
+ * desk, and writing it (the sidebar picks a section at once) would replace the saved one.
+ */
+let loadedVault: string | null = null;
+
 function persist(s: WorkspaceState): void {
-  if (!s.vaultId) return;
+  if (!s.vaultId || s.vaultId !== loadedVault) return;
   void vx().ui.set(`desk.${s.vaultId}`, { open: s.desk.open, pinned: s.desk.pinned, active: s.desk.active });
   void vx().ui.set(`workspace.${s.vaultId}`, {
     section: s.section,
@@ -103,6 +109,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
   sectionsVersion: 0,
 
   async init(vaultPath, vaultId) {
+    loadedVault = null;
     set({
       vaultPath,
       vaultId,
@@ -145,13 +152,14 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
       sidebar: w?.sidebar ?? true,
       outline: w?.outline ?? window.innerWidth >= 1440,
     });
+    loadedVault = vaultId;
   },
 
   setViewState(id, state) {
     const viewStates = { ...get().viewStates, [id]: state };
     set({ viewStates });
     const vaultId = get().vaultId;
-    if (vaultId) void vx().ui.set(`views.${vaultId}`, viewStates);
+    if (vaultId && vaultId === loadedVault) void vx().ui.set(`views.${vaultId}`, viewStates);
   },
 
   setSection(path) {

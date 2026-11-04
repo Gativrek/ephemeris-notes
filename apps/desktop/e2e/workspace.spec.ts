@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { cp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { fixtureLibrary, launch, setPickFolder, tempDir, type Launched } from './helpers';
+import { fixtureLibrary, launch, setPickFolder, showOutline, tempDir, type Launched } from './helpers';
 
 let ctx: Launched;
 let lib: string;
@@ -335,8 +335,8 @@ test('Inbox: the rail badge counts captures; Move to… files a note into a sect
 test('outline styles: margin track, document map and tabbed inspector render the same note', async () => {
   const { page } = ctx;
   await openNote(page, 'Notes', 'Lecture 10');
+  await showOutline(page);
   const outline = page.getByTestId('outline');
-  if (!(await outline.isVisible())) await page.keyboard.press('ControlOrMeta+Shift+O');
   await expect(outline).toHaveAttribute('data-style', 'annotated');
   const setStyle = async (label: string) => {
     await page.keyboard.press('ControlOrMeta+,');
@@ -692,6 +692,39 @@ test('a long note never squeezes the Desk', async () => {
   expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(
     await page.evaluate(() => window.innerHeight),
   );
+});
+
+test('the Desk survives opening a Vault and quitting without touching it', async () => {
+  // Its own user data, kept across launches.
+  await ctx.close();
+  const userData = await tempDir('desk-userdata');
+  const openVault = async (first: boolean) => {
+    const c = await launch({ userData });
+    if (first) {
+      await setPickFolder(c.app, lib);
+      await c.page.getByRole('button', { name: 'Open Library…' }).click();
+    }
+    await expect(c.page.getByTestId('chooser')).toBeVisible();
+    await c.page.getByTestId('vault-card').filter({ hasText: 'GNSS Constellation Study' }).dblclick();
+    await expect(c.page.getByTestId('workspace')).toBeVisible();
+    return c;
+  };
+  try {
+    let c = await openVault(true);
+    await openNote(c.page, 'Notes', 'Lecture 2');
+    await expect(c.page.getByTestId('desk-card')).toHaveCount(1);
+    await c.close();
+    // Opened and closed again with nothing changed: the Desk loads and stays saved.
+    c = await openVault(false);
+    await expect(c.page.getByTestId('desk-card').filter({ hasText: 'Lecture 2' })).toHaveCount(1);
+    await c.close();
+    c = await openVault(false);
+    await expect(c.page.getByTestId('desk-card').filter({ hasText: 'Lecture 2' })).toHaveCount(1);
+    await c.close();
+  } finally {
+    await rm(userData, { recursive: true, force: true, maxRetries: 5, retryDelay: 500 });
+    ctx = await launch();
+  }
 });
 
 test('arrows over the Vault banner step through the Domain, sliding, saving first', async () => {

@@ -114,12 +114,15 @@ export function useOutline(
       if (timer) clearTimeout(timer);
       timer = setTimeout(rebuild, Math.max(150, settleDelay(getRecord(path)?.state.doc.length ?? 0)));
     };
-    rebuild();
+    // After the next paint: this effect can run inside the store update that opens the note,
+    // and a long note's outline takes tens of ms, which would hold back the note itself.
+    const first = requestAnimationFrame(() => (timer = setTimeout(rebuild, 0)));
     // Catches changes that bypass the editor (reloads); never while the user is typing.
     const poll = setInterval(() => Date.now() - lastEdit > 1500 && rebuild(), 1500);
     editorStats.listeners.add(schedule);
     return () => {
       editorStats.listeners.delete(schedule);
+      cancelAnimationFrame(first);
       clearInterval(poll);
       if (timer) clearTimeout(timer);
     };

@@ -6,7 +6,15 @@ import { execFileSync } from 'node:child_process';
 import { cp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { appRoot, fixtureLibrary, launch, setPickFolder, tempDir, type Launched } from './helpers';
+import {
+  appRoot,
+  fixtureLibrary,
+  launch,
+  setPickFolder,
+  showOutline,
+  tempDir,
+  type Launched,
+} from './helpers';
 
 const pluginRoot = path.resolve(appRoot, '../../packages/sample-plugin');
 const pluginDist = path.join(pluginRoot, 'dist');
@@ -403,7 +411,7 @@ test('v2: inline widgets, extractors, outline entries, views and note edits', as
   await installAndEnable(page);
   await page.keyboard.press('Escape');
   await openV2Note(page);
-  if (!(await page.getByTestId('outline').isVisible())) await page.keyboard.press('ControlOrMeta+Shift+O');
+  await showOutline(page);
 
   // Inline: one widget; the match in inline code and the refused one stay text.
   const inline = page.locator('.sample-plugin-inline');

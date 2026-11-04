@@ -61,7 +61,9 @@ test('SPECS 16 budgets on a 5,000-note library', async () => {
     ctx = await launch({ userData });
     let page = ctx.page;
     await setPickFolder(ctx.app, lib.root);
-    // Frame gaps while indexing show whether the UI stays responsive.
+    // Frame gaps while indexing show whether the UI stays responsive. Counted from the first
+    // paint: before it, frames wait for the GPU process, which is not the UI's doing.
+    await page.waitForFunction(() => performance.getEntriesByName('first-paint').length > 0);
     await page.evaluate(() => {
       const w = window as unknown as { __gaps: number[]; __gapRun: boolean };
       w.__gaps = [];
@@ -235,6 +237,7 @@ test('SPECS 16 budgets on a 5,000-note library', async () => {
     // ---- Cold start to the chooser, then open a Vault to an editable note. ------------------
     const starts: number[] = [];
     const rendererStarts: number[] = [];
+    const firstPaints: number[] = [];
     for (let i = 0; i < 3; i++) {
       const t = Date.now();
       ctx = await launch({ userData });
@@ -247,11 +250,23 @@ test('SPECS 16 budgets on a 5,000-note library', async () => {
         () => performance.timeOrigin + (performance.getEntriesByName('vx-chooser')[0]?.startTime ?? NaN),
       );
       rendererStarts.push(chooserAt - mainStart);
+      // The window paints only once the GPU process is up, which can take far longer than
+      // the render (about 1.9 s on the owner's AMD machine, in bare Electron too).
+      const paintAt = await page.evaluate(async () => {
+        for (;;) {
+          const p = performance.getEntriesByName('first-paint')[0];
+          if (p) return performance.timeOrigin + p.startTime;
+          await new Promise((r) => setTimeout(r, 20));
+        }
+      });
+      firstPaints.push(paintAt - mainStart);
       if (i < 2) await ctx.close();
     }
     results.coldStartWallMedianMs = round(pct(starts, 50));
     results.coldStartMedianMs = round(pct(rendererStarts, 50));
-    // Measured in the page: double-click the card, wait for the note's editor to paint.
+    results.coldStartToFirstPaintMedianMs = round(pct(firstPaints, 50));
+    // Measured in the page, after the window has painted (nobody can double-click it before):
+    // double-click the card, wait for the note's editor to paint.
     results.openVaultToEditableMs = round(
       await page.evaluate(async (name) => {
         const card = [...document.querySelectorAll<HTMLElement>('[data-testid="vault-card"]')].find((c) =>
