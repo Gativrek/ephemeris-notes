@@ -21,7 +21,7 @@ import { footerRegistry } from '../editor/pluginFooter';
 import { inlineRegistry } from '../editor/pluginInline';
 import { unwrap, vx } from '../lib/vx';
 import { currentEditor, editorStats } from '../workspace/EditorPane';
-import { editOpenDoc, getRecord, saveDoc } from '../workspace/docs';
+import { editOpenDoc, externalChange, getRecord, saveDoc, useDocs } from '../workspace/docs';
 import { recentlyActedIn, wireActivity } from './activity';
 import { newKey, usePlugins } from './store';
 import { openView, validViewType } from './views';
@@ -206,7 +206,14 @@ export function notesService(id: string, log: Log): NoteEditor {
       const list = validEdits(edits, file.text.length);
       if (!list) return { ok: false, reason: 'invalid' };
       const userEvent = `plugin.${id}`;
-      if (getRecord(path)) {
+      const rec = getRecord(path);
+      if (rec) {
+        // A note showing a conflict banner waits for the user; nothing would be saved.
+        if (useDocs.getState().meta[path]?.conflict) return { ok: false, reason: 'conflict' };
+        // Changed on disk and not reloaded yet: load the disk's text first, or the edit's
+        // offsets (into that text) would land in the editor's older one.
+        if (rec.hash !== file.hash) await externalChange(path);
+        if (getRecord(path)?.hash !== file.hash) return { ok: false, reason: 'conflict' };
         // Open: one transaction in the note's own history, then the normal save.
         const view = currentEditor();
         if (view && editorStats.path === path) view.dispatch({ changes: list, userEvent });

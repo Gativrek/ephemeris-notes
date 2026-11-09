@@ -458,6 +458,19 @@ test('v2: inline widgets, extractors, outline entries, views and note edits', as
   await expect(view.locator('.sample-plugin-board-status')).toHaveText('edit ok');
   await expect.poll(async () => readFile(file(notePath), 'utf8')).toContain('Edited by the sample plugin.');
 
+  // Changed on disk and edited at once, before the open note reloads: the edit goes into
+  // the disk's text (the editor loads it first), and both changes are kept.
+  const onDisk = await readFile(file(notePath), 'utf8');
+  await writeFile(file(notePath), `Changed outside.\n${onDisk}`);
+  await view.getByRole('button', { name: 'Append Line' }).click();
+  await expect(view.locator('.sample-plugin-board-status')).toHaveText('edit ok');
+  await expect
+    .poll(
+      async () => (await readFile(file(notePath), 'utf8')).split('Edited by the sample plugin.').length - 1,
+    )
+    .toBe(2);
+  expect(await readFile(file(notePath), 'utf8')).toMatch(/^Changed outside\.\n/);
+
   // onRequestClose keeps a dirty view open.
   await view.getByRole('button', { name: 'Make Dirty' }).click();
   await page.keyboard.press('ControlOrMeta+w');
