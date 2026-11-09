@@ -216,10 +216,21 @@ class SamplePlugin implements Plugin {
         };
         void show();
         const sub = ctx.index.onChanged(() => void show());
-        root.append(count, md, records, click, makeDirty, save, append, status);
+        // 1.4.0 (SPECS 12.13.1): the library's link graph, followed as links change.
+        const graph = el('p', 'board-graph');
+        const showGraph = async () => {
+          const g = await ctx.index.links();
+          graph.textContent = `graph: ${g.notes.length} notes, ${g.links.length} links`;
+        };
+        void showGraph();
+        const linkSub = ctx.index.onLinksChanged(() => void showGraph());
+        root.append(count, md, records, click, makeDirty, save, append, status, graph);
         return {
           onRequestClose: () => !dirty,
-          dispose: () => sub.dispose(),
+          dispose: () => {
+            sub.dispose();
+            linkSub.dispose();
+          },
         };
       },
     });

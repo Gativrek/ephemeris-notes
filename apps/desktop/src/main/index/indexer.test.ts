@@ -132,6 +132,40 @@ describe('links and backlinks (SPECS 5)', () => {
     expect(index.links.resolve('KF', 'x.md').path).toBe('Academic/Knowledge/Concepts/Kalman Filter.md');
   });
 
+  it('gives the link graph of a scope, as backlinks see it (SPECS 12.13.1)', () => {
+    const kalman = 'Academic/Knowledge/Concepts/Kalman Filter.md';
+    const all = index.linkGraph({ kind: 'all' });
+    expect(
+      all.links
+        .filter((l) => l.to === kalman)
+        .map((l) => l.from)
+        .sort(),
+    ).toEqual(
+      index
+        .backlinks(kalman)
+        .map((b) => b.path)
+        .sort(),
+    );
+    // One row per pair, no links to self.
+    const pairs = all.links.map((l) => `${l.from} > ${l.to}`);
+    expect(new Set(pairs).size).toBe(pairs.length);
+    expect(all.links.every((l) => l.from !== l.to && l.count >= 1)).toBe(true);
+    expect(all.notes.length).toBe(index.notesIn({ kind: 'all' }).length);
+
+    const vault = index.linkGraph({ kind: 'vault', vaultPath: 'Academic/GNSS Study' });
+    expect(vault.notes.every((n) => n.path.startsWith('Academic/GNSS Study/'))).toBe(true);
+    expect(vault.links.every((l) => l.from.startsWith('Academic/GNSS Study/'))).toBe(true);
+    // Links leave the scope: Intro links to the Kalman Filter concept note in Knowledge.
+    expect(vault.links).toContainEqual({
+      from: 'Academic/GNSS Study/Notes/Intro.md',
+      to: kalman,
+      count: expect.any(Number),
+    });
+    expect(
+      index.linkGraph({ kind: 'domain', domain: 'work' }).links.every((l) => l.from.startsWith('Work/')),
+    ).toBe(true);
+  });
+
   it('updates incrementally: new, changed and deleted notes, and links that start resolving', async () => {
     expect(index.backlinks('Academic/GNSS Study/Notes/Missing Note.md')).toEqual([]);
     await fs.writeFile(

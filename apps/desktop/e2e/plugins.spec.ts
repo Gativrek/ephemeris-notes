@@ -601,3 +601,24 @@ test('API 1.4.0: ui.openNote opens a note at a line; a path that is not a note i
   ).toHaveCount(1);
   await expect(page.getByTestId('desk-card')).toHaveCount(1);
 });
+
+test('API 1.4.0: index.links gives the link graph and onLinksChanged follows it', async () => {
+  const { page } = ctx;
+  await installAndEnable(page);
+  await page.keyboard.press('Escape');
+  await openPluginNote(page);
+  await page.locator('.sample-plugin-reverse').first().getByRole('button', { name: 'Open Board' }).click();
+  const graph = page.locator('.sample-plugin-board-graph');
+  await expect(graph).toHaveText(/^graph: \d+ notes, \d+ links$/);
+  const count = async () => (await graph.textContent())!.match(/\d+/g)!.map(Number) as [number, number];
+  const [notes, links] = await count();
+  expect(notes).toBeGreaterThan(10);
+  expect(links).toBeGreaterThan(5);
+
+  // A new note linking to two others: one more note, two more links.
+  await writeFile(
+    file('Academic/GNSS Study/Notes/Graph Test.md'),
+    '# Graph test\n\n[[Intro]] and [[Kalman Filter]].\n',
+  );
+  await expect(graph).toHaveText(`graph: ${notes + 1} notes, ${links + 2} links`, { timeout: 15_000 });
+});

@@ -206,6 +206,33 @@ test('SPECS 16 budgets on a 5,000-note library', async () => {
     results.searchP50Ms = round(pct(searchTimes, 50));
     results.searchMaxMs = round(Math.max(...searchTimes));
 
+    // ---- The link graph of the whole library (SPECS 12.13.1, target 300 ms). -------------
+    const graph = await page.evaluate(async () => {
+      const vx = (
+        window as unknown as {
+          vx: {
+            index: {
+              linkGraph(s: {
+                kind: 'all';
+              }): Promise<{ ok: boolean; value?: { notes: unknown[]; links: unknown[] } }>;
+            };
+          };
+        }
+      ).vx;
+      const times: number[] = [];
+      let size = { notes: 0, links: 0 };
+      for (let i = 0; i < 3; i++) {
+        const t = performance.now();
+        const r = await vx.index.linkGraph({ kind: 'all' });
+        times.push(performance.now() - t);
+        size = { notes: r.value?.notes.length ?? 0, links: r.value?.links.length ?? 0 };
+      }
+      return { times, size };
+    });
+    results.linkGraphMaxMs = round(Math.max(...graph.times));
+    results.linkGraphNotes = graph.size.notes;
+    results.linkGraphLinks = graph.size.links;
+
     // ---- Switch desk items. ------------------------------------------------------------
     await page.getByTestId('tree').getByRole('treeitem', { name: 'Note 0' }).first().click();
     await expect(content).toContainText('Note 0');
@@ -304,6 +331,7 @@ test('SPECS 16 budgets on a 5,000-note library', async () => {
   expect.soft(results.fullIndexMs, 'full index').toBeLessThan(20_000);
   expect.soft(results.reindexAfterSaveMs, 'incremental reindex').toBeLessThan(150);
   expect.soft(results.searchMaxMs, 'search').toBeLessThan(120);
+  expect.soft(results.linkGraphMaxMs, 'link graph').toBeLessThan(300);
   expect.soft(results.keystrokeWorkP95Ms, 'keystroke').toBeLessThan(16);
   expect.soft(results.deskSwitchMaxMs, 'desk switch').toBeLessThan(100);
 });

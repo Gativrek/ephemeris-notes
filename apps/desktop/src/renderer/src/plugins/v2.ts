@@ -102,6 +102,28 @@ export function indexService(id: string, track: Track, log: Log): PluginIndex {
         off();
       });
     },
+    async links(q) {
+      const scope = q?.scope ?? { kind: 'all' };
+      return unwrap(vx().index.linkGraph(JSON.parse(JSON.stringify(scope))));
+    },
+    onLinksChanged(cb) {
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      const off = vx().index.onChanged(() => {
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(() => {
+          timer = null;
+          try {
+            cb();
+          } catch (err) {
+            log.error('index.onLinksChanged failed', err);
+          }
+        }, 200);
+      });
+      return track(() => {
+        if (timer) clearTimeout(timer);
+        off();
+      });
+    },
   };
 }
 

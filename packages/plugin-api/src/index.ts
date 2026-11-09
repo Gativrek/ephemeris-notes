@@ -275,6 +275,20 @@ export interface PluginIndex {
   query(q: IndexQuery): Promise<IndexRecord[]>;
   /** Fires after records of this plugin change (debounced). */
   onChanged(cb: () => void): Disposable;
+  /** 1.4.0 (SPECS 12.13.1): resolved links between notes, from the index. Default scope: all. */
+  links(q?: { scope?: IndexQuery['scope'] }): Promise<LinkGraph>;
+  /** 1.4.0: fires after the index changes, so links may have (debounced). */
+  onLinksChanged(cb: () => void): Disposable;
+}
+export interface LinkGraph {
+  /** Every note in the scope, linked or not. */
+  notes: Array<{ path: string; title: string }>;
+  /**
+   * Links from notes in the scope, one per pair, with how many times the source links
+   * there. `to` is a note or an attachment, possibly outside the scope. Unresolved and
+   * ambiguous links, and a note's links to itself, are left out.
+   */
+  links: Array<{ from: string; to: string; count: number }>;
 }
 export type ExtractorSpec = { id: string; version: number; where?: ExtractorWhere } & (
   | {

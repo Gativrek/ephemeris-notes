@@ -59,6 +59,7 @@ export function registerIndexHandlers(deps: { sessions: SessionManager; index: I
   );
   handle('index', 'outline', (_e, p) => need().call('outline', str(p, 'path', 1024)));
   handle('index', 'notesIn', (_e, scope) => need().call('notesIn', scopeArg(scope)));
+  handle('index', 'linkGraph', (_e, scope) => need().call('linkGraph', scopeArg(scope)));
   handle('index', 'status', () => index.current);
   handle('index', 'rebuild', () => need().call('rebuild'));
   handle('index', 'ambiguous', () => need().call('ambiguous'));

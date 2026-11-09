@@ -810,6 +810,37 @@ export class LibraryIndex {
     return rows.map((r) => ({ path: String(r.path), title: String(r.title) }));
   }
 
+  /**
+   * The resolved link graph (SPECS 12.13.1): the notes in a scope, and their links as one
+   * row per pair with a count. Targets are as backlinks see them (`target_resolved`):
+   * unresolved and ambiguous links are left out, and so are a note's links to itself.
+   */
+  linkGraph(scope: SearchScope): {
+    notes: Array<{ path: string; title: string }>;
+    links: Array<{ from: string; to: string; count: number }>;
+  } {
+    const notes = this.notesIn(scope);
+    const where =
+      scope.kind === 'vault'
+        ? "AND src LIKE ? ESCAPE '\\'"
+        : scope.kind === 'domain'
+          ? 'AND src IN (SELECT path FROM notes WHERE domain = ?)'
+          : '';
+    const params: SqlValue[] =
+      scope.kind === 'vault'
+        ? [`${scope.vaultPath.replace(/[\\%_]/g, '\\$&')}/%`]
+        : scope.kind === 'domain'
+          ? [scope.domain]
+          : [];
+    const links = this.db
+      .prepare(
+        `SELECT src, target_resolved AS dst, COUNT(*) AS n FROM links WHERE target_resolved IS NOT NULL AND target_resolved <> src ${where} GROUP BY src, target_resolved ORDER BY src, target_resolved`,
+      )
+      .all(...params)
+      .map((r) => ({ from: String(r.src), to: String(r.dst), count: Number(r.n) }));
+    return { notes, links };
+  }
+
   outline(p: string) {
     return {
       headings: this.db

@@ -72,6 +72,7 @@ const methods: Record<string, (...args: never[]) => unknown> = {
   resolve: (link: string, from: string) => index.links.resolve(link, from),
   outline: (p: string) => index.outline(p),
   notesIn: (scope: Parameters<LibraryIndex['notesIn']>[0]) => index.notesIn(scope),
+  linkGraph: (scope: Parameters<LibraryIndex['linkGraph']>[0]) => index.linkGraph(scope),
   ambiguous: () => index.ambiguousLinks(),
   linkImpact: (paths: string[]) => ({
     notes: index.linksInto(paths).filter((n) => !paths.some((p) => inside(n.path, p))),

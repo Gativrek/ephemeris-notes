@@ -240,6 +240,13 @@ export interface VxBridge {
       }>
     >;
     notesIn(scope: SearchScope): Promise<Result<Array<{ path: string; title: string }>>>;
+    /** The resolved link graph of a scope (SPECS 12.13.1). */
+    linkGraph(scope: SearchScope): Promise<
+      Result<{
+        notes: Array<{ path: string; title: string }>;
+        links: Array<{ from: string; to: string; count: number }>;
+      }>
+    >;
     status(): Promise<Result<IndexStatus>>;
     /** Deletes and rebuilds the index (Settings > Library). */
     rebuild(): Promise<Result<null>>;
@@ -436,6 +443,7 @@ export const BRIDGE_METHODS = {
     'resolve',
     'outline',
     'notesIn',
+    'linkGraph',
     'status',
     'rebuild',
     'ambiguous',
