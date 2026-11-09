@@ -24,6 +24,8 @@ import { assetUrl } from '../lib/asset';
 import { useCatalog } from '../lib/catalog';
 import { currentTheme, onThemeChange } from '../lib/theme';
 import { errorMessage, unwrap, vx } from '../lib/vx';
+import { openPath } from '../workspace/actions';
+import { useWorkspace } from '../workspace/store';
 import { newKey, usePlugins, type PluginState } from './store';
 import {
   editorService,
@@ -181,6 +183,17 @@ async function makeContext(manifest: PluginManifest, disposables: Disposable[]):
       openOverlay: (opts) => openOverlay(opts, id),
       notify: (message, kind) => notify(`${manifest.name}: ${message}`, kind),
       revealInFolder: (path) => void vx().shell.revealInFolder(path),
+      async openNote(path, opts) {
+        if (typeof path !== 'string' || !/\.md$/i.test(path) || !useWorkspace.getState().vaultPath)
+          return false;
+        if (!useCatalog.getState().paths.includes(path)) return false;
+        const line = opts?.line;
+        openPath(
+          path,
+          typeof line === 'number' && Number.isInteger(line) && line >= 1 ? { line } : undefined,
+        );
+        return true;
+      },
     },
     settings: {
       register(def) {

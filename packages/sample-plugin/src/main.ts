@@ -251,6 +251,23 @@ class SamplePlugin implements Plugin {
     void ctx.editor
       .insertText('load-time probe')
       .then((ok) => ctx.storage.library.writeJson('v13.json', { loadInsert: ok }));
+
+    // ---- 1.4.0 (SPECS 12.13) ----
+    const openNote = async (target: string) => {
+      const ok = await ctx.ui.openNote(target, { line: 3 });
+      ctx.ui.notify(ok ? `opened ${target.split('/').pop()} at line 3` : `not a note: ${target}`);
+    };
+    ctx.commands.register({
+      id: 'open-note',
+      title: 'Sample: Open Note at Line',
+      run: () => openNote('Academic/GNSS Study/Notes/Plugin Test.md'),
+    });
+    // A path that is not a note in the library is refused.
+    ctx.commands.register({
+      id: 'open-missing',
+      title: 'Sample: Open Missing Note',
+      run: () => openNote('Academic/GNSS Study/Notes/No Such Note.md'),
+    });
   }
 
   onunload(): void {

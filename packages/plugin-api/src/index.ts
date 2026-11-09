@@ -7,7 +7,7 @@
  * are major. A change here without a matching change to packages/sample-plugin fails CI.
  */
 
-export const API_VERSION = '1.3.0';
+export const API_VERSION = '1.4.0';
 
 export interface Disposable {
   dispose(): void;
@@ -127,6 +127,11 @@ export interface UiService {
   notify(message: string, kind?: 'info' | 'error'): void;
   /** Library-relative path. */
   revealInFolder(path: string): void;
+  /**
+   * 1.4.0 (SPECS 12.13): opens a note on the desk and, with `line` (1-based), scrolls to it,
+   * as search results do. Resolves false for a path that is not a note in the library.
+   */
+  openNote(path: string, opts?: { line?: number }): Promise<boolean>;
 }
 
 // ---- Settings and help --------------------------------------------------

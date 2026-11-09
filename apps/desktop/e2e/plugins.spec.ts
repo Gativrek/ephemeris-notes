@@ -565,3 +565,26 @@ test('API 1.3.0: note footers, and insertText from a command (refused without a 
   const probe = JSON.parse(await readFile(file('.ephemeris/plugin-data/sample-plugin/v13.json'), 'utf8'));
   expect(probe).toEqual({ loadInsert: false });
 });
+
+test('API 1.4.0: ui.openNote opens a note at a line; a path that is not a note is refused', async () => {
+  const { page } = ctx;
+  await installAndEnable(page);
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('desk-card')).toHaveCount(0);
+
+  await runCommand(page, 'Sample: Open Note at Line');
+  await expect(page.getByTestId('desk-card').filter({ hasText: 'Plugin Test' })).toHaveCount(1);
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Sample Plugin: opened Plugin Test.md at line 3' }),
+  ).toHaveCount(1);
+  // The cursor is on line 3, the opening fence of a block: the block shows its source.
+  await expect(
+    page.locator('.vx-editor .cm-line', { hasText: '```sample-reverse file="Notes/Intro.md"' }),
+  ).toHaveCount(1);
+
+  await runCommand(page, 'Sample: Open Missing Note');
+  await expect(
+    page.getByRole('status').filter({ hasText: 'not a note: Academic/GNSS Study/Notes/No Such Note.md' }),
+  ).toHaveCount(1);
+  await expect(page.getByTestId('desk-card')).toHaveCount(1);
+});
