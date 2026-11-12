@@ -69,6 +69,14 @@ const GLYPHS = {
       <path d="M4 10h16M9 3v4M15 3v4" />
     </>
   ),
+  // A clock turning back: a note's history (SPECS 4.12).
+  history: (
+    <>
+      <path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3" />
+      <path d="M4 4v4h4" />
+      <path d="M12 8v4l3 2" />
+    </>
+  ),
   settings: (
     <>
       <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />

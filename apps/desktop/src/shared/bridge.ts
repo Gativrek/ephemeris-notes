@@ -132,6 +132,10 @@ export interface VxBridge {
     gitStatus(): Promise<Result<GitStatusInfo>>;
     /** Commits every change now (Settings > Library > Commit Now). */
     gitCommitNow(): Promise<Result<GitStatusInfo>>;
+    /** Git timeline (SPECS 4.12): a note's versions, newest first. Reads only. */
+    gitHistory(path: string): Promise<Result<GitHistory>>;
+    /** One version's text, from its commit and the note's path at that commit. */
+    gitVersion(commit: string, pathAtCommit: string): Promise<Result<{ text: string } | null>>;
   };
   fs: {
     read(path: string): Promise<Result<TextFile>>;
@@ -369,6 +373,24 @@ export interface PluginInfo {
 
 export type StorageScope = 'library' | 'vault';
 
+export interface GitHistoryEntry {
+  /** 40 hex digits. */
+  commit: string;
+  /** Commit time, ms since the epoch. */
+  at: number;
+  author: string;
+  /** The commit message's first line. */
+  subject: string;
+  /** The note's library path in that commit (renames are followed). */
+  path: string;
+  added: number;
+  removed: number;
+}
+
+export type GitHistory =
+  | { available: true; entries: GitHistoryEntry[]; uncommitted: boolean }
+  | { available: false; reason: 'notRepository' | 'noGit' };
+
 export interface GitStatusInfo {
   repo: boolean;
   enabled: boolean;
@@ -406,7 +428,18 @@ export type PushEvent =
 
 /** Bridge surface as a method list, so preload and main agree on channels. */
 export const BRIDGE_METHODS = {
-  library: ['open', 'create', 'current', 'close', 'stats', 'files', 'gitStatus', 'gitCommitNow'],
+  library: [
+    'open',
+    'create',
+    'current',
+    'close',
+    'stats',
+    'files',
+    'gitStatus',
+    'gitCommitNow',
+    'gitHistory',
+    'gitVersion',
+  ],
   notes: ['create', 'templates', 'daily', 'addAttachment'],
   app: ['pdfData'],
   plugins: [

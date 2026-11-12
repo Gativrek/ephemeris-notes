@@ -138,6 +138,13 @@ export function editOpenDoc(path: string, changes: ChangeSpec, userEvent: string
   return true;
 }
 
+/** Replaces an open note's whole text as one undoable edit (the Git timeline's restore, SPECS 4.12). */
+export function replaceOpenDoc(path: string, text: string, userEvent: string): boolean {
+  const rec = records.get(path);
+  if (!rec) return false;
+  return editOpenDoc(path, { from: 0, to: currentState(rec).doc.length, insert: text }, userEvent);
+}
+
 /** Called by the editor for every edit of the shown document. */
 export function noteEdited(path: string, state: EditorState): void {
   const rec = records.get(path);

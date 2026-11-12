@@ -31,6 +31,7 @@ import {
 } from './actions';
 import { useDocs } from './docs';
 import { useWorkspace } from './store';
+import { openHistory } from './History';
 import {
   buildSections,
   buildTree,
@@ -492,6 +493,7 @@ export function Sidebar({ vault }: { vault: VaultInfo }) {
           ]),
       { id: 'rename', label: s.menu.rename, separatorBefore: true },
       { id: 'moveTo', label: s.menu.moveTo },
+      ...(/.md$/i.test(node.path) ? [{ id: 'history', label: s.menu.history }] : []),
       { id: 'reveal', label: s.menu.reveal },
       { id: 'trash', label: s.menu.delete, separatorBefore: true },
     ];
@@ -522,6 +524,9 @@ export function Sidebar({ vault }: { vault: VaultInfo }) {
         break;
       case 'moveTo':
         useWorkspace.setState({ overlay: { kind: 'moveTo', path: node.path } });
+        break;
+      case 'history':
+        openHistory(node.path);
         break;
       case 'reveal':
         void vx().shell.revealInFolder(node.path);

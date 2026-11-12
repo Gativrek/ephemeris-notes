@@ -80,6 +80,9 @@ importers:
       '@codemirror/view':
         specifier: ^6.43.15
         version: 6.43.15
+      '@ephemeris-notes/diff':
+        specifier: workspace:*
+        version: link:../../packages/diff
       '@ephemeris-notes/markdown':
         specifier: workspace:*
         version: link:../../packages/markdown
@@ -137,6 +140,8 @@ importers:
       zustand:
         specifier: ^5.0.16
         version: 5.0.16(@types/react@19.3.0)(react@19.3.1)
+
+  packages/diff: {}
 
   packages/markdown:
     dependencies:

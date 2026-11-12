@@ -18,7 +18,14 @@ import { useSettings, wireSettings } from '../../lib/settings';
 import { unwrap, vx } from '../../lib/vx';
 import { useApp } from '../../store/app';
 import { workspaceStrings as s } from '../../strings/workspace';
-import { newNote, newUnfiledNote, openDailyNote, setNotifier } from '../../workspace/actions';
+import {
+  newNote,
+  newUnfiledNote,
+  notice as showNotice,
+  openDailyNote,
+  setNotifier,
+} from '../../workspace/actions';
+import { historyTitle, isHistoryId, openHistory } from '../../workspace/History';
 import { setDateLocale } from '../../workspace/tree';
 import { HOTKEYS_KEY, eventKey, isMacPlatform, recording } from '../../lib/hotkeys';
 import { commandFor, currentOverrides, scopeOf, type Overrides } from '../../lib/keymap';
@@ -147,6 +154,15 @@ export function Workspace({ vaultPath }: { vaultPath: string }) {
       ['daily', c.daily, () => void openDailyNote()],
       ['settings', c.settings, () => setSettingsAt({ section: 'general', page: null })],
       ['help', c.help, () => setSettingsAt({ section: 'help', page: null })],
+      [
+        'show-history',
+        c.showHistory,
+        () => {
+          const active = ws().desk.active;
+          if (active && /\.md$/i.test(active) && !isHistoryId(active)) openHistory(active);
+          else showNotice(s.history.openNoteFirst);
+        },
+      ],
       ['switch-vault', c.switchVault, () => useApp.getState().showChooser()],
       ['prev-vault', c.prevVault, () => void stepVault(-1)],
       ['next-vault', c.nextVault, () => void stepVault(1)],
@@ -185,9 +201,11 @@ export function Workspace({ vaultPath }: { vaultPath: string }) {
     if (!vault) return;
     const note = isViewId(active)
       ? viewTitle(active ?? '')
-      : active
-        ? active.slice(active.lastIndexOf('/') + 1).replace(/\.md$/i, '')
-        : null;
+      : isHistoryId(active)
+        ? historyTitle(active ?? '')
+        : active
+          ? active.slice(active.lastIndexOf('/') + 1).replace(/\.md$/i, '')
+          : null;
     void vx().window.setTitle([note, vault.name, s.appName].filter(Boolean).join(' · '));
   }, [vault, active, activeTitle]);
 

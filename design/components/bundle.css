@@ -689,3 +689,37 @@ body { margin: 0; font-family: var(--font-ui); color: var(--text); background: v
 .vx-banner-dialog__row { display: flex; align-items: center; gap: var(--space-3); }
 .vx-banner-preview { position: relative; overflow: hidden; align-self: center; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--chooser-panel-inset); }
 .vx-banner-preview__empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: var(--space-4); text-align: center; font-size: 13px; color: var(--muted); }
+
+/* ---- History: a note's versions from git (SPECS 4.12, design/components/History) ---- */
+.vx-history { display: grid; grid-template-columns: 280px minmax(0, 1fr); height: 100%; min-height: 0; font-family: var(--font-ui); color: var(--text); }
+.vx-history--message { display: flex; align-items: center; justify-content: center; padding: var(--space-6); text-align: center; font-size: 14px; color: var(--muted); }
+.vx-history__list { display: flex; flex-direction: column; gap: 2px; min-height: 0; overflow-y: auto; padding: var(--space-3) var(--space-2); border-right: 1px solid var(--line); background: var(--surface-side); }
+.vx-history__list-title { padding: 4px 8px 8px; color: var(--muted); }
+.vx-history__version { appearance: none; display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; width: 100%; padding: 8px 10px; border: 0; border-radius: var(--radius-md); background: transparent; color: var(--text); text-align: left; font: inherit; cursor: pointer; }
+.vx-history__version:hover { background: var(--surface-hover); }
+.vx-history__version[aria-pressed="true"] { background: var(--selection); color: var(--on-selection); }
+.vx-history__version:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+.vx-history__when { font: 600 13px/18px var(--font-ui); }
+.vx-history__subject { grid-column: 1 / -1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; line-height: 16px; color: var(--muted); }
+.vx-history__version[aria-pressed="true"] .vx-history__subject { color: inherit; }
+.vx-history__counts { grid-row: 1; grid-column: 2; font: 12px/18px var(--font-mono); color: var(--muted); }
+.vx-history__empty { margin: var(--space-3) 10px; font-size: 13px; color: var(--muted); }
+.vx-history__main { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.vx-history__bar { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--line); }
+.vx-history__bar .vx-segmented > button { padding: 0 14px; white-space: nowrap; }
+.vx-history__note { margin: var(--space-3) var(--space-4) 0; font-size: 13px; color: var(--muted); }
+.vx-history__changes { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+.vx-history__legend { margin: var(--space-3) var(--space-4) var(--space-2); font: 12px/16px var(--font-mono); color: var(--muted); }
+.vx-history__diff { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 0 0 var(--space-6); font: 13px/20px var(--font-mono); background: var(--surface); }
+.vx-history__line { display: grid; grid-template-columns: 48px 48px 20px minmax(0, 1fr); }
+.vx-history__line.is-insert { background: var(--diff-added); }
+.vx-history__line.is-delete { background: var(--diff-removed); }
+.vx-history__num { padding-right: 8px; text-align: right; color: var(--faint); user-select: none; }
+.vx-history__sign { text-align: center; color: var(--muted); user-select: none; }
+.vx-history__text { white-space: pre-wrap; overflow-wrap: anywhere; padding-right: var(--space-4); }
+.vx-history__word { background: transparent; color: inherit; border-radius: 2px; }
+.vx-history__line.is-insert .vx-history__word { background: var(--diff-added-mark); }
+.vx-history__line.is-delete .vx-history__word { background: var(--diff-removed-mark); }
+.vx-history__fold { appearance: none; display: block; width: 100%; height: 28px; margin: 2px 0; border: 0; border-top: 1px dashed var(--line); border-bottom: 1px dashed var(--line); background: var(--surface-side); color: var(--muted); font: 12px var(--font-ui); cursor: pointer; }
+.vx-history__fold:hover { color: var(--ink); }
+.vx-history__fold:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }

@@ -87,9 +87,18 @@ function persist(s: WorkspaceState): void {
   });
 }
 
-const remap = (p: string, from: string, to: string) =>
-  p === from ? to : p.startsWith(`${from}/`) ? to + p.slice(from.length) : p;
+/** A note's history (SPECS 4.12) is a desk item named after the note: it follows the note. */
+const HISTORY = 'history:';
+const remap = (p: string, from: string, to: string): string =>
+  p.startsWith(HISTORY)
+    ? HISTORY + remap(p.slice(HISTORY.length), from, to)
+    : p === from
+      ? to
+      : p.startsWith(`${from}/`)
+        ? to + p.slice(from.length)
+        : p;
 const under = (p: string, root: string) => p === root || p.startsWith(`${root}/`);
+const noteOf = (p: string) => (p.startsWith(HISTORY) ? p.slice(HISTORY.length) : p);
 
 export const useWorkspace = create<WorkspaceState>((set, get) => ({
   vaultPath: null,
@@ -137,7 +146,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
     } | null;
     // Plugin views (`view:…`) live on the desk next to the Vault's notes.
     const inVault = (p: unknown): p is string =>
-      typeof p === 'string' && (under(p, vaultPath) || p.startsWith('view:'));
+      typeof p === 'string' && (under(noteOf(p), vaultPath) || p.startsWith('view:'));
     const open = Array.isArray(d?.open) ? d.open.filter(inVault).slice(0, MAX_OPEN) : [];
     const pinned = Array.isArray(d?.pinned) ? d.pinned.filter(inVault) : [];
     const active =
@@ -275,7 +284,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
 
   removePath(path) {
     set((s) => {
-      const keep = (p: string) => !under(p, path);
+      const keep = (p: string) => !under(noteOf(p), path);
       const open = s.desk.open.filter(keep);
       const pinned = s.desk.pinned.filter(keep);
       const recent = s.desk.recent.filter(keep);

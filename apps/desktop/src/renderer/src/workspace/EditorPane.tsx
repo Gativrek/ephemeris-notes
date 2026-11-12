@@ -41,6 +41,7 @@ import { closeItem } from './Desk';
 import { useWorkspace } from './store';
 import { PdfViewer } from '../pdf/PdfViewer';
 import { PluginViewPane, isViewId } from '../plugins/views';
+import { HistoryPane, isHistoryId } from './History';
 
 /** Live statistics for the status bar and outline. */
 export const editorStats = {
@@ -329,9 +330,10 @@ export function EditorPane() {
   const shownRef = useRef<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [shown, setShown] = useState(0);
-  // A PDF or a plugin view (SPECS 12.11.4) takes the editor's place.
+  // A PDF, a plugin view (SPECS 12.11.4) or a note's history (4.12) takes the editor's place.
   const isView = isViewId(active);
-  const isPdf = (!!active && /\.pdf$/i.test(active)) || isView;
+  const isHistory = isHistoryId(active);
+  const isPdf = (!!active && /\.pdf$/i.test(active)) || isView || isHistory;
 
   // One view for the pane; documents swap their states in and out.
   useEffect(() => {
@@ -483,7 +485,8 @@ export function EditorPane() {
         </div>
       )}
       {isView && active && <PluginViewPane key={active} id={active} onClose={() => closeItem(active)} />}
-      {isPdf && !isView && active && (
+      {isHistory && active && <HistoryPane key={active} id={active} />}
+      {isPdf && !isView && !isHistory && active && (
         <PdfViewer key={active} path={active} page={jump?.path === active ? (jump.page ?? null) : null} />
       )}
       <div

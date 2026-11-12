@@ -9,7 +9,7 @@ import { EVENT_CHANNEL, type Domain, type LibraryStats, type PushEvent } from '@
 import { DOMAIN_FOLDERS, DOMAINS } from './library/library';
 import { isNote } from './library/walk';
 import { registerCoreHandlers, type MachineState } from './app/handlers';
-import { handle, setDevOrigin } from './app/ipc';
+import { handle, setDevOrigin, str } from './app/ipc';
 import { JsonStore } from './app/json-store';
 import {
   handleAppProtocol,
@@ -29,6 +29,8 @@ import { SessionManager } from './app/session';
 import { installTestMode, isTestMode } from './app/test-mode';
 import { Settings } from './app/settings';
 import { execGit, GIT_ENABLED_KEY, GIT_INTERVAL_KEY, GitAutoCommit } from './library/git';
+import { execGitBytes, noteHistory, noteVersion } from './library/git-history';
+import { normalizeLibraryPath } from './library/paths';
 import { registerVaultHandlers } from './app/vault-handlers';
 import { registerIndexHandlers, renameWithLinks } from './app/index-handlers';
 import { IndexClient } from './index/client';
@@ -233,6 +235,14 @@ async function main(): Promise<void> {
     await git.commitNow();
     return git.status();
   });
+  // Git timeline (SPECS 4.12): reads only.
+  const gitBytes = execGitBytes();
+  handle('library', 'gitHistory', (_e, p) =>
+    noteHistory(gitBytes, sessions.require().root.root, normalizeLibraryPath(p)),
+  );
+  handle('library', 'gitVersion', (_e, commit, p) =>
+    noteVersion(gitBytes, sessions.require().root.root, str(commit, 'commit', 40), normalizeLibraryPath(p)),
+  );
 
   // Plugins (SPECS 12): per machine, in user data; served from vx-plugin://<id>/.
   const plugins = new PluginManager(path.join(userData, 'plugins'), () => enabledPlugins(machineSettings));

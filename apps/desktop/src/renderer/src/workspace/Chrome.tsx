@@ -8,6 +8,7 @@ import { domainStrings } from '../strings/domains';
 import { workspaceStrings as s } from '../strings/workspace';
 import { openDailyNote } from './actions';
 import { getRecord, useDocs } from './docs';
+import { historyNote, isHistoryId } from './History';
 import { editorStats } from './EditorPane';
 import { SearchBox, useIndexStatus, type SearchHandle } from './SearchBox';
 import { useWorkspace } from './store';
@@ -204,12 +205,15 @@ export function StatusBar({ vault, extra }: { vault: VaultInfo; extra?: ReactNod
   const stats = useEditorStats();
   const index = useIndexStatus();
   const d = domainStrings[vault.domain];
-  const crumbs = active
-    ? active
-        .slice(vault.path.length + 1)
-        .split('/')
-        .slice(0, -1)
-    : [];
+  // A note's folders; a history shows its note's, and a plugin view (not a path) none.
+  const where = active && isHistoryId(active) ? historyNote(active) : active;
+  const crumbs =
+    where && where.startsWith(`${vault.path}/`)
+      ? where
+          .slice(vault.path.length + 1)
+          .split('/')
+          .slice(0, -1)
+      : [];
   const save = !meta
     ? ''
     : meta.readOnly

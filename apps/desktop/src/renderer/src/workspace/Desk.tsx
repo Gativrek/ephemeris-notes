@@ -6,6 +6,7 @@ import { unwrap, vx } from '../lib/vx';
 import { workspaceStrings as s } from '../strings/workspace';
 import { currentVault } from './actions';
 import { closeDoc, useDocs } from './docs';
+import { historyNote, historyTitle, isHistoryId, openHistory } from './History';
 import { useWorkspace } from './store';
 import { dailyParts, displayName } from './tree';
 
@@ -34,7 +35,64 @@ export function closeItem(path: string): void {
     return;
   }
   ws.closeItem(path);
-  if (!ws.desk.pinned.includes(path)) void closeDoc(path);
+  if (!isHistoryId(path) && !ws.desk.pinned.includes(path)) void closeDoc(path);
+}
+
+/** A note's history (SPECS 4.12): a desk item beside the note. */
+function HistoryCard({ id, pinned, active }: { id: string; pinned: boolean; active: boolean }) {
+  const ws = useWorkspace.getState;
+  const title = historyTitle(id);
+  const onContext = async (e: MouseEvent) => {
+    e.preventDefault();
+    const choice = await unwrap(
+      vx().window.contextMenu([
+        { id: pinned ? 'unpin' : 'pin', label: pinned ? s.menu.unpin : s.menu.pin },
+        { id: 'close', label: s.menu.close, enabled: !pinned },
+        { id: 'others', label: s.menu.closeOthers },
+        { id: 'note', label: s.menu.openNote, separatorBefore: true },
+      ]),
+    ).catch(() => null);
+    if (choice === 'pin') ws().pin(id);
+    if (choice === 'unpin') ws().unpin(id);
+    if (choice === 'close') closeItem(id);
+    if (choice === 'others') for (const p of ws().desk.open) if (p !== id) closeItem(p);
+    if (choice === 'note') ws().openItem(historyNote(id));
+  };
+  return (
+    <button
+      type="button"
+      role="tab"
+      className="vx-desk-card"
+      aria-selected={active}
+      title={title}
+      data-testid={pinned ? 'desk-pinned' : 'desk-card'}
+      data-path={id}
+      style={{ width: active ? 270 : 210 }}
+      onClick={() => ws().activate(id)}
+      onAuxClick={(e) => {
+        if (e.button === 1 && !pinned) closeItem(id);
+      }}
+      onMouseDown={(e) => e.button === 1 && e.preventDefault()}
+      onContextMenu={(e) => void onContext(e)}
+    >
+      <span className="vx-desk-card__thumb vx-desk-card__thumb--view">
+        <Icon name="history" />
+      </span>
+      <span className="vx-desk-card__body">
+        <span className="vx-desk-card__title">{title}</span>
+        <span className="vx-desk-card__sub">
+          {pinned ? (
+            <>
+              <span className="vx-diamond vx-diamond--gold" aria-hidden="true" />
+              {s.desk.pinned}
+            </>
+          ) : (
+            s.history.sub
+          )}
+        </span>
+      </span>
+    </button>
+  );
 }
 
 function ViewCard({ id, pinned, active }: { id: string; pinned: boolean; active: boolean }) {
@@ -98,6 +156,7 @@ function ViewCard({ id, pinned, active }: { id: string; pinned: boolean; active:
 
 function Card({ path, pinned, active }: { path: string; pinned: boolean; active: boolean }) {
   if (isViewId(path)) return <ViewCard id={path} pinned={pinned} active={active} />;
+  if (isHistoryId(path)) return <HistoryCard id={path} pinned={pinned} active={active} />;
   return <NoteCard path={path} pinned={pinned} active={active} />;
 }
 
@@ -118,9 +177,11 @@ function NoteCard({ path, pinned, active }: { path: string; pinned: boolean; act
         { id: pinned ? 'unpin' : 'pin', label: pinned ? s.menu.unpin : s.menu.pin },
         { id: 'close', label: s.menu.close, enabled: !pinned },
         { id: 'others', label: s.menu.closeOthers },
-        { id: 'reveal', label: s.menu.reveal, separatorBefore: true },
+        ...(/.md$/i.test(path) ? [{ id: 'history', label: s.menu.history, separatorBefore: true }] : []),
+        { id: 'reveal', label: s.menu.reveal, separatorBefore: !/.md$/i.test(path) },
       ]),
     ).catch(() => null);
+    if (choice === 'history') openHistory(path);
     if (choice === 'pin') ws().pin(path);
     if (choice === 'unpin') ws().unpin(path);
     if (choice === 'close') closeItem(path);
@@ -229,7 +290,7 @@ export function Desk() {
           type="button"
           className="vx-desk-clear"
           onClick={() => {
-            for (const p of desk.open) if (!isViewId(p)) void closeDoc(p);
+            for (const p of desk.open) if (!isViewId(p) && !isHistoryId(p)) void closeDoc(p);
             useWorkspace.getState().clearUnpinned();
           }}
         >

@@ -35,6 +35,10 @@
   --syntax-comment: #5f6874;
   --syntax-builtin: #7e5410;
   --danger: #a13d2d;
+  --diff-added: rgba(46,125,70,0.12);
+  --diff-added-mark: rgba(46,125,70,0.30);
+  --diff-removed: rgba(161,61,45,0.10);
+  --diff-removed-mark: rgba(161,61,45,0.26);
   --domain-academic: #3c5e92;
   --domain-academic-soft: rgba(60,94,146,0.13);
   --domain-academic-band: #9db6de;
@@ -115,6 +119,10 @@
   --syntax-comment: #939ca7;
   --syntax-builtin: #d7b26a;
   --danger: #e0907f;
+  --diff-added: rgba(110,190,130,0.16);
+  --diff-added-mark: rgba(110,190,130,0.34);
+  --diff-removed: rgba(224,144,127,0.14);
+  --diff-removed-mark: rgba(224,144,127,0.32);
   --domain-academic: #7fa2d8;
   --domain-academic-soft: rgba(127,162,216,0.18);
   --domain-work: #7dbe9f;
