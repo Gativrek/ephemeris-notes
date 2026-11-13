@@ -3,7 +3,6 @@ import { useEffect, useState, type ReactNode } from 'react';
 import type { VaultInfo } from '@shared/bridge';
 import { Icon, type IconName } from '../components/Icon';
 import { useCatalog } from '../lib/catalog';
-import { useApp } from '../store/app';
 import { domainStrings } from '../strings/domains';
 import { workspaceStrings as s } from '../strings/workspace';
 import { openDailyNote } from './actions';
@@ -12,6 +11,7 @@ import { historyNote, isHistoryId } from './History';
 import { editorStats } from './EditorPane';
 import { SearchBox, useIndexStatus, type SearchHandle } from './SearchBox';
 import { useWorkspace } from './store';
+import { leaveVault } from '../features/transition/coverFlight';
 
 export type SearchScopeKind = 'vault' | 'domain' | 'all';
 
@@ -109,7 +109,7 @@ export function Rail({
         icon="vaults"
         label={s.rail.vaults}
         title={s.rail.vaultsTitle}
-        onClick={() => useApp.getState().showChooser()}
+        onClick={() => leaveVault()}
       />
       <RailButton
         icon="folder"

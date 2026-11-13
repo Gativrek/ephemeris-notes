@@ -10,6 +10,7 @@ import { eventKey, isMacPlatform, recording } from './lib/hotkeys';
 import { commandFor, currentOverrides } from './lib/keymap';
 import { stopPlugins } from './plugins/host';
 import { saveAll } from './workspace/docs';
+import { leaveVault } from './features/transition/coverFlight';
 
 export function App() {
   const library = useApp((s) => s.library);
@@ -52,7 +53,7 @@ export function App() {
         useApp.getState().library
       ) {
         e.preventDefault();
-        useApp.getState().showChooser();
+        leaveVault();
       }
     };
     window.addEventListener('keydown', onKey);

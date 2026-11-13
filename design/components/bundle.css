@@ -731,3 +731,7 @@ body { margin: 0; font-family: var(--font-ui); color: var(--text); background: v
 .vx-side__resize:hover::after, .vx-side__resize:focus-visible::after { background: var(--cyan); }
 .vx-side__resize:focus-visible { outline: none; }
 @media (prefers-reduced-motion: reduce) { .vx-side__resize::after { transition: none; } }
+
+/* ---- Cover flight: between the chooser and the workspace (SPECS 7) ---- */
+.vx-flight { position: fixed; z-index: 40; overflow: hidden; pointer-events: none; }
+.vx-wash { position: fixed; inset: 0; z-index: 35; pointer-events: none; }

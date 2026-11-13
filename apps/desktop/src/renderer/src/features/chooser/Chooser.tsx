@@ -21,6 +21,7 @@ import { chooserStrings as s } from '../../strings/chooser';
 import { DOMAIN_ORDER, domainStrings } from '../../strings/domains';
 import { useCardStrip } from './strip';
 import { NewVaultCard, VaultCard, type CardModel } from './VaultCard';
+import { enterVault, returnToVault } from '../transition/coverFlight';
 
 /** Cards in view at 1920 × 1080; more scroll (SPECS 7). */
 export const VISIBLE_CARDS = 5;
@@ -240,7 +241,7 @@ export function Chooser() {
   const activate = useCallback(
     (index: number) => {
       const v = inDomain[index];
-      if (v) app().openVaultPath(v.path);
+      if (v) enterVault(v.path);
       else app().openDialog({ mode: 'new', domain });
     },
     [inDomain, domain, app],
@@ -316,7 +317,7 @@ export function Chooser() {
         }
         case 'Escape':
           if (!app().openVault) return;
-          app().showWorkspace();
+          returnToVault();
           break;
         default:
           return;

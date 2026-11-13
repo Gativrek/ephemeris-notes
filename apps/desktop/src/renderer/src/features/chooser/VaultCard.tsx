@@ -61,6 +61,7 @@ export function VaultCard({
     <div
       className={`vx-card-slot${selected ? ' is-selected' : ''}`}
       data-testid={preview ? 'card-preview' : 'vault-card'}
+      data-vault-id={preview ? undefined : card.id}
     >
       {preview ? (
         <div className="vx-card" role="img" aria-label={`${card.name}, ${card.meta}`}>

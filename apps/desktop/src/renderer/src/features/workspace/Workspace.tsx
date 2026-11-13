@@ -42,6 +42,7 @@ import { InboxPanel } from '../../workspace/Inbox';
 import { useWorkspace } from '../../workspace/store';
 import { clampWidth, useSidebarWidth } from '../../workspace/sidebarWidth';
 import { stepVault } from '../../workspace/vaultStep';
+import { leaveVault } from '../transition/coverFlight';
 
 const NO_BACKLINKS: Backlink[] = [];
 
@@ -164,7 +165,7 @@ export function Workspace({ vaultPath }: { vaultPath: string }) {
           else showNotice(s.history.openNoteFirst);
         },
       ],
-      ['switch-vault', c.switchVault, () => useApp.getState().showChooser()],
+      ['switch-vault', c.switchVault, () => leaveVault()],
       ['prev-vault', c.prevVault, () => void stepVault(-1)],
       ['next-vault', c.nextVault, () => void stepVault(1)],
       ['rebuild-index', c.rebuildIndex, () => void vx().index.rebuild()],
