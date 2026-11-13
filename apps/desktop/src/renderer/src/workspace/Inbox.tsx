@@ -16,6 +16,7 @@ import { workspaceStrings as s } from '../strings/workspace';
 import { baseName, freeName, notice, openPath, renamePath, report } from './actions';
 import { useWorkspace } from './store';
 import { buildSections, collator, displayName } from './tree';
+import { SidebarResize } from './SidebarResize';
 
 const INBOX = 'Inbox/';
 
@@ -108,6 +109,7 @@ export function InboxPanel() {
           );
         })}
       </div>
+      <SidebarResize />
     </aside>
   );
 }

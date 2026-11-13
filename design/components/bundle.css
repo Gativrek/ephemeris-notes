@@ -97,7 +97,7 @@ body { margin: 0; font-family: var(--font-ui); color: var(--text); background: v
 .vx-search__key { padding: 1px 6px; border: 1px solid var(--line); border-radius: var(--radius-sm); font-size: 11px; }
 
 /* ---------- Section tile ---------- */
-.vx-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); }
+.vx-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
 .vx-tile { appearance: none; margin: 0; position: relative; height: var(--size-tile); box-sizing: border-box; padding: 7px 8px 6px 9px; display: flex; flex-direction: column; justify-content: space-between; text-align: left; font: inherit; cursor: pointer; overflow: hidden; border-radius: var(--radius-lg); background: var(--surface-raised); border: 1px solid var(--line); }
 .vx-tile[aria-pressed="true"] { border-color: var(--cyan); box-shadow: var(--shadow-selected); }
 .vx-tile__texture { position: absolute; inset: 0; opacity: .2; background-size: 220px 146px; background-position: right -50px top -30px; pointer-events: none; }
@@ -723,3 +723,11 @@ body { margin: 0; font-family: var(--font-ui); color: var(--text); background: v
 .vx-history__fold { appearance: none; display: block; width: 100%; height: 28px; margin: 2px 0; border: 0; border-top: 1px dashed var(--line); border-bottom: 1px dashed var(--line); background: var(--surface-side); color: var(--muted); font: 12px var(--font-ui); cursor: pointer; }
 .vx-history__fold:hover { color: var(--ink); }
 .vx-history__fold:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+
+/* ---- Sidebar width: a handle on its right edge (SPECS 9.4) ---- */
+.vx-side { position: relative; }
+.vx-side__resize { position: absolute; top: 0; bottom: 0; right: -4px; z-index: 3; width: 8px; cursor: col-resize; touch-action: none; }
+.vx-side__resize::after { content: ""; position: absolute; top: 0; bottom: 0; left: 3px; width: 2px; background: transparent; transition: background-color 120ms ease; }
+.vx-side__resize:hover::after, .vx-side__resize:focus-visible::after { background: var(--cyan); }
+.vx-side__resize:focus-visible { outline: none; }
+@media (prefers-reduced-motion: reduce) { .vx-side__resize::after { transition: none; } }

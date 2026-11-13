@@ -40,6 +40,7 @@ import { Overlays } from '../../workspace/Overlays';
 import { Sidebar } from '../../workspace/Sidebar';
 import { InboxPanel } from '../../workspace/Inbox';
 import { useWorkspace } from '../../workspace/store';
+import { clampWidth, useSidebarWidth } from '../../workspace/sidebarWidth';
 import { stepVault } from '../../workspace/vaultStep';
 
 const NO_BACKLINKS: Backlink[] = [];
@@ -180,6 +181,15 @@ export function Workspace({ vaultPath }: { vaultPath: string }) {
     return () => usePlugins.setState((st) => ({ commands: st.commands.filter((x) => x.owner !== 'core') }));
   }, []);
   useEffect(() => wireCatalog(), []);
+  // The sidebar's width (SPECS 9.4): as chosen, within what the window leaves room for.
+  const sidebarWidth = useSidebarWidth((st) => st.width);
+  const [windowWidth, setWindowWidth] = useState(() => window.innerWidth);
+  useEffect(() => {
+    void useSidebarWidth.getState().load();
+    const onResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
   useEffect(() => wireSettings(), []);
   // Settings > Keyboard: open editors take new keys at once.
   useEffect(
@@ -279,7 +289,11 @@ export function Workspace({ vaultPath }: { vaultPath: string }) {
     ? ` is-vault-${motion.phase} is-vault-${motion.phase}--${motion.dir > 0 ? 'next' : 'prev'}`
     : '';
   return (
-    <div className={`vx-shell${motionClass}`} data-testid="workspace">
+    <div
+      className={`vx-shell${motionClass}`}
+      data-testid="workspace"
+      style={{ ['--size-sidebar' as string]: `${clampWidth(sidebarWidth, windowWidth)}px` }}
+    >
       <TitleBar vault={vault} searchRef={searchRef} scope={scope} onScope={setScope} />
       <Rail
         onSearch={() => searchRef.current?.focus()}

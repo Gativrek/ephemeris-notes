@@ -31,6 +31,7 @@ import {
 } from './actions';
 import { useDocs } from './docs';
 import { useWorkspace } from './store';
+import { SidebarResize } from './SidebarResize';
 import { openHistory } from './History';
 import {
   buildSections,
@@ -68,12 +69,30 @@ async function listRecursive(root: string, includeFolders: boolean, maxEntries =
 
 function HeaderCover({ vault, className = '' }: { vault: VaultInfo; className?: string }) {
   const image = useHeaderImage(vault);
+  // The sidebar can be widened (SPECS 9.4): place the image for the header's real width.
+  const ref = useRef<HTMLSpanElement>(null);
+  const [width, setWidth] = useState<number>(BANNER_WINDOW.width);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => setWidth(el.clientWidth || BANNER_WINDOW.width));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
   return (
     <span
+      ref={ref}
       className={`vx-vault-head__cover${image ? '' : ' vx-cover-contour'}${className}`}
       data-banner={image?.banner ? 'true' : undefined}
     >
-      {image && <PlacedImage url={image.url} focus={image.focus} zoom={image.zoom} win={BANNER_WINDOW} />}
+      {image && (
+        <PlacedImage
+          url={image.url}
+          focus={image.focus}
+          zoom={image.zoom}
+          win={{ width, height: BANNER_WINDOW.height }}
+        />
+      )}
     </span>
   );
 }
@@ -618,6 +637,7 @@ export function Sidebar({ vault }: { vault: VaultInfo }) {
           </>
         )}
       </div>
+      <SidebarResize />
     </aside>
   );
 }

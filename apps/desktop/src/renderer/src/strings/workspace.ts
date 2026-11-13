@@ -34,6 +34,8 @@ export const workspaceStrings = {
   },
   sidebar: {
     sections: 'Sections',
+    resize: 'Sidebar width',
+    resizeHint: 'Drag to widen or narrow the sidebar; double-click for the default width',
     more: 'More',
     fewer: 'Fewer',
     noSections: 'No sections yet. New Section starts one.',

@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { cp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { fixtureLibrary, launch, setPickFolder, showOutline, tempDir, type Launched } from './helpers';
@@ -766,4 +766,80 @@ test('arrows over the Vault banner step through the Domain, sliding, saving firs
   await expect(page.locator('.vx-card-slot.is-selected .vx-card__name')).toHaveText(
     'GNSS Constellation Study',
   );
+});
+
+test('section tiles sit two per row, and the sidebar widens by its edge, keeping its width', async () => {
+  // Cut off in a tile of the default sidebar (about 15 characters), whole once it is wider.
+  const long = 'Literature Review';
+  await mkdir(file(`Academic/GNSS Study/${long}`), { recursive: true });
+  await writeFile(file(`Academic/GNSS Study/${long}/Kickoff.md`), '# Kickoff\n');
+  // Its own user data, kept across a restart.
+  await ctx.close();
+  const userData = await tempDir('sidebar-userdata');
+  const openVault = async (first: boolean) => {
+    const c = await launch({ userData });
+    if (first) {
+      await setPickFolder(c.app, lib);
+      await c.page.getByRole('button', { name: 'Open Library…' }).click();
+    }
+    await expect(c.page.getByTestId('chooser')).toBeVisible();
+    await c.page.getByTestId('vault-card').filter({ hasText: 'GNSS Constellation Study' }).dblclick();
+    await expect(c.page.getByTestId('workspace')).toBeVisible();
+    return c;
+  };
+  try {
+    let c = await openVault(true);
+    const page = c.page;
+    const sidebar = page.getByTestId('sidebar');
+    const width = async () => Math.round((await sidebar.boundingBox())!.width);
+    expect(await width()).toBe(304);
+
+    // Two per row: the third tile starts a new row under the first.
+    const xs = await page
+      .getByTestId('section-tile')
+      .evaluateAll((all) => all.map((t) => Math.round(t.getBoundingClientRect().x)));
+    expect(xs[1]).toBeGreaterThan(xs[0]!);
+    expect(xs[2]).toBe(xs[0]);
+
+    // Dragging the edge widens it; the long name then fits.
+    const tile = page.getByTestId('section-tile').filter({ hasText: long });
+    if (!(await tile.isVisible())) await page.locator('.vx-tile--more').click();
+    const cut = () => tile.locator('.vx-tile__name').evaluate((n) => n.scrollWidth > n.clientWidth);
+    expect(await cut()).toBe(true);
+    const handle = page.getByTestId('sidebar-resize');
+    const h = (await handle.boundingBox())!;
+    await page.mouse.move(h.x + h.width / 2, h.y + 200);
+    await page.mouse.down();
+    await page.mouse.move(h.x + h.width / 2 + 160, h.y + 200, { steps: 8 });
+    await page.mouse.up();
+    expect(await width()).toBe(464);
+    expect(await cut()).toBe(false);
+
+    // Keys: Home is the narrowest, arrows move by 16 px, a double-click is the default.
+    await handle.focus();
+    await page.keyboard.press('Home');
+    expect(await width()).toBe(240);
+    await page.keyboard.press('ArrowRight');
+    await expect(handle).toHaveAttribute('aria-valuenow', '256');
+    await handle.dblclick();
+    expect(await width()).toBe(304);
+
+    // The width chosen is there after a restart.
+    await handle.focus();
+    for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowRight');
+    expect(await width()).toBe(384);
+    await page.waitForTimeout(500);
+    await c.close();
+    c = await openVault(false);
+    await expect
+      .poll(async () => Math.round((await c.page.getByTestId('sidebar').boundingBox())!.width))
+      .toBe(384);
+    await c.close();
+  } finally {
+    // Best effort: Chromium can hold a journal file for a moment after the app closes.
+    await rm(userData, { recursive: true, force: true, maxRetries: 5, retryDelay: 500 }).catch(
+      () => undefined,
+    );
+    ctx = await launch();
+  }
 });
