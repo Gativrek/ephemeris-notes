@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Chooser } from './features/chooser/Chooser';
+import { Chooser, markSwitchKey } from './features/chooser/Chooser';
 import { FirstRun } from './features/firstrun/FirstRun';
 import { VaultDialog } from './features/vault-dialog/VaultDialog';
 import { Workspace } from './features/workspace/Workspace';
@@ -53,6 +53,7 @@ export function App() {
         useApp.getState().library
       ) {
         e.preventDefault();
+        markSwitchKey();
         leaveVault();
       }
     };

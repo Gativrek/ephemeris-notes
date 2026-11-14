@@ -187,9 +187,36 @@ export function Workspace({ vaultPath }: { vaultPath: string }) {
   const [windowWidth, setWindowWidth] = useState(() => window.innerWidth);
   useEffect(() => {
     void useSidebarWidth.getState().load();
-    const onResize = () => setWindowWidth(window.innerWidth);
+    // Below 1440px the outline panel makes way for the note (SPECS 9.4): narrowing the
+    // window past it folds an open panel, and widening again brings back a panel that
+    // was folded this way (not one the user closed).
+    const WIDE = 1440;
+    let last = window.innerWidth;
+    let folded = false;
+    let resizing = false;
+    const offOutline = useWorkspace.subscribe((st, prev) => {
+      if (st.outline !== prev.outline && !resizing) folded = false;
+    });
+    const onResize = () => {
+      const w = window.innerWidth;
+      setWindowWidth(w);
+      const ws = useWorkspace.getState();
+      resizing = true;
+      if (last >= WIDE && w < WIDE && ws.outline) {
+        ws.setPanels({ outline: false });
+        folded = true;
+      } else if (last < WIDE && w >= WIDE && folded) {
+        ws.setPanels({ outline: true });
+        folded = false;
+      }
+      resizing = false;
+      last = w;
+    };
     window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      offOutline();
+    };
   }, []);
   useEffect(() => wireSettings(), []);
   // Settings > Keyboard: open editors take new keys at once.

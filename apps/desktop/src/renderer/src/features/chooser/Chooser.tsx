@@ -23,6 +23,12 @@ import { useCardStrip } from './strip';
 import { NewVaultCard, VaultCard, type CardModel } from './VaultCard';
 import { enterVault, returnToVault } from '../transition/coverFlight';
 
+/** When the Switch Vault shortcut last brought up the chooser (App.tsx). */
+let switchKeyAt = -Infinity;
+export const markSwitchKey = (): void => {
+  switchKeyAt = performance.now();
+};
+
 /** Cards in view at 1920 × 1080; more scroll (SPECS 7). */
 export const VISIBLE_CARDS = 5;
 /** One card plus the gap after it: the strip scrolls and snaps in these steps. */
@@ -249,10 +255,21 @@ export function Chooser() {
 
   // ---- keyboard map (SPECS 7) -----------------------------------------------------
   useEffect(() => {
+    // Letter keys (R, E) are commands only when pressed on their own: not as part of a
+    // word typed into the chooser (someone expecting a note picker types "lect"), and
+    // not in the first moments after the Switch Vault shortcut brought the chooser up.
+    let typedAt = -Infinity;
     const onKey = (e: KeyboardEvent) => {
       if (app().dialog || app().screen !== 'chooser') return;
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (isTyping(document.activeElement)) return;
+      if (/^\p{L}$/u.test(e.key)) {
+        const now = performance.now();
+        const typing = now - typedAt < 1000 || now - switchKeyAt < 600;
+        // Other letters (and swallowed ones) mark typing; R then R again stays a command.
+        if (typing || !/^[re]$/i.test(e.key)) typedAt = now;
+        if (typing) return;
+      }
       const sel = app().selection[app().domain];
       if (arrangeRef.current) {
         const n = arrangeRef.current.order.length;

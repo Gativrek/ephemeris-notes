@@ -48,7 +48,7 @@ test('opening a Vault flies its cover to the header, and the workspace takes cli
   await expect(page.getByTestId('chooser')).toHaveCount(0);
 
   // Back to the chooser: the header flies to its card.
-  await page.keyboard.press('ControlOrMeta+o');
+  await page.keyboard.press('ControlOrMeta+Shift+H');
   await expect(page.getByTestId('chooser')).toBeVisible();
   await expect(flights(page)).toHaveCount(1);
   await expect(flights(page)).toHaveCount(0, { timeout: 2000 });
@@ -69,7 +69,7 @@ test('with reduced motion nothing flies; the screens only fade', async () => {
   });
   await card(page).dblclick();
   await expect(page.getByTestId('workspace')).toBeVisible();
-  await page.keyboard.press('ControlOrMeta+o');
+  await page.keyboard.press('ControlOrMeta+Shift+H');
   await expect(page.getByTestId('chooser')).toBeVisible();
   await page.waitForTimeout(600);
   expect(flew).toBe(false);

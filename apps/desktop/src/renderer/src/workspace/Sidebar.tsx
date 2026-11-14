@@ -30,6 +30,7 @@ import {
   report,
 } from './actions';
 import { useDocs } from './docs';
+import { currentEditor } from './EditorPane';
 import { useWorkspace } from './store';
 import { SidebarResize } from './SidebarResize';
 import { openHistory } from './History';
@@ -201,6 +202,13 @@ function Tiles({
 }) {
   const more = useWorkspace((st) => st.moreTiles);
   const { tiles, more: showMore } = visibleTiles(sections, more);
+  const files = useCatalog((st) => st.paths);
+  // As the section's header counts it: its PDFs when it has any, else its notes.
+  const countOf = (t: Section) => {
+    if (t.kind !== 'section') return t.noteCount;
+    const pdfs = files.filter((f) => f.startsWith(`${t.path}/`) && /\.pdf$/i.test(f)).length;
+    return pdfs > 0 ? pdfs : t.noteCount;
+  };
   const ws = useWorkspace.getState;
   const onDrop = (e: DragEvent, target: string) => {
     const from = e.dataTransfer.getData(DRAG_TYPE);
@@ -232,7 +240,7 @@ function Tiles({
         >
           <span className="vx-tile__top">
             <Icon name={sectionIcon(t.name, t.kind, icons[t.name]) as IconName} />
-            <span className="vx-tile__count">{t.noteCount}</span>
+            <span className="vx-tile__count">{countOf(t)}</span>
           </span>
           <span className="vx-tile__name">{t.name}</span>
         </button>
@@ -263,8 +271,14 @@ function RenameInput({ path, onDone }: { path: string; onDone: () => void }) {
     ref.current?.focus();
     ref.current?.select();
   }, []);
-  const commit = async () => {
+  const done = useRef(false);
+  const commit = async (fromKey = false) => {
+    if (done.current) return;
+    done.current = true;
     const name = value.trim();
+    // Enter on the open note: the editor takes the keys straight away, so typing right
+    // after naming a note doesn't drop its first characters while the rename runs.
+    if (fromKey && useWorkspace.getState().desk.active === path) currentEditor()?.focus();
     onDone();
     if (!name) return;
     const finalName = isNote ? `${name}.md` : name;
@@ -280,8 +294,15 @@ function RenameInput({ path, onDone }: { path: string; onDone: () => void }) {
       onClick={(e) => e.stopPropagation()}
       onKeyDown={(e) => {
         e.stopPropagation();
-        if (e.key === 'Enter') void commit();
-        if (e.key === 'Escape') onDone();
+        if (e.key === 'Enter') {
+          // The editor takes focus now: this Enter must not reach it as a new line.
+          e.preventDefault();
+          void commit(true);
+        }
+        if (e.key === 'Escape') {
+          done.current = true;
+          onDone();
+        }
       }}
       onBlur={() => void commit()}
     />

@@ -390,6 +390,11 @@ export function EditorPane() {
     const view = viewRef.current;
     if (!view) return;
     const previous = shownRef.current;
+    // The shown note was renamed (docs.renamed moved the view along): nothing to load.
+    if (previous && previous === active && !isPdf) {
+      emitStats(view, active);
+      return;
+    }
     if (previous && previous !== active) {
       rememberState(previous, view.state);
       void saveDoc(previous);

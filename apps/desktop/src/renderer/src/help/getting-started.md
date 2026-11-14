@@ -26,7 +26,7 @@ The chooser shows each Domain's Vaults as cards on a strip: drag or flick it, or
 - `R` arranges the cards: drag one to its place, or select one and press Left and Right; Enter or **Done** keeps the order, Escape cancels.
 - **New Vault** asks for a name, a Domain and a cover. Pick the cover's focus point by clicking the image, and its zoom with the slider; the card beside it shows the result. Editing a Vault can also move it to another Domain, or delete it (you type its name to confirm; the folder goes to the system trash).
 
-`Ctrl+O` returns to the chooser from anywhere. Settings > General > **Reopen last Vault** skips the chooser at launch.
+`Ctrl+Shift+H` returns to the chooser from anywhere. Settings > General > **Reopen last Vault** skips the chooser at launch.
 
 ## Sections
 

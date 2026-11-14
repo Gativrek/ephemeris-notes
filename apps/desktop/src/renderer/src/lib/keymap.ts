@@ -17,9 +17,10 @@ export interface ShortcutDef {
 
 /** The built-in shortcuts, in the order Settings and Help list them. */
 export const SHORTCUTS: ShortcutDef[] = [
-  { id: 'core:switch-vault', scope: 'app', defaults: ['Mod-o'] },
+  { id: 'core:switch-vault', scope: 'app', defaults: ['Mod-Shift-h'] },
   { id: 'core:search', scope: 'app', defaults: ['Mod-k'] },
   { id: 'core:palette', scope: 'app', defaults: ['Mod-p'] },
+  { id: 'core:open-note', scope: 'app', defaults: ['Mod-o'] },
   { id: 'core:new-note', scope: 'app', defaults: ['Mod-n'] },
   { id: 'core:toggle-source', scope: 'app', defaults: ['Mod-e'] },
   { id: 'core:close-item', scope: 'app', defaults: ['Mod-w'] },

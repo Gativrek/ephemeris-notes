@@ -21,6 +21,8 @@ export interface MachineState extends Record<string, unknown> {
 declare global {
   // Set by E2E tests through `electronApp.evaluate` to replace the native folder dialog.
   var __vxPickFolder: string | undefined;
+  // The same for the file dialog: an absolute path.
+  var __vxPickFile: string | undefined;
 }
 
 export interface HandlerDeps {
@@ -117,6 +119,32 @@ export function registerCoreHandlers(deps: HandlerDeps): void {
   handle('fs', 'mkdir', (_e, p) => lfs().mkdir(p));
   handle('fs', 'list', (_e, p) => lfs().list(p));
   handle('fs', 'stat', (_e, p) => lfs().stat(p));
+  // A file in the library, picked in the OS dialog (plugin `file` settings, SPECS 12.11).
+  handle('fs', 'pickFile', async (event, extsArg): Promise<string | null> => {
+    const { root } = sessions.require();
+    const exts = Array.isArray(extsArg)
+      ? extsArg.slice(0, 20).map((e) => str(e, 'extension', 20).replace(/^\./, ''))
+      : [];
+    let abs: string | null;
+    if (!deps.isPackaged && typeof globalThis.__vxPickFile === 'string') abs = globalThis.__vxPickFile;
+    else {
+      const win = BrowserWindow.fromWebContents(event.sender);
+      const opts: Electron.OpenDialogOptions = {
+        title: 'Choose a File',
+        defaultPath: root.root,
+        properties: ['openFile'],
+        ...(exts.length
+          ? { filters: [{ name: exts.map((e) => `.${e}`).join(', '), extensions: exts }] }
+          : {}),
+      };
+      const res = win ? await dialog.showOpenDialog(win, opts) : await dialog.showOpenDialog(opts);
+      abs = res.canceled || !res.filePaths[0] ? null : res.filePaths[0];
+    }
+    if (!abs) return null;
+    const rel = root.toRelative(path.normalize(abs));
+    if (!rel) fail('INVALID_ARGUMENT', 'Choose a file inside the library.');
+    return rel;
+  });
 
   // ---- settings ------------------------------------------------------------
   handle('settings', 'get', (_e, key) => settings.get(validateKey(key)));

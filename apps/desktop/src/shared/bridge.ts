@@ -150,6 +150,8 @@ export interface VxBridge {
     mkdir(path: string): Promise<Result<{ path: string }>>;
     list(dir: string): Promise<Result<FileEntry[]>>;
     stat(path: string): Promise<Result<FileEntry>>;
+    /** Shows a file picker at the library root; the picked file's library path, or null. */
+    pickFile(extensions?: string[]): Promise<Result<string | null>>;
   };
   vaults: {
     list(): Promise<Result<VaultInfo[]>>;
@@ -482,7 +484,7 @@ export const BRIDGE_METHODS = {
     'reorder',
   ],
   ui: ['get', 'set'],
-  fs: ['read', 'readBinary', 'write', 'create', 'rename', 'trash', 'mkdir', 'list', 'stat'],
+  fs: ['read', 'readBinary', 'write', 'create', 'rename', 'trash', 'mkdir', 'list', 'stat', 'pickFile'],
   index: [
     'search',
     'backlinks',

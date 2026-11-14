@@ -4,7 +4,7 @@ Opening a Vault shows its workspace: the rail on the left, the sidebar, the desk
 
 ## The rail
 
-From top to bottom: **Switch Vault** (back to the chooser, `Ctrl+O`), **Files** (the sidebar), **Search** (`Ctrl+K`), **Inbox** (with a count when notes are waiting), **Daily note** (`Ctrl+Shift+D`), then **Help** and **Settings** (`Ctrl+,`) at the bottom.
+From top to bottom: **Switch Vault** (back to the chooser, `Ctrl+Shift+H`), **Files** (the sidebar), **Search** (`Ctrl+K`), **Inbox** (with a count when notes are waiting), **Daily note** (`Ctrl+Shift+D`), then **Help** and **Settings** (`Ctrl+,`) at the bottom.
 
 ## The sidebar
 

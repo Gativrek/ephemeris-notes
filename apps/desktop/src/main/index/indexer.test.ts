@@ -306,6 +306,36 @@ describe('plugin extractors in the index (SPECS 12.11.2)', () => {
     expect(idx.queryRecords('sample', { extractor: 'tags' }).map((r) => r.key)).toEqual(['gamma']);
   });
 
+  it('catches up on notes written while the extractor was inactive', async () => {
+    await fs.writeFile(file(note), 'sample-tag:: alpha\n');
+    await index.sync();
+    await index.registerExtractor('sample', spec);
+    const keys = (idx: LibraryIndex) => idx.queryRecords('sample', { extractor: 'tags' }).map((r) => r.key);
+
+    // Plugin turned off, note edited, plugin back on.
+    index.unregisterExtractor('sample', 'tags');
+    await fs.writeFile(file(note), 'sample-tag:: beta\n');
+    await index.refresh([note]);
+    await index.registerExtractor('sample', spec);
+    expect(keys(index)).toEqual(['beta']);
+
+    // App closed, note edited and another added; next launch syncs before plugins load.
+    const other = 'Academic/GNSS Study/Notes/More Tags.md';
+    await fs.writeFile(file(note), 'sample-tag:: gamma\n');
+    await fs.writeFile(file(other), 'sample-tag:: delta\n');
+    const next = new LibraryIndex(db, lib);
+    await next.sync();
+    await next.registerExtractor('sample', spec);
+    expect(keys(next).sort()).toEqual(['delta', 'gamma']);
+
+    // A pending note deleted before the plugin returns leaves nothing behind.
+    next.unregisterExtractor('sample', 'tags');
+    await fs.rm(file(other));
+    await next.sync();
+    await next.registerExtractor('sample', spec);
+    expect(keys(next)).toEqual(['gamma']);
+  });
+
   it('refuses a spec that does not compile', async () => {
     await expect(index.registerExtractor('sample', { ...spec, pattern: '(' })).rejects.toThrow(/compile/);
   });

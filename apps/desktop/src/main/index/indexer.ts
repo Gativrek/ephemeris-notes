@@ -25,7 +25,7 @@ import { compileExtractor, extract, type Extractor } from './extractors';
 import type { Db, Row, SqlValue } from './db';
 import { fold, parseQuery, snippets, toFtsMatch } from './query';
 
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 const MAX_INDEX_BYTES = 8 * 1024 * 1024;
 
 const SCHEMA = `
@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS plugin_records (plugin TEXT, extractor TEXT, path TEX
 CREATE INDEX IF NOT EXISTS plugin_records_key ON plugin_records(plugin, extractor, key);
 CREATE INDEX IF NOT EXISTS plugin_records_path ON plugin_records(path);
 CREATE TABLE IF NOT EXISTS plugin_extractors (plugin TEXT, extractor TEXT, version INTEGER, PRIMARY KEY (plugin, extractor));
+CREATE TABLE IF NOT EXISTS plugin_pending (plugin TEXT, extractor TEXT, path TEXT, PRIMARY KEY (plugin, extractor, path));
 CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(path UNINDEXED, title, body, tokenize = 'unicode61 remove_diacritics 2');
 `;
 
@@ -124,7 +125,8 @@ export class LibraryIndex {
 
   /**
    * Activates an extractor. A new one, or a new `version`, re-extracts the whole
-   * library in the background; otherwise its stored records stay as they are.
+   * library in the background; otherwise its stored records stay, and only the notes
+   * written while it was inactive (app closed, plugin off) are extracted again.
    */
   async registerExtractor(plugin: string, raw: unknown): Promise<void> {
     const ex = compileExtractor(plugin, raw);
@@ -132,28 +134,56 @@ export class LibraryIndex {
     const stored = this.db
       .prepare('SELECT version FROM plugin_extractors WHERE plugin = ? AND extractor = ?')
       .get(plugin, ex.spec.id);
-    if (stored && Number(stored.version) === ex.spec.version) return;
+    if (stored && Number(stored.version) === ex.spec.version) {
+      const pending = this.db
+        .prepare('SELECT path FROM plugin_pending WHERE plugin = ? AND extractor = ?')
+        .all(plugin, ex.spec.id)
+        .map((r) => String(r.path));
+      this.db
+        .prepare('DELETE FROM plugin_pending WHERE plugin = ? AND extractor = ?')
+        .run(plugin, ex.spec.id);
+      if (pending.length) await this.extractPaths(ex, pending);
+      return;
+    }
     this.db.transaction(() => {
       this.db
         .prepare('DELETE FROM plugin_records WHERE plugin = ? AND extractor = ?')
         .run(plugin, ex.spec.id);
       this.db
+        .prepare('DELETE FROM plugin_pending WHERE plugin = ? AND extractor = ?')
+        .run(plugin, ex.spec.id);
+      this.db
         .prepare('INSERT OR REPLACE INTO plugin_extractors (plugin, extractor, version) VALUES (?, ?, ?)')
         .run(plugin, ex.spec.id, ex.spec.version);
     });
-    await this.extractAll(ex);
+    await this.extractPaths(
+      ex,
+      this.db
+        .prepare('SELECT path FROM notes')
+        .all()
+        .map((r) => String(r.path)),
+    );
   }
 
   unregisterExtractor(plugin: string, id: string): void {
-    // Records stay (re-enabling is instant) until the next rebuild.
+    // Records stay (re-enabling is instant) until the next rebuild; notes written
+    // meanwhile are marked pending and re-extracted when it comes back.
     this.extractors.delete(`${plugin}/${id}`);
   }
 
-  private async extractAll(ex: Extractor): Promise<void> {
-    const paths = this.db
-      .prepare('SELECT path FROM notes')
-      .all()
-      .map((r) => String(r.path));
+  /** Marks a written note for every known extractor that is not active now. */
+  private markPending(rel: string): void {
+    const ins = this.db.prepare(
+      'INSERT OR IGNORE INTO plugin_pending (plugin, extractor, path) VALUES (?, ?, ?)',
+    );
+    for (const r of this.db.prepare('SELECT plugin, extractor FROM plugin_extractors').all()) {
+      const plugin = String(r.plugin);
+      const id = String(r.extractor);
+      if (!this.extractors.has(`${plugin}/${id}`)) ins.run(plugin, id, rel);
+    }
+  }
+
+  private async extractPaths(ex: Extractor, paths: string[]): Promise<void> {
     const total = paths.length;
     const numbering = this.opts.numbering ?? 'all';
     const BATCH = 100;
@@ -181,10 +211,16 @@ export class LibraryIndex {
         const ins = this.db.prepare(
           'INSERT INTO plugin_records (plugin, extractor, path, line, key, value) VALUES (?, ?, ?, ?, ?, ?)',
         );
+        const del = this.db.prepare(
+          'DELETE FROM plugin_records WHERE plugin = ? AND extractor = ? AND path = ?',
+        );
+        const known = this.db.prepare('SELECT 1 AS ok FROM notes WHERE path = ?');
         batch.forEach((rel, k) => {
           const text = texts[k];
           const s = summaries[k];
-          if (text === null || text === undefined || !s) return;
+          // The note's old records go first, so a note written again meanwhile isn't doubled.
+          del.run(ex.plugin, ex.spec.id, rel);
+          if (text === null || text === undefined || !s || !known.get(rel)) return;
           try {
             for (const r of extract(ex, text, s)) ins.run(ex.plugin, ex.spec.id, rel, r.line, r.key, r.value);
           } catch (err) {
@@ -273,6 +309,7 @@ export class LibraryIndex {
         'notes_fts',
         'plugin_records',
         'plugin_extractors',
+        'plugin_pending',
       ]) {
         db.exec(`DROP TABLE IF EXISTS ${t};`);
       }
@@ -463,6 +500,7 @@ export class LibraryIndex {
     }
     if (this.db.prepare('DELETE FROM plugin_records WHERE path = ?').run(rel).changes)
       for (const ex of this.extractors.values()) this.recordsChanged.add(ex.plugin);
+    this.db.prepare('DELETE FROM plugin_pending WHERE path = ?').run(rel);
     if (alsoFile) this.db.prepare('DELETE FROM files WHERE path = ?').run(rel);
   }
 
@@ -479,6 +517,7 @@ export class LibraryIndex {
     if (!note) return;
     const s = note.summary ?? analyzeNote(note.text, { numbering: this.opts.numbering ?? 'all' });
     this.extractInto(rel, note.text, s);
+    this.markPending(rel);
     const fm = s.frontmatter?.data ?? null;
     const title = noteTitle(s, rel);
     const aliases = fm ? stringList(fm.aliases) : [];

@@ -8,7 +8,7 @@ import type { SettingField } from '@ephemeris-notes/plugin-api';
 import appIcon from '@design/assets/Logos/ephemeris-icon.svg';
 import { useCatalog } from '../../lib/catalog';
 import { useSettings } from '../../lib/settings';
-import { errorMessage } from '../../lib/vx';
+import { errorMessage, unwrap, vx } from '../../lib/vx';
 import { installPlugin, setPluginEnabled, setPluginSetting } from '../../plugins/host';
 import { usePlugins, type PluginRuntime, type SettingsEntry } from '../../plugins/store';
 import { settingsStrings as s } from '../../strings/settings';
@@ -208,6 +208,7 @@ function FieldControl({ owner, field }: { owner: string; field: SettingField }) 
   const stored = usePlugins((st) => st.values[owner]?.[field.key]);
   const value = stored === undefined ? field.default : stored;
   const files = useCatalog((st) => st.paths);
+  const [pickError, setPickError] = useState<string | null>(null);
   const set = (v: unknown) => void setPluginSetting(owner, field.key, v);
   const label = field.label;
   switch (field.type) {
@@ -252,8 +253,17 @@ function FieldControl({ owner, field }: { owner: string; field: SettingField }) 
       const listId = field.type === 'file' ? `vx-files-${owner}-${field.key}` : undefined;
       const exts =
         field.type === 'file' ? (field.extensions ?? []).map((e) => e.replace(/^\./, '').toLowerCase()) : [];
+      // One cell of the setting's row: the field, then Browse… beside it.
       return (
-        <>
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            gap: 8,
+          }}
+        >
           <TextInput
             label={label}
             value={String(value ?? '')}
@@ -270,7 +280,28 @@ function FieldControl({ owner, field }: { owner: string; field: SettingField }) 
                 ))}
             </datalist>
           )}
-        </>
+          {field.type === 'file' && (
+            <button
+              type="button"
+              className="vx-btn vx-btn--small"
+              aria-label={s.plugins.browseFor(label)}
+              onClick={() => {
+                setPickError(null);
+                void unwrap(vx().fs.pickFile(exts)).then(
+                  (rel) => rel && set(rel),
+                  (err) => setPickError(errorMessage(err)),
+                );
+              }}
+            >
+              {s.plugins.browse}
+            </button>
+          )}
+          {pickError && (
+            <span className="vx-dialog__hint" role="alert">
+              {pickError}
+            </span>
+          )}
+        </div>
       );
     }
   }

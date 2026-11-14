@@ -3,7 +3,13 @@
  * anywhere in a link's source. Hover previews after 500 ms. Autocomplete after `[[`,
  * headings after `#` and block IDs after `#^` (SPECS 10.1).
  */
-import { autocompletion, type CompletionContext, type CompletionResult } from '@codemirror/autocomplete';
+import {
+  autocompletion,
+  pickedCompletion,
+  type Completion,
+  type CompletionContext,
+  type CompletionResult,
+} from '@codemirror/autocomplete';
 import { syntaxTree } from '@codemirror/language';
 import { EditorView, hoverTooltip, type Tooltip } from '@codemirror/view';
 import { analyzeNote, splitTarget, type PdfSelection } from '@ephemeris-notes/markdown';
@@ -208,6 +214,23 @@ async function targetOutline(ctx: EditorContext, path: string) {
   return entry;
 }
 
+/**
+ * Inserts a link completion and closes it with `]]` unless the brackets are already
+ * there (auto-closed when `[[` was typed); either way the cursor ends after them.
+ */
+export function linkApply(text: string) {
+  return (view: EditorView, completion: Completion, from: number, to: number) => {
+    const closed = view.state.sliceDoc(to, to + 2) === ']]';
+    const insert = closed ? text : `${text}]]`;
+    view.dispatch({
+      changes: { from, to, insert },
+      selection: { anchor: from + text.length + 2 },
+      userEvent: 'input.complete',
+      annotations: pickedCompletion.of(completion),
+    });
+  };
+}
+
 async function wikiCompletions(cx: CompletionContext): Promise<CompletionResult | null> {
   const before = cx.matchBefore(/!?\[\[[^\]\n[]*$/);
   if (!before) return null;
@@ -215,8 +238,6 @@ async function wikiCompletions(cx: CompletionContext): Promise<CompletionResult 
   const open = before.text.indexOf('[[') + 2;
   const typed = before.text.slice(open);
   const from = before.from + open;
-  const after = cx.state.sliceDoc(cx.pos, cx.pos + 2);
-  const close = after === ']]' ? '' : ']]';
   const hash = typed.indexOf('#');
   if (hash >= 0) {
     // Headings after `#`, block IDs after `#^`, in the target note.
@@ -235,7 +256,7 @@ async function wikiCompletions(cx: CompletionContext): Promise<CompletionResult 
           label: e.label,
           detail: e.number ? `(${e.number})` : '',
           type: 'constant',
-          apply: `${e.label}${close}`,
+          apply: linkApply(e.label),
           boost: -1,
           info: () => {
             const box = document.createElement('div');
@@ -252,7 +273,7 @@ async function wikiCompletions(cx: CompletionContext): Promise<CompletionResult 
           : items.map((label) => ({
               label,
               type: isBlock ? 'constant' : 'property',
-              apply: `${label}${close}`,
+              apply: linkApply(label),
             }))),
         ...equations,
       ],
@@ -262,7 +283,7 @@ async function wikiCompletions(cx: CompletionContext): Promise<CompletionResult 
   const options = ctx.files().map((p) => {
     const label = ctx.linkText(p);
     const folder = p.includes('/') ? p.slice(0, p.lastIndexOf('/')) : '';
-    return { label, detail: folder, type: /\.md$/i.test(p) ? 'text' : 'variable', apply: `${label}${close}` };
+    return { label, detail: folder, type: /\.md$/i.test(p) ? 'text' : 'variable', apply: linkApply(label) };
   });
   return { from, options, validFor: /^[^\]|#\n]*$/ };
 }

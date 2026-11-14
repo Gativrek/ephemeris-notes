@@ -100,6 +100,8 @@ export const settingsStrings = {
     trust:
       'Plugins are trusted code. They run inside the app with access to your notes. Install only plugins you trust.',
     install: 'Install from Folder…',
+    browse: 'Browse…',
+    browseFor: (label: string) => `Browse for ${label}`,
     none: 'No plugins installed. Plugins live in the plugins folder of the app’s user data.',
     enable: (name: string) => `Enable ${name}`,
     states: {

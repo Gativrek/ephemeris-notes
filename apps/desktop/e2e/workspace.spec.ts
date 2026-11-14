@@ -68,6 +68,8 @@ test('sidebar: Vault header, section tiles, Unfiled, daily tile and a natural-so
   await expect(page.getByTestId('tree').locator('.vx-date')).toHaveCount(1);
   await tile(page, 'Papers').click();
   await expect(page.getByTestId('tree').locator('.vx-pdf')).toHaveCount(1);
+  // The tile counts what its header counts: one PDF.
+  await expect(tile(page, 'Papers').locator('.vx-tile__count')).toHaveText('1');
 });
 
 test('live preview renders links, embeds and math; links open on the desk', async () => {
@@ -150,11 +152,14 @@ test('new note, inline rename, pin, close and trash', async () => {
   await expect(input).toBeFocused();
   await input.fill('Carrier smoothing');
   await input.press('Enter');
+  // Typing straight after naming the note lands in it, first letter included.
+  await page.keyboard.type('Hello');
   await expect
-    .poll(async () =>
-      readFile(file('Academic/GNSS Study/Notes/Carrier smoothing.md'), 'utf8').catch(() => null),
+    .poll(
+      async () => readFile(file('Academic/GNSS Study/Notes/Carrier smoothing.md'), 'utf8').catch(() => null),
+      { timeout: 5000 },
     )
-    .toBe('');
+    .toBe('Hello');
   await expect(page.getByTestId('desk-card')).toHaveCount(1);
 
   await contextChoice('pin');
@@ -243,9 +248,11 @@ test('wikilink autocomplete inserts the shortest unambiguous link', async () => 
   await page.waitForTimeout(150);
   await page.keyboard.press('Enter');
   await expect(editor(page)).toContainText('Kalman Filter');
+  // The cursor ends after the closing brackets, whether or not they were auto-closed.
+  await page.keyboard.type(' next');
   await expect(page.getByTestId('save-state')).toHaveText('Saved', { timeout: 5000 });
   expect(await readFile(file('Academic/GNSS Study/Notes/Lectures/Lecture 10.md'), 'utf8')).toContain(
-    '[[Kalman Filter]]',
+    '[[Kalman Filter]] next',
   );
 });
 
@@ -367,16 +374,21 @@ test('outline styles: margin track, document map and tabbed inspector render the
 
 test('Settings > Keyboard: a hotkey runs its command; fixed keys are refused, taken ones offered', async () => {
   const { page } = ctx;
+  // Ctrl+O opens a note by default.
+  await page.keyboard.press('ControlOrMeta+o');
+  await expect(page.getByTestId('quick-open')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('quick-open')).toHaveCount(0);
   await page.keyboard.press('ControlOrMeta+,');
   await page.getByTestId('settings').getByRole('link', { name: 'Keyboard', exact: true }).click();
   const row = page.getByTestId('hotkey-core:open-note');
-  await row.getByRole('button', { name: 'Set Shortcut' }).click();
+  await row.getByRole('button', { name: 'Change' }).click();
   // A key another command has is offered as a swap; keeping it leaves both as they were.
   await page.keyboard.press('ControlOrMeta+k');
   await expect(page.getByRole('alert')).toContainText('is used by Search. Use it for Open Note… instead?');
   await page.getByRole('button', { name: 'Keep It There' }).click();
   await expect(page.getByTestId('hotkey-core:search')).toContainText('+K');
-  await row.getByRole('button', { name: 'Set Shortcut' }).click();
+  await row.getByRole('button', { name: 'Change' }).click();
   // The editor's fixed keys and plain typing keys are refused.
   await page.keyboard.press('ControlOrMeta+Enter');
   await expect(page.getByRole('alert')).toContainText('is already used by the editor');
@@ -766,7 +778,7 @@ test('arrows over the Vault banner step through the Domain, sliding, saving firs
   await page.keyboard.press('Enter');
   await expect(head).toContainText('GNSS Constellation Study');
   await expect(page.getByTestId('workspace')).not.toHaveClass(/is-vault-/);
-  await page.keyboard.press('ControlOrMeta+o');
+  await page.keyboard.press('ControlOrMeta+Shift+H');
   await expect(page.locator('.vx-card-slot.is-selected .vx-card__name')).toHaveText(
     'GNSS Constellation Study',
   );
@@ -846,4 +858,28 @@ test('section tiles sit two per row, and the sidebar widens by its edge, keeping
     );
     ctx = await launch();
   }
+});
+
+test('narrowing the window below 1440px folds the outline; widening brings it back', async () => {
+  const { app, page } = ctx;
+  const resize = (width: number) =>
+    app.evaluate(({ BrowserWindow }, w) => {
+      const win = BrowserWindow.getAllWindows()[0]!;
+      win.setContentSize(w, 900);
+    }, width);
+  const wrap = page.locator('.vx-outline-wrap');
+  await resize(1600);
+  await expect.poll(() => page.evaluate(() => window.innerWidth)).toBeGreaterThanOrEqual(1440);
+  await showOutline(page);
+  await resize(1000);
+  await expect(wrap).toHaveCount(0);
+  await resize(1600);
+  await expect(wrap).toHaveCount(1);
+  // One the user closed stays closed.
+  await page.keyboard.press('ControlOrMeta+Shift+O');
+  await expect(wrap).toHaveCount(0);
+  await resize(1000);
+  await resize(1600);
+  await expect.poll(() => page.evaluate(() => window.innerWidth)).toBeGreaterThanOrEqual(1440);
+  await expect(wrap).toHaveCount(0);
 });

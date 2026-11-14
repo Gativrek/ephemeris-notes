@@ -141,12 +141,16 @@ test('moves a Vault to another Domain after confirming, and deletes one with the
   expect(trashed?.some((p) => p.endsWith(path.join('Personal', 'Knowledge')))).toBe(true);
 });
 
-test('Enter opens the workspace; Ctrl+O returns to the chooser; Escape goes back', async () => {
+test('Enter opens the workspace; Ctrl+Shift+H returns to the chooser; Escape goes back', async () => {
   const { page } = ctx;
   await page.keyboard.press('Enter');
   await expect(page.getByTestId('workspace')).toBeVisible();
-  await page.keyboard.press('ControlOrMeta+o');
+  await page.keyboard.press('ControlOrMeta+Shift+H');
   await expect(page.getByTestId('chooser')).toBeVisible();
+  // Typing a word here (expecting a note picker) runs no letter command: no Edit Vault.
+  await page.keyboard.type('lect');
+  await page.keyboard.type('edit');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.keyboard.press('Escape');
   await expect(page.getByTestId('workspace')).toBeVisible();
 });
