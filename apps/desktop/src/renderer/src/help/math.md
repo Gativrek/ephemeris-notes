@@ -25,6 +25,14 @@ $$ {#eq:newton}
 
 Refer to it anywhere in the same note with `@eq:newton`. The reference shows the equation's number and jumps to it when clicked. Type `@eq:` for suggestions.
 
+## Equations in other notes
+
+A labeled equation in another note is a link to it: `[[Kalman Filter#eq:kf-gain]]` reads "Kalman Filter, Eq. (3)", with the number that note shows. Hover it to see the equation; click it to open the note at the equation. `[[Kalman Filter#eq:kf-gain|the gain]]` shows your own text instead.
+
+Put `!` in front, on a line of its own, to show the equation itself here, numbered as in its note: `![[Kalman Filter#eq:kf-update]]`.
+
+After `[[Kalman Filter#`, suggestions list the note's labeled equations after its headings; after `#eq:`, only equations. A label that note does not have reads "Eq. (?)". Renaming the note updates these links like any other; renaming a label does not.
+
 ## Settings
 
 Settings > Math chooses:

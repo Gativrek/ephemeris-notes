@@ -13,7 +13,8 @@ import { renderInline } from './inline';
 import { embedAloneOnLine, rangeActive } from './livePreview';
 import { blockRegistry } from './registry';
 import { DisplayMathWidget, PropertiesWidget, TableWidget, WarningWidget } from './widgets';
-import { NoteEmbedWidget } from './embeds';
+import { EquationEmbedWidget, NoteEmbedWidget } from './embeds';
+import { equationLabel, noteEquations } from './noteEquations';
 import { PluginBlockWidget } from './pluginBlock';
 import { equationField } from './equations';
 
@@ -175,6 +176,26 @@ function build(state: EditorState): DecorationSet {
       const parts = splitTarget(m[1]!);
       const res = ctx.resolve(parts.target);
       if (!res.path || !/\.md$/i.test(res.path)) continue;
+      const eqLabel = equationLabel(parts.heading);
+      if (eqLabel) {
+        const known = noteEquations(res.path, ctx.loadNote, ctx.numbering);
+        const eq = known?.equations.find((e) => e.label === eqLabel);
+        decos.push(
+          Decoration.replace({
+            widget: new EquationEmbedWidget(
+              res.path,
+              eqLabel,
+              parts.target,
+              known?.title ?? null,
+              eq?.tex ?? null,
+              eq?.number ?? null,
+              !!known,
+            ),
+            block: true,
+          }).range(aligned.from, aligned.to),
+        );
+        continue;
+      }
       decos.push(
         Decoration.replace({
           widget: new NoteEmbedWidget(res.path, parts.heading, parts.target),

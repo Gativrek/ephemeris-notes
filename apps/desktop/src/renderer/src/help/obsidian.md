@@ -10,7 +10,7 @@ The library is an ordinary folder of Markdown files. Open it as a vault in Obsid
 
 ## What degrades to text
 
-- Equation labels (`{#eq:name}`) and references (`@eq:name`) show as plain text in Obsidian.
+- Equation labels (`{#eq:name}`) and references (`@eq:name`) show as plain text in Obsidian. Links to another note's equation (`[[Note#eq:name]]`) open that note there.
 - Plugin blocks show as fenced code.
 
 ## Folders

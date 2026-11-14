@@ -6,6 +6,8 @@ import { refreshLinks, type EditorContext } from '../editor/context';
 import { parseMacros } from '../editor/math';
 import { blockRegistry } from '../editor/registry';
 import { inlineRegistry } from '../editor/pluginInline';
+import { equationByLabel, revealEquation } from '../editor/equations';
+import { clearNoteEquations, equationLabel, onEquationsChanged } from '../editor/noteEquations';
 import {
   attrsCompartment,
   contentAttrs,
@@ -352,9 +354,14 @@ export function EditorPane() {
       queueMicrotask(() => viewRef.current === view && view.dispatch({ effects: refreshLinks.of(null) }));
     const offBlocks = blockRegistry.onChange(redraw);
     const offInline = inlineRegistry.onChange(redraw);
+    // Other notes' equations (10.4.1): redraw references when they load, reload when notes change.
+    const offEquations = onEquationsChanged(redraw);
+    const offIndex = vx().index.onChanged(() => clearNoteEquations());
     const offRegistry = () => {
       offBlocks();
       offInline();
+      offEquations();
+      offIndex();
     };
     attachView({
       get path() {
@@ -456,8 +463,17 @@ export function EditorPane() {
   useEffect(() => {
     const view = viewRef.current;
     if (!view || !jump || jump.path !== active || shownRef.current !== active) return;
-    const pos = jumpTarget(view.state, jump);
+    const eqLabel = equationLabel(jump.heading);
+    const eq = eqLabel ? equationByLabel(view.state, eqLabel) : null;
     useWorkspace.setState({ jump: null });
+    if (eq) {
+      // [[Note#eq:label]]: scroll to the equation and flash it, as @eq: does (10.4.1).
+      // The cursor stays out of it, so the equation stays rendered.
+      revealEquation(view, eq);
+      view.focus();
+      return;
+    }
+    const pos = eqLabel ? null : jumpTarget(view.state, jump);
     if (pos === null) return;
     view.dispatch({
       selection: EditorSelection.cursor(pos),

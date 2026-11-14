@@ -11,6 +11,8 @@ import { editorContext, revealSource, type EditorContext, type OpenLinkRequest }
 import { activeLines } from './livePreview';
 import { equationCompletions } from './equations';
 import { fenceCompletions } from './fences';
+import { renderMath } from './math';
+import { equationLabel, summarize, type NoteEquation } from './noteEquations';
 
 const parseSelection = (v: string | undefined): PdfSelection | null => {
   const n = v?.split(',').map(Number);
@@ -122,6 +124,43 @@ export const linkPreview = hoverTooltip(
     if (!path || !/\.md$/i.test(path)) return null;
     const text = await ctx.loadNote(path);
     if (text === null) return null;
+    const eqLabel = equationLabel(parts.heading);
+    if (eqLabel) {
+      // An equation reference (10.4.1): the equation itself, with its number.
+      const known = summarize(path, text, ctx.numbering);
+      const eq = known.equations.find((e) => e.label === eqLabel);
+      return {
+        pos: link.from,
+        end: link.to,
+        above: true,
+        create() {
+          const dom = document.createElement('div');
+          dom.className = 'vx-preview-card vx-preview-card--eq';
+          const title = document.createElement('div');
+          title.className = 'vx-preview-card__title';
+          title.textContent = known.title;
+          dom.append(title);
+          if (eq) {
+            const fig = document.createElement('figure');
+            fig.className = 'vx-math';
+            fig.append(renderMath(eq.tex, true, ctx.macros));
+            if (eq.number !== null) {
+              const n = document.createElement('span');
+              n.className = 'vx-math__num';
+              n.textContent = `(${eq.number})`;
+              fig.append(n);
+            }
+            dom.append(fig);
+          } else {
+            const body = document.createElement('div');
+            body.className = 'vx-preview-card__body';
+            body.textContent = `No equation labeled ${eqLabel} in this note.`;
+            dom.append(body);
+          }
+          return { dom };
+        },
+      };
+    }
     return {
       pos: link.from,
       end: link.to,
@@ -149,7 +188,10 @@ export const linkPreview = hoverTooltip(
 
 // ---- Autocomplete -----------------------------------------------------------
 
-const headingCache = new Map<string, { at: number; headings: string[]; blocks: string[] }>();
+const headingCache = new Map<
+  string,
+  { at: number; headings: string[]; blocks: string[]; equations: NoteEquation[] }
+>();
 
 async function targetOutline(ctx: EditorContext, path: string) {
   const hit = headingCache.get(path);
@@ -160,6 +202,7 @@ async function targetOutline(ctx: EditorContext, path: string) {
     at: Date.now(),
     headings: s.headings.map((h) => h.text),
     blocks: s.blockIds.map((b) => b.id),
+    equations: summarize(path, text ?? '', ctx.numbering).equations,
   };
   headingCache.set(path, entry);
   return entry;
@@ -184,13 +227,35 @@ async function wikiCompletions(cx: CompletionContext): Promise<CompletionResult 
     const isBlock = typed[hash + 1] === '^';
     const start = from + hash + (isBlock ? 2 : 1);
     const items = isBlock ? outline.blocks : outline.headings;
+    // Labeled equations follow the headings; after `#eq:` they are all that is listed (10.4.1).
+    const onlyEquations = typed.slice(hash + 1).startsWith('eq:');
+    const equations = isBlock
+      ? []
+      : outline.equations.map((e) => ({
+          label: e.label,
+          detail: e.number ? `(${e.number})` : '',
+          type: 'constant',
+          apply: `${e.label}${close}`,
+          boost: -1,
+          info: () => {
+            const box = document.createElement('div');
+            box.className = 'vx-eq-preview';
+            box.append(renderMath(e.tex, true, ctx.macros));
+            return box;
+          },
+        }));
     return {
       from: start,
-      options: items.map((label) => ({
-        label,
-        type: isBlock ? 'constant' : 'property',
-        apply: `${label}${close}`,
-      })),
+      options: [
+        ...(onlyEquations
+          ? []
+          : items.map((label) => ({
+              label,
+              type: isBlock ? 'constant' : 'property',
+              apply: `${label}${close}`,
+            }))),
+        ...equations,
+      ],
       validFor: /^[^\]|#\n]*$/,
     };
   }

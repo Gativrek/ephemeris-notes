@@ -18,6 +18,7 @@ import { editorContext, refreshLinks, revealSource } from './context';
 import { isCodeLanguage } from './languages';
 import { blockRegistry } from './registry';
 import { EqRefWidget, equationByLabel, formatRef } from './equations';
+import { equationLabel, noteEquations, referenceText } from './noteEquations';
 import { PdfPageWidget } from './pdfWidget';
 import {
   CheckboxWidget,
@@ -292,6 +293,31 @@ function buildDecorations(view: EditorView): DecorationSet {
               }
               // A note or PDF embed alone on its line is a block (blocks.ts).
               if (embedAloneOnLine(state, nf, nt) && /\.md$/i.test(res.path)) return false;
+            }
+            // [[Note#eq:label]]: "Kalman Filter, Eq. (3)", numbered as that note numbers it (10.4.1).
+            const eqLabel = res.path && /\.md$/i.test(res.path) ? equationLabel(parts.heading) : null;
+            if (eqLabel && res.path) {
+              const known = noteEquations(res.path, ctx.loadNote, ctx.numbering);
+              const eq = known?.equations.find((e) => e.label === eqLabel);
+              const text = known
+                ? referenceText(known.title, eq?.number ?? null, ctx.refFormat)
+                : `${parts.target}, ${formatRef('…', ctx.refFormat)}`;
+              decos.push(
+                Decoration.replace({
+                  widget: new LinkWidget({
+                    text: alias ?? text,
+                    target: parts.target,
+                    heading: parts.heading,
+                    block: null,
+                    page: null,
+                    path: res.path,
+                    candidates: res.candidates,
+                    pdf: false,
+                    missingPart: !!known && !eq,
+                  }),
+                }).range(nf, nt),
+              );
+              return false;
             }
             const shown =
               alias ??

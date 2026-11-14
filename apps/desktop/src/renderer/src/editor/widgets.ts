@@ -19,6 +19,8 @@ export interface LinkModel {
   path: string | null;
   candidates: string[];
   pdf: boolean;
+  /** The note exists but the part named after `#` does not (an unknown equation label). */
+  missingPart?: boolean;
 }
 
 /** Marks an element as a followable link for the click handler. */
@@ -52,12 +54,13 @@ export class LinkWidget extends WidgetType {
       a.path === b.path &&
       a.target === b.target &&
       a.heading === b.heading &&
+      !!a.missingPart === !!b.missingPart &&
       a.candidates.length === b.candidates.length
     );
   }
   toDOM(): HTMLElement {
     const el = document.createElement('span');
-    el.className = linkClass(this.link);
+    el.className = linkClass(this.link) + (this.link.missingPart ? ' vx-cm-link--missing' : '');
     linkAttrs(el, this.link);
     if (this.link.pdf) {
       const badge = document.createElement('span');
