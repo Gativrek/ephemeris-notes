@@ -54,6 +54,7 @@ export function registerIndexHandlers(deps: { sessions: SessionManager; index: I
   };
   handle('index', 'search', (_e, q, scope) => need().call('search', str(q, 'query', 2000), scopeArg(scope)));
   handle('index', 'backlinks', (_e, p) => need().call('backlinks', str(p, 'path', 1024)));
+  handle('index', 'pdfHighlights', (_e, p) => need().call('pdfHighlights', str(p, 'path', 1024)));
   handle('index', 'resolve', (_e, link, from) =>
     need().call('resolve', str(link, 'link', 1024), str(from, 'fromPath', 1024)),
   );

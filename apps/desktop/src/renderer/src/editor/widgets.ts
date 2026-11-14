@@ -2,7 +2,7 @@
  * Widgets drawn in place of Markdown source on inactive lines (SPECS 10.1–10.7, 10.10).
  */
 import { WidgetType, type EditorView } from '@codemirror/view';
-import type { YamlValue } from '@ephemeris-notes/markdown';
+import type { PdfSelection, YamlValue } from '@ephemeris-notes/markdown';
 import { editorContext } from './context';
 import { renderMath } from './math';
 
@@ -15,6 +15,7 @@ export interface LinkModel {
   heading: string | null;
   block: string | null;
   page: number | null;
+  selection?: PdfSelection | null;
   path: string | null;
   candidates: string[];
   pdf: boolean;
@@ -23,13 +24,14 @@ export interface LinkModel {
 /** Marks an element as a followable link for the click handler. */
 export function linkAttrs(
   el: HTMLElement,
-  link: Pick<LinkModel, 'target' | 'heading' | 'block' | 'page' | 'path'>,
+  link: Pick<LinkModel, 'target' | 'heading' | 'block' | 'page' | 'path' | 'selection'>,
 ): void {
   el.dataset.vxLink = '1';
   el.dataset.target = link.target;
   if (link.heading) el.dataset.heading = link.heading;
   if (link.block) el.dataset.block = link.block;
   if (link.page !== null) el.dataset.page = String(link.page);
+  if (link.selection) el.dataset.selection = link.selection.join(',');
   if (link.path) el.dataset.path = link.path;
 }
 

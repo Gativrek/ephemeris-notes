@@ -33,6 +33,8 @@ export interface LinkRef {
   block: string | null;
   /** From `#page=N` on PDF links. */
   page: number | null;
+  /** From `#page=N&selection=a,b,c,d` on PDF links (SPECS 10.8.1). */
+  selection: PdfSelection | null;
   alias: string | null;
   /** Embed width from `|300`. */
   width: number | null;
@@ -109,22 +111,47 @@ class LineIndex {
   }
 }
 
-/** Splits `Target#Heading`, `Target#^block`, `file.pdf#page=3`. */
+/**
+ * A passage of a PDF page (SPECS 10.8.1), as Obsidian writes it: the first and last text
+ * items of the page's text content, and the character offsets in them (the end offset is
+ * exclusive).
+ */
+export type PdfSelection = [beginIndex: number, beginOffset: number, endIndex: number, endOffset: number];
+
+/**
+ * Splits `Target#Heading`, `Target#^block`, `file.pdf#page=3`, and
+ * `file.pdf#page=3&selection=4,0,6,12` (other `&key=value` pairs, such as PDF++'s
+ * `color`, are ignored).
+ */
 export function splitTarget(raw: string): {
   target: string;
   heading: string | null;
   block: string | null;
   page: number | null;
+  selection: PdfSelection | null;
 } {
+  const none = { heading: null, block: null, page: null, selection: null };
   const hash = raw.indexOf('#');
-  if (hash < 0) return { target: raw.trim(), heading: null, block: null, page: null };
+  if (hash < 0) return { target: raw.trim(), ...none };
   const target = raw.slice(0, hash).trim();
   const frag = raw.slice(hash + 1);
-  if (frag.startsWith('^')) return { target, heading: null, block: frag.slice(1).trim(), page: null };
-  const page = /^page=(\d+)$/.exec(frag.trim());
-  if (page) return { target, heading: null, block: null, page: Number(page[1]) };
-  return { target, heading: frag.trim() || null, block: null, page: null };
+  if (frag.startsWith('^')) return { target, ...none, block: frag.slice(1).trim() };
+  const page = /^page=(\d+)((?:&[a-z]+=[^&]*)*)$/i.exec(frag.trim());
+  if (page) {
+    const sel = /&selection=(\d+),(\d+),(\d+),(\d+)(?:&|$)/i.exec(page[2]!);
+    return {
+      target,
+      ...none,
+      page: Number(page[1]),
+      selection: sel ? [Number(sel[1]), Number(sel[2]), Number(sel[3]), Number(sel[4])] : null,
+    };
+  }
+  return { target, ...none, heading: frag.trim() || null };
 }
+
+/** The fragment for a PDF passage: `page=3&selection=4,0,6,12`. */
+export const pdfFragment = (page: number, sel: PdfSelection): string =>
+  `page=${page}&selection=${sel.join(',')}`;
 
 const TAG_RE = /\\tag\*?\{([^}]*)\}/;
 

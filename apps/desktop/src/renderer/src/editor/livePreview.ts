@@ -254,6 +254,7 @@ function buildDecorations(view: EditorView): DecorationSet {
                     ...(res.path ? { 'data-path': res.path } : {}),
                     ...(parts.heading ? { 'data-heading': parts.heading } : {}),
                     ...(parts.page !== null ? { 'data-page': String(parts.page) } : {}),
+                    ...(parts.selection ? { 'data-selection': parts.selection.join(',') } : {}),
                   }).range(t.from, t.to),
                 );
               }
@@ -307,6 +308,7 @@ function buildDecorations(view: EditorView): DecorationSet {
                   heading: parts.heading,
                   block: parts.block,
                   page: parts.page,
+                  selection: parts.selection,
                   path: res.path,
                   candidates: res.candidates,
                   pdf: /\.pdf$/i.test(res.path ?? parts.target),

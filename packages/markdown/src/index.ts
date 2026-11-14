@@ -4,6 +4,7 @@ export {
   noteTitle,
   numberEquations,
   parseTree,
+  pdfFragment,
   splitTarget,
   stringList,
   type CrossRef,
@@ -14,6 +15,7 @@ export {
   type LinkRef,
   type NoteSummary,
   type NumberingMode,
+  type PdfSelection,
 } from './analyze';
 export { parseInfoString, splitArgs, type InfoString } from './infostring';
 export { LinkCatalog, domainOf, hasExtension, vaultRootOf, DOMAIN_FOLDERS, type Resolution } from './links';

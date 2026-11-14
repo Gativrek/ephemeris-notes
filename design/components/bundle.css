@@ -735,3 +735,27 @@ body { margin: 0; font-family: var(--font-ui); color: var(--text); background: v
 /* ---- Cover flight: between the chooser and the workspace (SPECS 7) ---- */
 .vx-flight { position: fixed; z-index: 40; overflow: hidden; pointer-events: none; }
 .vx-wash { position: fixed; inset: 0; z-index: 35; pointer-events: none; }
+
+/* PDF highlights (SPECS 10.8.1): marks over the page, the bar over a selection, the list. */
+.vx-pdf-hl-layer { position: absolute; inset: 0; z-index: 2; pointer-events: none; mix-blend-mode: multiply; }
+.vx-pdf-hl { position: absolute; border-radius: 2px; background: var(--pdf-highlight); }
+.vx-pdf-hl.is-flash { background: var(--pdf-highlight-flash); animation: vx-pdf-flash 1.6s ease-out forwards; }
+@keyframes vx-pdf-flash { 0%, 55% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .vx-pdf-hl.is-flash { animation: none; } }
+.vx-pdf-container.is-over-highlight { cursor: pointer; }
+.vx-pdf-selbar { position: absolute; z-index: 5; display: flex; gap: 4px; padding: 4px; border-radius: var(--radius-sm); background: var(--surface-raised); box-shadow: var(--shadow-card); border: 1px solid var(--line); transform: translateX(-50%); }
+.vx-pdf-selbar .vx-btn { gap: 6px; }
+.vx-pdf-tip { position: absolute; z-index: 5; max-width: 260px; padding: 3px 8px; border-radius: var(--radius-xs); background: var(--surface-raised); border: 1px solid var(--line); box-shadow: var(--shadow-card); font: 500 12px/1.4 var(--font-ui); color: var(--text); pointer-events: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vx-pdf-notice { position: absolute; z-index: 5; left: 50%; bottom: var(--space-4); transform: translateX(-50%); display: flex; align-items: center; gap: var(--space-3); padding: 6px 8px 6px 12px; border-radius: var(--radius-sm); background: var(--surface-raised); border: 1px solid var(--line); box-shadow: var(--shadow-card); font: 400 13px/1.4 var(--font-ui); color: var(--text); }
+.vx-pdf-side { flex: 0 0 auto; display: flex; flex-direction: column; min-height: 0; background: var(--surface-side); border-right: 1px solid var(--line); }
+.vx-pdf-side__tabs { flex: 0 0 auto; display: flex; gap: 2px; padding: 6px 6px 0; border-bottom: 1px solid var(--line); }
+.vx-pdf-side__tab { appearance: none; flex: 1 1 0; padding: 6px 4px; border: 0; border-bottom: 2px solid transparent; background: transparent; font: 500 12px var(--font-ui); color: var(--muted); cursor: pointer; }
+.vx-pdf-side__tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--cyan); }
+.vx-pdf-side .vx-pdf-thumbs { flex: 1 1 auto; width: 148px; border-right: 0; }
+.vx-pdf-hls { flex: 1 1 auto; width: 260px; overflow-y: auto; margin: 0; padding: var(--space-2); list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.vx-pdf-hls__item { appearance: none; width: 100%; margin: 0; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; text-align: left; border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; cursor: pointer; font: 400 13px/1.45 var(--font-ui); color: var(--text); }
+.vx-pdf-hls__item:hover, .vx-pdf-hls__item:focus-visible { background: var(--surface-raised); border-color: var(--line); outline: none; }
+.vx-pdf-hls__quote { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; border-left: 3px solid var(--pdf-highlight); padding-left: 8px; }
+.vx-pdf-hls__quote.is-missing { color: var(--muted); font-style: italic; border-left-color: var(--line); }
+.vx-pdf-hls__meta { font-size: 11px; color: var(--muted); }
+.vx-pdf-hls__empty { padding: var(--space-3); font: 400 13px/1.5 var(--font-ui); color: var(--muted); }

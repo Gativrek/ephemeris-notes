@@ -69,6 +69,7 @@ const methods: Record<string, (...args: never[]) => unknown> = {
   status: () => index.getStatus(),
   search: (q: string, scope: Parameters<LibraryIndex['search']>[1]) => index.search(q, scope),
   backlinks: (p: string) => index.backlinks(p),
+  pdfHighlights: (p: string) => index.pdfHighlights(p),
   resolve: (link: string, from: string) => index.links.resolve(link, from),
   outline: (p: string) => index.outline(p),
   notesIn: (scope: Parameters<LibraryIndex['notesIn']>[0]) => index.notesIn(scope),

@@ -4,7 +4,7 @@
  * a facet so nested read-only views (embeds, help pages) share the same model.
  */
 import { Facet, StateEffect } from '@codemirror/state';
-import type { Resolution } from '@ephemeris-notes/markdown';
+import type { PdfSelection, Resolution } from '@ephemeris-notes/markdown';
 
 export interface OpenLinkRequest {
   /** Resolved library path, or null for a missing note. */
@@ -13,6 +13,8 @@ export interface OpenLinkRequest {
   heading: string | null;
   block: string | null;
   page: number | null;
+  /** A passage of a PDF page (SPECS 10.8.1). */
+  selection: PdfSelection | null;
   /** Open beside the current item without switching (Ctrl/Cmd+click). */
   newItem: boolean;
 }

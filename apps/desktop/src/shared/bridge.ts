@@ -235,6 +235,8 @@ export interface VxBridge {
   index: {
     search(query: string, scope: SearchScope): Promise<Result<SearchHit[]>>;
     backlinks(path: string): Promise<Result<Backlink[]>>;
+    /** Links to passages of the PDF at `path` (SPECS 10.8.1). */
+    pdfHighlights(path: string): Promise<Result<PdfHighlightLink[]>>;
     resolve(link: string, fromPath: string): Promise<Result<{ path: string | null; candidates: string[] }>>;
     outline(path: string): Promise<
       Result<{
@@ -331,6 +333,17 @@ export interface Backlink {
   title: string;
   line: number;
   snippet: string;
+}
+
+/** A link to a passage of a PDF (SPECS 10.8.1): where it is, and the passage. */
+export interface PdfHighlightLink {
+  /** The note holding the link. */
+  path: string;
+  title: string;
+  line: number;
+  col: number;
+  page: number;
+  selection: [number, number, number, number];
 }
 
 export interface IndexStatus {
@@ -473,6 +486,7 @@ export const BRIDGE_METHODS = {
   index: [
     'search',
     'backlinks',
+    'pdfHighlights',
     'resolve',
     'outline',
     'notesIn',

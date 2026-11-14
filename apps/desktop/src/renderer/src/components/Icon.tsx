@@ -110,6 +110,13 @@ const GLYPHS = {
   ),
   plus: <path d="M12 5v14M5 12h14" />,
   close: <path d="M6 6l12 12M18 6L6 18" />,
+  highlight: (
+    <>
+      <path d="M14.5 4.5l5 5-7.5 7.5-5-5z" />
+      <path d="M7 12l-2.5 4.5 3 3L12 17" />
+      <path d="M4 20.5h7" />
+    </>
+  ),
   copy: (
     <>
       <rect x="8" y="8" width="12" height="12" rx="2" />

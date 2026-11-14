@@ -4,7 +4,7 @@ The library is an ordinary folder of Markdown files. Open it as a vault in Obsid
 
 ## What carries over
 
-- Wikilinks, headings and block links, embeds and PDF page links use Obsidian's syntax.
+- Wikilinks, headings and block links, embeds, PDF page links and PDF selection links (highlights) use Obsidian's syntax: a highlight made here opens in Obsidian at its passage, and a link copied from Obsidian's PDF viewer shows here as a highlight.
 - Link resolution matches Obsidian's: case-insensitive, by file name when unique. Links the app writes use the shortest unambiguous form, so Obsidian resolves them to the same files.
 - Frontmatter, tags, task lists and `$` math look the same.
 

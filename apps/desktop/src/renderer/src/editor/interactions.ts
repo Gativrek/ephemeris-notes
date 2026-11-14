@@ -6,11 +6,16 @@
 import { autocompletion, type CompletionContext, type CompletionResult } from '@codemirror/autocomplete';
 import { syntaxTree } from '@codemirror/language';
 import { EditorView, hoverTooltip, type Tooltip } from '@codemirror/view';
-import { analyzeNote, splitTarget } from '@ephemeris-notes/markdown';
+import { analyzeNote, splitTarget, type PdfSelection } from '@ephemeris-notes/markdown';
 import { editorContext, revealSource, type EditorContext, type OpenLinkRequest } from './context';
 import { activeLines } from './livePreview';
 import { equationCompletions } from './equations';
 import { fenceCompletions } from './fences';
+
+const parseSelection = (v: string | undefined): PdfSelection | null => {
+  const n = v?.split(',').map(Number);
+  return n && n.length === 4 && n.every(Number.isInteger) ? (n as PdfSelection) : null;
+};
 
 function requestFrom(el: HTMLElement, ctx: EditorContext, newItem: boolean): OpenLinkRequest | null {
   const target = el.dataset.target;
@@ -22,6 +27,7 @@ function requestFrom(el: HTMLElement, ctx: EditorContext, newItem: boolean): Ope
     heading: el.dataset.heading ?? null,
     block: el.dataset.block ?? null,
     page: el.dataset.page ? Number(el.dataset.page) : null,
+    selection: parseSelection(el.dataset.selection),
     newItem,
   };
 }

@@ -38,6 +38,8 @@
   --diff-added-mark: rgba(46,125,70,0.30);
   --diff-removed: rgba(161,61,45,0.10);
   --diff-removed-mark: rgba(161,61,45,0.26);
+  --pdf-highlight: rgba(240,190,40,0.40);
+  --pdf-highlight-flash: rgba(52,192,228,0.45);
   --domain-academic: #3c5e92;
   --domain-academic-soft: rgba(60,94,146,0.13);
   --domain-academic-band: #9db6de;
@@ -153,6 +155,8 @@
   --diff-added-mark: rgba(110,190,130,0.34);
   --diff-removed: rgba(224,144,127,0.14);
   --diff-removed-mark: rgba(224,144,127,0.32);
+  --pdf-highlight: rgba(240,190,40,0.40);
+  --pdf-highlight-flash: rgba(52,192,228,0.45);
   --domain-academic: #7fa2d8;
   --domain-academic-soft: rgba(127,162,216,0.18);
   --domain-work: #7dbe9f;
@@ -205,6 +209,8 @@
   --diff-added-mark: rgba(46,125,70,0.30);
   --diff-removed: rgba(161,61,45,0.10);
   --diff-removed-mark: rgba(161,61,45,0.26);
+  --pdf-highlight: rgba(240,190,40,0.40);
+  --pdf-highlight-flash: rgba(52,192,228,0.45);
   --domain-academic: #3c5e92;
   --domain-academic-soft: rgba(60,94,146,0.13);
   --domain-work: #2f6b55;

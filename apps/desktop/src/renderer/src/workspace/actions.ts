@@ -2,7 +2,7 @@
  * Workspace actions shared by keys, menus and buttons: opening links and notes, new
  * notes, the daily note, rename and trash with the desk and documents following.
  */
-import { splitTarget } from '@ephemeris-notes/markdown';
+import { splitTarget, type PdfSelection } from '@ephemeris-notes/markdown';
 import type { OpenLinkRequest } from '../editor/context';
 import { useCatalog } from '../lib/catalog';
 import { errorMessage, unwrap, vx } from '../lib/vx';
@@ -47,6 +47,7 @@ export function openPath(
     block?: string | null;
     line?: number;
     page?: number | null;
+    selection?: PdfSelection | null;
   },
 ): void {
   if (!OPENABLE.test(path)) {
@@ -63,6 +64,7 @@ export function openPath(
         block: opts.block ?? null,
         ...(opts.line ? { line: opts.line } : {}),
         ...(opts.page ? { page: opts.page } : {}),
+        ...(opts.selection ? { selection: opts.selection } : {}),
       },
     });
   }
@@ -70,7 +72,13 @@ export function openPath(
 
 export function openLink(req: OpenLinkRequest): void {
   if (req.path) {
-    openPath(req.path, { background: req.newItem, heading: req.heading, block: req.block, page: req.page });
+    openPath(req.path, {
+      background: req.newItem,
+      heading: req.heading,
+      block: req.block,
+      page: req.page,
+      selection: req.selection,
+    });
     return;
   }
   // Missing note: offer to create it in the current section (SPECS 5 rule 5).

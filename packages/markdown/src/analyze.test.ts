@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { analyzeNote, noteTitle, numberEquations, splitTarget, stringList } from './analyze';
+import { analyzeNote, noteTitle, numberEquations, pdfFragment, splitTarget, stringList } from './analyze';
 import { parseInfoString, splitArgs } from './infostring';
 import { parseYaml } from './yaml';
 
@@ -114,9 +114,24 @@ describe('helpers', () => {
   });
 
   it('splits targets', () => {
-    expect(splitTarget('N#H')).toEqual({ target: 'N', heading: 'H', block: null, page: null });
-    expect(splitTarget('N#^b1')).toEqual({ target: 'N', heading: null, block: 'b1', page: null });
-    expect(splitTarget('p.pdf#page=12')).toEqual({ target: 'p.pdf', heading: null, block: null, page: 12 });
+    const none = { heading: null, block: null, page: null, selection: null };
+    expect(splitTarget('N#H')).toEqual({ target: 'N', ...none, heading: 'H' });
+    expect(splitTarget('N#^b1')).toEqual({ target: 'N', ...none, block: 'b1' });
+    expect(splitTarget('p.pdf#page=12')).toEqual({ target: 'p.pdf', ...none, page: 12 });
+  });
+
+  it('reads PDF selections as Obsidian and PDF++ write them', () => {
+    expect(splitTarget('p.pdf#page=3&selection=4,0,6,12')).toMatchObject({
+      target: 'p.pdf',
+      page: 3,
+      selection: [4, 0, 6, 12],
+      heading: null,
+    });
+    expect(splitTarget('p.pdf#page=3&selection=4,0,6,12&color=yellow').selection).toEqual([4, 0, 6, 12]);
+    expect(splitTarget('p.pdf#page=3&color=red').selection).toBeNull();
+    expect(splitTarget('p.pdf#page=3&selection=4,0').page).toBe(3);
+    expect(splitTarget('p.pdf#page=3&selection=4,0').selection).toBeNull();
+    expect(pdfFragment(3, [4, 0, 6, 12])).toBe('page=3&selection=4,0,6,12');
   });
 
   it('numbers equations directly', () => {

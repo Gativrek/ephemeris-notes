@@ -2,6 +2,7 @@
  * Workspace state for the open Vault: the selected section, expanded folders, the desk
  * (SPECS 9.5) and panel visibility. Desk and pins persist per Vault, per machine.
  */
+import type { PdfSelection } from '@ephemeris-notes/markdown';
 import { create } from 'zustand';
 import { unwrap, vx } from '../lib/vx';
 
@@ -51,7 +52,14 @@ interface WorkspaceState {
   /** Bumped when a section folder is created, renamed or removed (empty folders are not in the file catalog). */
   sectionsVersion: number;
   /** Pending jump inside the active note (heading, block or line). */
-  jump: { path: string; heading?: string | null; block?: string | null; line?: number; page?: number } | null;
+  jump: {
+    path: string;
+    heading?: string | null;
+    block?: string | null;
+    line?: number;
+    page?: number;
+    selection?: PdfSelection;
+  } | null;
 
   init(vaultPath: string, vaultId: string): Promise<void>;
   setSection(path: string | null): void;

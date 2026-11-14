@@ -17,7 +17,7 @@ import {
   type NoteSummary,
   type NumberingMode,
 } from '@ephemeris-notes/markdown';
-import type { Backlink, IndexStatus, SearchHit, SearchScope } from '@shared/bridge';
+import type { Backlink, IndexStatus, PdfHighlightLink, SearchHit, SearchScope } from '@shared/bridge';
 import { decodeText } from '../library/encoding';
 import { isTempFile } from '../library/atomic';
 import { walkFiles } from '../library/walk';
@@ -25,14 +25,14 @@ import { compileExtractor, extract, type Extractor } from './extractors';
 import type { Db, Row, SqlValue } from './db';
 import { fold, parseQuery, snippets, toFtsMatch } from './query';
 
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 const MAX_INDEX_BYTES = 8 * 1024 * 1024;
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
 CREATE TABLE IF NOT EXISTS files (path TEXT PRIMARY KEY, mtime REAL, size INTEGER, ext TEXT, name TEXT);
 CREATE TABLE IF NOT EXISTS notes (path TEXT PRIMARY KEY, vault TEXT, domain TEXT, title TEXT, mtime REAL, hash TEXT, frontmatter_json TEXT, aliases_json TEXT);
-CREATE TABLE IF NOT EXISTS links (src TEXT, target_raw TEXT, target_key TEXT, target_resolved TEXT, candidates INTEGER, kind TEXT, heading TEXT, block TEXT, line INTEGER, col INTEGER, context TEXT);
+CREATE TABLE IF NOT EXISTS links (src TEXT, target_raw TEXT, target_key TEXT, target_resolved TEXT, candidates INTEGER, kind TEXT, heading TEXT, block TEXT, line INTEGER, col INTEGER, context TEXT, page INTEGER, selection TEXT);
 CREATE INDEX IF NOT EXISTS links_src ON links(src);
 CREATE INDEX IF NOT EXISTS links_resolved ON links(target_resolved);
 CREATE INDEX IF NOT EXISTS links_key ON links(target_key);
@@ -529,7 +529,7 @@ export class LibraryIndex {
     const res = l.target ? this.catalog.resolve(l.target, src) : { path: src, candidates: [] };
     this.db
       .prepare(
-        'INSERT INTO links (src, target_raw, target_key, target_resolved, candidates, kind, heading, block, line, col, context) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO links (src, target_raw, target_key, target_resolved, candidates, kind, heading, block, line, col, context, page, selection) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       )
       .run(
         src,
@@ -543,6 +543,8 @@ export class LibraryIndex {
         l.line,
         l.col,
         lineText.trim().slice(0, 240),
+        l.page,
+        l.selection ? l.selection.join(',') : null,
       );
   }
 
@@ -770,6 +772,23 @@ export class LibraryIndex {
       out.push({ path: src, title: String(r.title), line: Number(r.line), snippet: String(r.context ?? '') });
     }
     return out;
+  }
+
+  /** Every link to a passage of the PDF `target` (SPECS 10.8.1), in note and line order. */
+  pdfHighlights(target: string): PdfHighlightLink[] {
+    return this.db
+      .prepare(
+        'SELECT l.src, l.line, l.col, l.page, l.selection, n.title FROM links l JOIN notes n ON n.path = l.src WHERE l.target_resolved = ? AND l.selection IS NOT NULL ORDER BY l.src, l.line, l.col',
+      )
+      .all(target)
+      .map((r) => ({
+        path: String(r.src),
+        title: String(r.title),
+        line: Number(r.line),
+        col: Number(r.col),
+        page: Number(r.page),
+        selection: String(r.selection).split(',').map(Number) as PdfHighlightLink['selection'],
+      }));
   }
 
   /** Notes whose links point into `paths` (files or folders), with link counts. */

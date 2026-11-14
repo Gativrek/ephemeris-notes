@@ -487,7 +487,12 @@ export function EditorPane() {
       {isView && active && <PluginViewPane key={active} id={active} onClose={() => closeItem(active)} />}
       {isHistory && active && <HistoryPane key={active} id={active} />}
       {isPdf && !isView && !isHistory && active && (
-        <PdfViewer key={active} path={active} page={jump?.path === active ? (jump.page ?? null) : null} />
+        <PdfViewer
+          key={active}
+          path={active}
+          page={jump?.path === active ? (jump.page ?? null) : null}
+          selection={jump?.path === active ? (jump.selection ?? null) : null}
+        />
       )}
       <div
         ref={hostRef}

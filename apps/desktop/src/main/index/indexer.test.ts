@@ -186,6 +186,29 @@ describe('links and backlinks (SPECS 5)', () => {
     expect(index.backlinks('Academic/Knowledge/Concepts/Kalman Filter.md')).toEqual([]);
   });
 
+  it('lists links to passages of a PDF, and only those (SPECS 10.8.1)', async () => {
+    const pdf = 'Academic/GNSS Study/Papers/paper.pdf';
+    const note = 'Academic/GNSS Study/Notes/Reading.md';
+    await fs.writeFile(
+      file(note),
+      [
+        '# Reading',
+        '',
+        '> A passage.',
+        '> — [[paper.pdf#page=2&selection=0,3,0,9|p. 2]]',
+        'Same passage, PDF++ style: [[paper.pdf#page=2&selection=0,3,0,9&color=yellow]]',
+        'A page only: [[paper.pdf#page=3]], the file: [[paper.pdf]]',
+        '',
+      ].join('\n'),
+    );
+    await index.refresh([note]);
+    expect(index.pdfHighlights(pdf)).toEqual([
+      { path: note, title: 'Reading', line: 4, col: 5, page: 2, selection: [0, 3, 0, 9] },
+      { path: note, title: 'Reading', line: 5, col: 28, page: 2, selection: [0, 3, 0, 9] },
+    ]);
+    expect(index.backlinks(pdf).map((b) => b.path)).toContain(note);
+  });
+
   it('a second sync with nothing changed does nothing', async () => {
     expect(await index.sync()).toEqual({ indexed: 0, removed: 0 });
   });
