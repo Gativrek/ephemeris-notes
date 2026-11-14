@@ -143,12 +143,21 @@ test('settings: install, enable, fields, pane, plugin settings and library stora
   const state = JSON.parse(await readFile(file('.ephemeris/plugin-data/sample-plugin/state.json'), 'utf8'));
   expect(state).toEqual({ loads: 1 });
 
-  // Help: the plugin's page is listed under its name and renders its block live.
+  // Help: the plugin's page is in the folded Plugins folder, under its name, and renders its block live.
   await settingsLink(page, 'Help').click();
   const help = page.getByTestId('settings-help');
   await expect(help).toContainText('Getting started');
   await expect(help).toContainText('Using with Obsidian');
-  await help.getByRole('link', { name: 'Sample plugin guide' }).click();
+  const folder = page.getByTestId('help-plugins-folder');
+  await expect(folder).toHaveAttribute('aria-expanded', 'false');
+  await expect(help.getByRole('link', { name: 'Sample Plugin' })).toHaveCount(0);
+  await folder.click();
+  await expect(folder).toHaveAttribute('aria-expanded', 'true');
+  await help.getByRole('link', { name: 'Sample Plugin' }).click();
+  await expect(help.getByRole('link', { name: 'Sample Plugin' })).toHaveAttribute(
+    'title',
+    'Sample plugin guide',
+  );
   await expect(page.getByTestId('help-article').locator('.sample-plugin-output')).toHaveText('egap pleh');
 
   // Disabling removes its pages and settings.
@@ -157,7 +166,8 @@ test('settings: install, enable, fields, pane, plugin settings and library stora
   await expect(card).toContainText('Disabled');
   await expect(card.locator('.sample-plugin-pane')).toHaveCount(0);
   await settingsLink(page, 'Help').click();
-  await expect(help.getByRole('link', { name: 'Sample plugin guide' })).toHaveCount(0);
+  await expect(help.getByRole('link', { name: 'Sample Plugin' })).toHaveCount(0);
+  await expect(page.getByTestId('help-plugins-folder')).toHaveCount(0);
 });
 
 test('blocks: render, args, vault files, error state, write-back with undo, storage and theme', async () => {

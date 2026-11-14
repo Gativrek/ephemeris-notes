@@ -593,6 +593,15 @@ body { margin: 0; font-family: var(--font-ui); color: var(--text); background: v
 .vx-help__nav .vx-row[aria-current="page"] { background: var(--selection); color: var(--on-selection); }
 .vx-help__group { display: flex; flex-direction: column; gap: 2px; margin-top: var(--space-4); }
 .vx-help__group-title { padding: 0 8px 4px; color: var(--muted); }
+/* The Plugins folder: every plugin help page, by plugin name, folded by default. */
+.vx-help__folder { display: flex; flex-direction: column; gap: 2px; margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--line); }
+.vx-help__folder-head { appearance: none; display: flex; align-items: center; gap: 6px; width: 100%; margin: 0; padding: 6px 8px; border: 0; border-radius: var(--radius-sm); background: transparent; font: 600 13px var(--font-ui); color: var(--text); text-align: left; cursor: pointer; }
+.vx-help__folder-head:hover, .vx-help__folder-head:focus-visible { background: var(--surface-hover); outline: none; }
+.vx-help__folder-head:focus-visible { box-shadow: var(--shadow-selected); }
+.vx-help__folder-name { flex: 1 1 auto; }
+.vx-help__folder-count { font: 500 11px var(--font-ui); color: var(--muted); font-variant-numeric: tabular-nums; }
+.vx-help__folder-body { display: flex; flex-direction: column; gap: 2px; padding-left: 20px; }
+.vx-help__folder-body .vx-help__group { margin-top: var(--space-2); }
 .vx-editor.vx-help__article { background: transparent; }
 .vx-editor.vx-view-markdown { flex: none; background: transparent; }
 .vx-view-markdown .cm-scroller { padding: 0 !important; font-size: inherit; }

@@ -287,11 +287,15 @@ test('Settings > Editor applies font size and spell check; Help lists the core p
   const help = page.getByTestId('settings-help');
   for (const title of [
     'Getting started',
+    'The workspace',
     'Markdown basics',
     'Links and embeds',
     'Math and equation references',
+    'PDFs',
     'Search syntax',
+    'History and git',
     'Keyboard shortcuts',
+    'Plugins',
     'Inbox contract',
     'Using with Obsidian',
   ])

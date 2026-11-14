@@ -40,6 +40,7 @@ export const settingsStrings = {
     commitNow: 'Commit Now',
     gitLast: (message: string, when: string) => `${message} (${when})`,
   },
+  helpPlugins: 'Plugins',
   general: {
     reopen: 'Reopen last Vault',
     reopenHint: 'Open the Vault you used last instead of the chooser when the app starts.',
